@@ -1,0 +1,76 @@
+{
+  "name": "toucan",
+  "version": "0.1.0",
+  "description": "An infinite canvas in the browser (tldraw or Excalidraw) that you edit by hand while agents edit it through a CLI and a built-in Codex chat.",
+  "license": "MIT",
+  "author": "Marc Lavallee <mlavallee@gmail.com>",
+  "homepage": "https://lavallee.github.io/toucan/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lavallee/toucan.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lavallee/toucan/issues"
+  },
+  "keywords": [
+    "tldraw",
+    "excalidraw",
+    "canvas",
+    "agents",
+    "codex",
+    "mermaid",
+    "json-canvas",
+    "diagram"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "toucan": "bin/toucan.mjs"
+  },
+  "exports": {
+    "./client": "./lib/client.mjs",
+    "./tg": "./lib/tg.mjs"
+  },
+  "scripts": {
+    "dev": "node server/index.mjs --dev & vite --config app/vite.config.ts",
+    "build": "vite build --config app/vite.config.ts && rm -rf dist/excalidraw && mkdir -p dist/excalidraw && cp -r node_modules/@excalidraw/excalidraw/dist/prod/fonts dist/excalidraw/fonts",
+    "start": "node server/index.mjs",
+    "typecheck": "tsc --noEmit -p .",
+    "css:preflight": "node scripts/scope-preflight.mjs",
+    "test": "node scripts/tg-check.mjs",
+    "check": "node scripts/check-repo.mjs"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
+    "@fontsource-variable/geist": "5.3.0",
+    "@shadcn/react": "0.3.1",
+    "@tailwindcss/vite": "4.3.3",
+    "@tldraw/sync": "^5.5.2",
+    "@tldraw/sync-core": "^5.5.2",
+    "class-variance-authority": "0.7.1",
+    "cn": "0.4.0",
+    "elkjs": "^0.12.0",
+    "lucide-react": "1.57.0",
+    "radix-ui": "1.8.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "shadcn": "4.21.5",
+    "shiki": "4.5.0",
+    "streamdown": "2.7.0",
+    "tailwindcss": "4.3.3",
+    "tldraw": "^5.5.2",
+    "tw-animate-css": "1.4.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "7.0.2",
+    "vite": "^8.3.4"
+  },
+  "private": true
+}

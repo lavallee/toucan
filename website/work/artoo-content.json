@@ -1,0 +1,10 @@
+{
+  "contract": "artoo-content/1",
+  "files": [
+    "site/agents.html",
+    "site/extending.html",
+    "site/how-it-works.html",
+    "site/index.html",
+    "site/quickstart.html"
+  ]
+}

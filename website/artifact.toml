@@ -1,0 +1,28 @@
+[artifact]
+slug = "toucan-site"
+title = "toucan — a canvas you and your agents share"
+description = "An infinite canvas in the browser that you edit by hand while agents edit it beside you."
+kind = "explainer"
+form = "collection"
+status = "live"
+created = "2026-10-27"
+updated = "2026-10-27"
+
+[content]
+pages = "content"
+order = ["index.md", "quickstart.md", "agents.md", "how-it-works.md", "extending.md"]
+
+[deploy]
+target = "github-pages"
+
+[deploy.github-pages]
+commit = false
+mode = "workflow"
+own_root = true
+publish_dir = "website/site"
+subpath = ""
+
+[[libraries]]
+name = "artoo-kit"
+version = "0.5.0"
+sha256 = "f1fcd69b7343ecc60d21eec765705b74be168f3d8ba3143423f1300e07a93b4a"

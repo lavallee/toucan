@@ -1,0 +1,19 @@
+# toucan
+
+> An infinite canvas in the browser (tldraw or Excalidraw) that a person edits by hand while agents edit it through the `toucan` CLI and a built-in Codex chat.
+
+Agents: read AGENTS.md before changing a canvas. A person may be editing at the same time; inspect first, make small keyed edits, never wipe their work.
+
+## Docs
+
+- [Agent guide](https://github.com/lavallee/toucan/blob/main/AGENTS.md): CLI, `toucan.*` helpers, the graph format, engines, canvas scripts
+- [Quick start](https://lavallee.github.io/toucan/quickstart.html): install, sign in, first canvas
+- [How it works](https://lavallee.github.io/toucan/how-it-works.html): sync, exec relay, chat, security model
+- [Extending](https://lavallee.github.io/toucan/extending.html): extension commands, deployment notes, configuration, licences
+
+## Source
+
+- [bin/toucan.mjs](https://github.com/lavallee/toucan/blob/main/bin/toucan.mjs): the CLI
+- [lib/tg.mjs](https://github.com/lavallee/toucan/blob/main/lib/tg.mjs): the toucan graph and format converters
+- [lib/client.mjs](https://github.com/lavallee/toucan/blob/main/lib/client.mjs): Node client for extensions
+- [server/index.mjs](https://github.com/lavallee/toucan/blob/main/server/index.mjs): server, sync rooms, exec relay

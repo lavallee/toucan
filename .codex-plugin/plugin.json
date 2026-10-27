@@ -1,0 +1,39 @@
+{
+  "name": "toucan",
+  "version": "0.1.0",
+  "description": "Read and change a live tldraw or Excalidraw canvas through the toucan CLI while a person edits it by hand.",
+  "author": {
+    "name": "Marc Lavallee",
+    "url": "https://github.com/lavallee"
+  },
+  "homepage": "https://lavallee.github.io/toucan/",
+  "repository": "https://github.com/lavallee/toucan",
+  "license": "MIT",
+  "keywords": [
+    "canvas",
+    "diagram",
+    "tldraw",
+    "excalidraw",
+    "mermaid"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "toucan",
+    "shortDescription": "A canvas you and your agents share.",
+    "longDescription": "Drive a live tldraw or Excalidraw canvas through the toucan CLI: inspect it, draw and lay out diagrams, merge in Mermaid or JSON Canvas by key, and add canvas scripts, while a person keeps editing by hand.",
+    "developerName": "Marc Lavallee",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://lavallee.github.io/toucan/",
+    "brandColor": "#F28C28",
+    "defaultPrompt": [
+      "Show me what's on the canvas and suggest a cleaner layout.",
+      "Draw this system as a diagram on my toucan canvas.",
+      "Add a button to this canvas that highlights shapes changed today."
+    ]
+  }
+}

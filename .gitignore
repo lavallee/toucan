@@ -1,0 +1,10 @@
+node_modules
+dist
+canvases/
+.toucan/
+.playwright-mcp/
+.toucan-server.log
+.env
+
+__pycache__/
+website/site/
