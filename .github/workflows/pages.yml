@@ -23,16 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv tool install artoo-artifacts==0.6.0
+      - run: uv tool install artoo-artifacts==0.8.0
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Build the artifact
-        run: |
-          artoo build website
-          node scripts/site-figures.mjs
+        run: artoo build website
 
       - name: Firewall and coherence checks
         run: |

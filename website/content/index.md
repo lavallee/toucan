@@ -9,7 +9,7 @@ one shared document.
 
 [Get started →](quickstart.html) · [Source on GitHub ↗](https://github.com/lavallee/toucan)
 
-[Figure: A tldraw canvas of a shop's services beside the Codex chat panel. The person asked for a Redis cache between Catalog and Postgres and for the core services in blue; the panel shows Codex reading the guide, inspecting the canvas, and making both edits.](assets/toucan-canvas-chat.png)
+![A tldraw canvas of a shop's services beside the Codex chat panel. The person asked for a Redis cache between Catalog and Postgres and for the core services in blue; the panel shows Codex reading the guide, inspecting the canvas, and making both edits.](assets/toucan-canvas-chat.png)
 
 ## What you can do with it
 
