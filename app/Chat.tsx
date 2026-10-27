@@ -148,7 +148,7 @@ export function Chat() {
 								</EmptyMedia>
 								<EmptyTitle>What should change on the canvas?</EmptyTitle>
 								<EmptyDescription>
-									“Add a frame for the research cluster”, “colour unregistered projects red”, “add a button that re-runs the layout”.
+									“Group these into a frame”, “colour anything unowned red”, “add a button that re-runs the layout”.
 								</EmptyDescription>
 							</EmptyHeader>
 						</Empty>

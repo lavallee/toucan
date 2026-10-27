@@ -40,7 +40,8 @@
     "typecheck": "tsc --noEmit -p .",
     "css:preflight": "node scripts/scope-preflight.mjs",
     "test": "node scripts/tg-check.mjs",
-    "check": "node scripts/check-repo.mjs"
+    "check": "node scripts/check-repo.mjs",
+    "docs": "artoo build website && node scripts/site-figures.mjs"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",

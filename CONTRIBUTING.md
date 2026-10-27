@@ -30,5 +30,5 @@ npm run check && npm test && npm run typecheck && npm run build
 gitleaks git --redact .   # optional locally; CI runs it
 ```
 
-If you touched the docs site, also run `artoo build website` (`uv tool install artoo-artifacts`). In the
+If you touched the docs site, also run `npm run docs` (needs `uv tool install artoo-artifacts`). In the
 pull request, explain what changes for a person at the canvas or an agent at the CLI, and how you checked it.

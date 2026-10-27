@@ -7,6 +7,8 @@ An infinite canvas in the browser that you edit by hand while agents edit it bes
 
 **[Read the docs →](https://lavallee.github.io/toucan/)**
 
+![A tldraw canvas of a shop's services beside the Codex chat panel, where Codex has just added a Redis cache and coloured the core services blue.](website/site/assets/toucan-canvas-chat.png)
+
 Each canvas runs on [tldraw](https://tldraw.dev) or [Excalidraw](https://excalidraw.com). A small Node
 server keeps every open tab in sync, a chat panel drives [Codex](https://github.com/openai/codex) on your
 own ChatGPT sign-in, and any terminal agent (Claude Code, Codex, pi, …) can do the same through the
@@ -39,6 +41,8 @@ node bin/toucan.mjs url            # prints the sign-in link (with its token); o
 ```
 
 Then make a canvas from the index page, or from the terminal:
+
+<img src="website/site/assets/toucan-index.png" alt="The index page, with previews of three canvases" width="720">
 
 ```sh
 node bin/toucan.mjs new sketch --title "Sketch"

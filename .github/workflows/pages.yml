@@ -25,17 +25,21 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv tool install artoo-artifacts==0.6.0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Build the artifact
-        run: artoo build website
+        run: |
+          artoo build website
+          node scripts/site-figures.mjs
 
       - name: Firewall and coherence checks
         run: |
           artoo status website
           artoo doctor .
+          artoo verify website
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
       - name: Refuse to publish internal names
         run: node scripts/check-repo.mjs website/site
 
