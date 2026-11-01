@@ -43,6 +43,9 @@ engines and canvas scripts. A deployment may add notes in its data directory's `
 **"This".** When the person says "this" or "these", run `toucan --canvas NAME selection` to see what
 they have selected before guessing.
 
+**Proposals.** For broad feedback, propose rather than impose: `toucan --canvas NAME import plan.mmd
+--propose` adds shapes dashed; the person accepts or rejects them. Don't accept your own proposals unless asked.
+
 **Notes.** On tldraw, every sticky note is a message to you. When asked to handle them, run
 `toucan --canvas NAME notes`, act on each one using what it sits on and near, then
 `toucan --canvas NAME notes resolve KEY --reply "what you did"`. Never delete a note.

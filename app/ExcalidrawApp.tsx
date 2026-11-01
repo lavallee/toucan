@@ -7,6 +7,7 @@ import { wsUrl } from './net'
 import { connectRelay, keepThumbnail } from './relay'
 import { CanvasFrame } from './CanvasFrame'
 import { ExcalidrawPulses } from './pulses'
+import { ProposalBar } from './ProposalBar'
 
 // Fonts are served from our own dist/ (copied there at build time), not a CDN.
 ;(window as any).EXCALIDRAW_ASSET_PATH = `${location.origin}/excalidraw/`
@@ -26,10 +27,12 @@ export function ExcalidrawApp() {
 	const [relay, setRelay] = useState('connecting')
 	const [sync, setSync] = useState('connecting')
 	const known = useRef(new Map<string, number>()) // element id -> version last sent or received
+	const [helpers, setHelpers] = useState<{ toucan: any; subscribe: (f: () => void) => () => void } | null>(null)
 
 	useEffect(() => {
 		if (!api) return
 		const toucan = makeExcalidrawHelpers(api, ex)
+		setHelpers({ toucan, subscribe: (f) => api.onChange(f) })
 		;(window as any).editor = api
 		;(window as any).toucan = toucan
 
@@ -112,6 +115,7 @@ export function ExcalidrawApp() {
 			<div className="absolute inset-0">
 				<Excalidraw excalidrawAPI={setApi} theme={dark ? 'dark' : 'light'} UIOptions={{ canvasActions: { loadScene: false } }} />
 				<ExcalidrawPulses api={api} />
+				{helpers && <ProposalBar {...helpers} />}
 			</div>
 		</CanvasFrame>
 	)

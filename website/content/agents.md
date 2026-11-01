@@ -15,8 +15,9 @@ toucan --canvas NAME script list|put NAME FILE|rm NAME   # persistent canvas scr
 toucan canvases                                 # every canvas: title, description, shapes, open tabs
 toucan new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE]
 toucan --canvas NAME graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   # no tab needed
-toucan --canvas NAME import FILE [--format F] [--move] [--prune]   # keyed upsert of a graph file
+toucan --canvas NAME import FILE [--format F] [--move] [--prune] [--propose]   # keyed upsert of a graph file
 toucan --canvas NAME meta --title T --description D
+toucan --canvas NAME proposals [accept|reject [KEY...]]   # dashed = proposed
 toucan --canvas NAME selection                  # what people selected: resolve "this" / "these"
 toucan --canvas NAME notes [--all]              # sticky notes left for you, with what they're on/near
 toucan --canvas NAME notes resolve KEY --reply TEXT   # mark one handled (green + reply)
@@ -56,6 +57,22 @@ part of the message. When asked to handle the notes:
 content (use `node`); a note is a person's message. Excalidraw has no sticky note, so notes are
 tldraw-only for now.
 
+## Proposals: dashed = proposed
+
+When the person asks for an opinion or a broad change ("this isn't really a straight line", "what's
+missing?"), answer on the canvas as a **proposal** they can take or leave, not as a finished edit:
+
+- `toucan --canvas NAME import plan.mmd --propose`: what the import adds arrives dashed, as a proposal
+  (what it updates is changed as usual).
+- In exec code: `toucan.node(key, {..., proposed: true})`, `toucan.edge(a, b, {..., proposed: true})`, or
+  `toucan.propose(...keys)` for shapes that already exist.
+
+A proposal is drawn dashed and carries `meta.proposed` (Excalidraw: `customData.proposed`); a shape the
+person drew dashed is not one. Frames, notes and text can't be dashed, so they can't be proposed. The
+person sees a bar above the canvas with **Accept** (drawn solid again) and **Reject** (removed) for the
+selected proposals, or all of them. Leave that choice to them: run `toucan proposals accept|reject
+[KEY...]` only when asked. `toucan proposals` lists what is still open.
+
 ## What people see: presence and undo
 
 - **Your edits glow.** Shapes an exec adds or changes get a short violet halo, tagged "agent", in every
@@ -88,8 +105,9 @@ Mermaid flowcharts, DOT (export only) and `.excalidraw`.
 
 The `toucan.*` helpers are idempotent by key; prefer them to raw editor calls.
 
-- `node(key, {x, y, w, h, text, geo, color, fill, dash, size, parent, meta, move})` — create/update a box. Existing boxes keep their position unless `move: true`. `parent` is a frame key; x/y are then frame-relative.
-- `frame(key, {x, y, w, h, name, color})`, `edge(fromKey, toKey, {text, color, dash, kind, bend})` — bound arrow.
+- `node(key, {x, y, w, h, text, geo, color, fill, dash, size, parent, meta, move, proposed})` — create/update a box. Existing boxes keep their position unless `move: true`. `parent` is a frame key; x/y are then frame-relative.
+- `frame(key, {x, y, w, h, name, color})`, `edge(fromKey, toKey, {text, color, dash, kind, bend, proposed})` — bound arrow.
+- `propose(...keys)`, `proposals()`, `accept(...keys)`, `reject(...keys)` — see Proposals.
 - `get(key)`, `idFor(key)`, `text(shape)`, `find(q)`, `summary({within})`, `remove(...keys)`, `zoomTo(keys?)`, `pulse(keys)`
 - `await layout(keys | null, {within: frameKey, direction: 'RIGHT' | 'DOWN', spacing, layerSpacing})` — ELK.
 

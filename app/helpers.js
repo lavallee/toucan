@@ -49,6 +49,57 @@ export function makeHelpers(editor) {
 		return { page: editor.getCurrentPage().name, count: shapes.length, ...(selected.length && { selected }), ...(openNotes && { openNotes }), shapes: out }
 	}
 
+	// ---- proposals: dashed = proposed ------------------------------------------------------------
+	// An agent can propose shapes instead of just making them: they are drawn dashed and carry
+	// meta.proposed = { dash } (the dash to restore). A person accepts (made solid again) or rejects
+	// (removed) them from the bar above the canvas, or an agent does so when asked. A shape a person drew
+	// dashed is not a proposal: only meta.proposed counts.
+	const DASHED = new Set(['geo', 'arrow', 'draw', 'line'])
+	const isProposal = (s) => !!s?.meta?.proposed
+
+	/** Mark existing shapes (keys) as proposed. Frames, notes and text can't be dashed, so they're skipped. */
+	function propose(...keys) {
+		const shapes = keys.flat().map(get).filter((s) => s && DASHED.has(s.type) && !isProposal(s))
+		editor.updateShapes(shapes.map((s) => ({ id: s.id, type: s.type, props: { dash: 'dashed' }, meta: { ...s.meta, proposed: { dash: s.props.dash } } })))
+		return shapes.map(keyOf)
+	}
+
+	/** Open proposals, with what each connects or says. */
+	function proposals() {
+		return editor.getCurrentPageShapes().filter(isProposal).map((s) => {
+			const row = { key: keyOf(s), type: s.type, ...(text(s) && { text: text(s).slice(0, 120) }) }
+			if (s.type === 'arrow') for (const bd of editor.getBindingsFromShape(s, 'arrow')) row[bd.props.terminal === 'start' ? 'from' : 'to'] = keyOf(editor.getShape(bd.toId))
+			return row
+		})
+	}
+
+	const proposalsFor = (keys) => (keys?.length ? keys.flat().map((k) => editor.getCurrentPageShapes().find((s) => keyOf(s) === k)) : editor.getCurrentPageShapes()).filter(isProposal)
+
+	/** Accept proposals (keys, or all): drawn solid again, as ordinary shapes. One undo step. */
+	function accept(...keys) {
+		const shapes = proposalsFor(keys)
+		editor.markHistoryStoppingPoint('accept proposals')
+		editor.updateShapes(shapes.map((s) => {
+			// tldraw merges meta on update, so the flag is cleared to null rather than left out.
+			const dash = s.meta.proposed.dash ?? (s.type === 'arrow' ? 'solid' : 'draw')
+			return { id: s.id, type: s.type, props: { dash }, meta: { ...s.meta, proposed: null } }
+		}))
+		return { accepted: shapes.map(keyOf) }
+	}
+
+	/** Reject proposals (keys, or all): removed, with any proposed arrows left dangling. One undo step. */
+	function reject(...keys) {
+		const shapes = proposalsFor(keys)
+		const gone = new Set(shapes.map((s) => s.id))
+		const arrows = editor.getCurrentPageShapes().filter((a) => a.type === 'arrow' && isProposal(a) && !gone.has(a.id) && editor.getBindingsFromShape(a, 'arrow').some((b) => gone.has(b.toId)))
+		editor.markHistoryStoppingPoint('reject proposals')
+		editor.deleteShapes([...gone, ...arrows.map((a) => a.id)])
+		return { rejected: [...shapes, ...arrows].map(keyOf) }
+	}
+
+	/** Proposals among the current selection, for the person's accept/reject bar. */
+	const selectedProposals = () => editor.getSelectedShapes().filter(isProposal).map(keyOf)
+
 	/**
 	 * What people have selected, to resolve "this" and "these". `here`: the selection in the tab running
 	 * this code (the person's most recently focused tab). `others`: other tabs' selections on this page,
@@ -125,7 +176,7 @@ export function makeHelpers(editor) {
 	}
 
 	/** Create or update a box. `move: true` repositions an existing one. */
-	function node(key, { x = 0, y = 0, w = 180, h = 64, text: label = key, geo = 'rectangle', color = 'black', fill = 'semi', dash = 'draw', size = 's', parent, meta = {}, move = false } = {}) {
+	function node(key, { x = 0, y = 0, w = 180, h = 64, text: label = key, geo = 'rectangle', color = 'black', fill = 'semi', dash = 'draw', size = 's', parent, meta = {}, move = false, proposed = false } = {}) {
 		const id = idFor(key)
 		// Always explicit: without it tldraw drops new shapes into whatever frame is under them.
 		const parentId = parent ? idFor(parent) : editor.getCurrentPageId()
@@ -141,6 +192,7 @@ export function makeHelpers(editor) {
 		} else {
 			editor.createShape({ id, type: 'geo', x, y, parentId, props, meta: { ...meta, key } })
 		}
+		if (proposed) propose(key)
 		return id
 	}
 
@@ -159,7 +211,12 @@ export function makeHelpers(editor) {
 	}
 
 	/** Create or update an arrow bound to two keyed shapes. */
-	function edge(from, to, { text: label = '', color = 'grey', dash = 'solid', size = 's', kind = 'arc', bend = 0, meta = {} } = {}) {
+	function edge(from, to, { text: label = '', color = 'grey', dash = 'solid', size = 's', kind = 'arc', bend = 0, meta = {}, proposed = false } = {}) {
+		const id = edgeOnly(from, to, { text: label, color, dash, size, kind, bend, meta })
+		if (proposed) propose(`edge:${from}->${to}`)
+		return id
+	}
+	function edgeOnly(from, to, { text: label, color, dash, size, kind, bend, meta }) {
 		const a = get(from), b = get(to)
 		if (!a || !b) throw new Error(`edge ${from} -> ${to}: missing ${!a ? from : to}`)
 		const key = `edge:${from}->${to}`
@@ -239,7 +296,7 @@ export function makeHelpers(editor) {
 	 * matched by endpoints (edge:<from>-><to>). Nothing is deleted unless `prune`, which removes keyed
 	 * boxes, frames and arrows the graph doesn't mention.
 	 */
-	async function applyGraph(tg, { move = false, prune = false, direction } = {}) {
+	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction } = {}) {
 		editor.markHistoryStoppingPoint('apply graph')
 		tg = await layoutMissing(tg, { existing: graph(), elk, direction })
 		const raw = tg.extra?.tldraw ?? {}
@@ -341,6 +398,8 @@ export function makeHelpers(editor) {
 			editor.deleteShapes(gone.map((s) => s.id))
 			out.pruned = gone.length
 		}
+		// `propose`: what this import adds arrives as a proposal (dashed) for a person to accept or reject.
+		if (asProposal) propose(...out.created)
 		return { ...out, created: out.created.length }
 	}
 
@@ -408,5 +467,5 @@ export function makeHelpers(editor) {
 		}
 	}
 
-	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, _track }
+	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track }
 }

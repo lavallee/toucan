@@ -50,6 +50,47 @@ export function makeExcalidrawHelpers(api, ex) {
 		}
 	}
 
+	// ---- proposals: dashed = proposed (customData.proposed = { dash }); see the tldraw helpers ----
+	const isProposal = (e) => !!e?.customData?.proposed
+	const rowOf = (e) => ({ key: keyOf(e), type: e.type, ...(text(e) && { text: text(e).slice(0, 120) }) })
+
+	function propose(...keys) {
+		const want = new Set(keys.flat())
+		const els = shapes().filter((e) => want.has(keyOf(e)) && e.type !== 'frame' && !isProposal(e))
+		const changed = new Map(els.map((e) => [e.id, ex.newElementWith(e, { strokeStyle: 'dashed', customData: { ...e.customData, proposed: { dash: e.strokeStyle } } })]))
+		commit(all().map((e) => changed.get(e.id) ?? e))
+		return els.map(keyOf)
+	}
+
+	const proposals = () => shapes().filter(isProposal).map(rowOf)
+	const proposalsFor = (keys) => {
+		const want = new Set(keys.flat())
+		return shapes().filter((e) => isProposal(e) && (!want.size || want.has(keyOf(e))))
+	}
+
+	function accept(...keys) {
+		const els = proposalsFor(keys)
+		const changed = new Map(els.map((e) => {
+			const { proposed, ...customData } = e.customData
+			return [e.id, ex.newElementWith(e, { strokeStyle: proposed.dash ?? 'solid', customData })]
+		}))
+		commit(all().map((e) => changed.get(e.id) ?? e))
+		return { accepted: els.map(keyOf) }
+	}
+
+	function reject(...keys) {
+		const gone = new Set(proposalsFor(keys).map((e) => e.id))
+		for (const e of shapes()) if (isProposal(e) && e.type === 'arrow' && (gone.has(e.startBinding?.elementId) || gone.has(e.endBinding?.elementId))) gone.add(e.id)
+		const keysGone = shapes().filter((e) => gone.has(e.id)).map(keyOf)
+		commit(all().map((e) => (gone.has(e.id) || gone.has(e.containerId) ? ex.newElementWith(e, { isDeleted: true }) : e)))
+		return { rejected: keysGone }
+	}
+
+	const selectedProposals = () => {
+		const ids = api.getAppState().selectedElementIds ?? {}
+		return shapes().filter((e) => ids[e.id] && isProposal(e)).map(keyOf)
+	}
+
 	/**
 	 * What the person selected in the tab running this code (`here`), to resolve "this" and "these".
 	 * Excalidraw tabs here share no presence, so other tabs' selections aren't visible (`others` is empty).
@@ -70,7 +111,7 @@ export function makeExcalidrawHelpers(api, ex) {
 	 * or a grid spot below the scene for formats without positions. Arrows match by endpoints.
 	 * `prune` deletes keyed elements the graph doesn't mention.
 	 */
-	async function applyGraph(tg, { move = false, prune = false, direction } = {}) {
+	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction } = {}) {
 		tg = await layoutMissing(tg, { existing: graph(), elk, direction })
 		const current = all()
 		const byKey = new Map(shapes().map((e) => [keyOf(e), e]))
@@ -109,6 +150,8 @@ export function makeExcalidrawHelpers(api, ex) {
 			}
 			// New element: point its frame and bindings at the real ids of existing elements.
 			const el = { ...t, frameId: t.frameId ? idOf(t.frameId) : null }
+			// `propose`: new elements arrive dashed, as a proposal a person accepts or rejects.
+			if (asProposal && el.type !== 'frame') Object.assign(el, { strokeStyle: 'dashed', customData: { ...el.customData, proposed: { dash: t.strokeStyle } } })
 			if (el.type === 'arrow') {
 				for (const end of ['startBinding', 'endBinding']) {
 					const targetId = idOf(el[end].elementId)
@@ -197,5 +240,5 @@ export function makeExcalidrawHelpers(api, ex) {
 		}
 	}
 
-	return { engine: 'excalidraw', get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, pulse, selection, _track }
+	return { engine: 'excalidraw', get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track }
 }

@@ -8,13 +8,15 @@
 //     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D]
 //                                 make a canvas; --from copies another canvas (or a graph file) via TG
 //     graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   export (no tab needed)
-//     import FILE [--format F] [--move] [--prune]   keyed upsert of a graph file into the open canvas
+//     import FILE [--format F] [--move] [--prune] [--propose]   keyed upsert of a graph file into the open canvas
+//                                 (--propose: what it adds arrives dashed, as a proposal)
 //     meta [--title T] [--description D]        retitle/describe --canvas
 //     archive                     move --canvas aside to canvases/.archive/ (no tabs may have it open)
 //     summary [--within KEY]      compact JSON of shapes on the page
 //     exec -e CODE | FILE | -     run JS in the live editor; `return` a JSON value
 //     screenshot [OUT.png]        PNG of the page (or --keys a,b; --max px, default 1800)
 //     script list | put NAME FILE | rm NAME     canvas scripts (persistent behaviour)
+//     proposals [accept|reject [KEY...]]   dashed = proposed: list, or accept (solid) / reject (remove)
 //     selection                   what people have selected (to resolve "this"), in the tab you run in and others
 //     notes [--all]               sticky notes left for the agent, with the shapes they sit on and near
 //     notes resolve KEY --reply TEXT   mark a note handled: green, plus a one-line reply (never deleted)
@@ -51,7 +53,7 @@ function die(msg) {
 	process.exit(1)
 }
 
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals']
 let client
 if (cmd && !BUILTIN.includes(cmd)) {
 	// An extension command: `toucan foo …` runs `toucan-foo …` from PATH.
@@ -154,10 +156,17 @@ switch (cmd) {
 	}
 	case 'import': {
 		const file = positional()[0]
-		if (!file) die('usage: import FILE [--format tg|jsoncanvas|mermaid|excalidraw] [--move] [--prune]')
+		if (!file) die('usage: import FILE [--format tg|jsoncanvas|mermaid|excalidraw] [--move] [--prune] [--propose]')
 		const tg = readGraph(file, flag('format'))
 		if (tg.warnings?.length) console.error(`toucan: ${tg.warnings.length} line(s) not understood:\n  ${tg.warnings.join('\n  ')}`)
-		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move: !!flag('move'), prune: !!flag('prune') })})`, 120000))
+		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move: !!flag('move'), prune: !!flag('prune'), propose: !!flag('propose') })})`, 120000))
+		break
+	}
+	case 'proposals': {
+		const [, sub, ...keys] = argv
+		if (!sub) print(await exec('return toucan.proposals()'))
+		else if (sub === 'accept' || sub === 'reject') print(await exec(`return toucan.${sub}(...${JSON.stringify(keys)})`))
+		else die('usage: proposals [accept|reject [KEY...]]   (no keys: all of them)')
 		break
 	}
 	case 'selection':

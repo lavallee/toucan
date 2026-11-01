@@ -8,6 +8,7 @@ import { wsUrl } from './net'
 import { connectRelay, keepThumbnail, applySeed } from './relay'
 import { CanvasFrame } from './CanvasFrame'
 import { PulseBoxes, usePulses } from './pulses'
+import { ProposalBar } from './ProposalBar'
 
 declare global {
 	interface Window {
@@ -37,9 +38,11 @@ const components: TLComponents = { OnTheCanvas: AgentPulses }
 /** The tldraw engine. */
 export function App() {
 	const [status, setStatus] = useState('connecting')
+	const [helpers, setHelpers] = useState<{ toucan: any; subscribe: (f: () => void) => () => void } | null>(null)
 
 	const onMount = useCallback((editor: Editor) => {
 		const toucan = makeHelpers(editor)
+		setHelpers({ toucan, subscribe: (f) => editor.store.listen(f) })
 		window.editor = editor
 		window.toucan = toucan
 		const stopRelay = connectRelay({ editor, tl, toucan }, setStatus)
@@ -67,6 +70,7 @@ export function App() {
 
 	return (
 		<CanvasFrame live={status === 'live' && store.status === 'synced-remote'} engine="tldraw">
+			{helpers && <ProposalBar {...helpers} />}
 			<Tldraw store={store} onMount={onMount} components={components} colorScheme="system" licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY} />
 		</CanvasFrame>
 	)

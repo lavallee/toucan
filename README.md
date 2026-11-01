@@ -68,6 +68,8 @@ point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works fr
 - **Notes for the agent.** On tldraw, a sticky note is addressed to the agent: pin one where the problem
   is, and `toucan notes` gives the agent its text and the shapes it sits on and near. A handled note turns
   green with a one-line reply; notes are never deleted.
+- **Proposals.** An agent can answer on the canvas with a proposal: dashed shapes (`import --propose`)
+  that you accept (made solid) or reject (removed) from a bar above the canvas.
 - **An index of canvases** at `/`, with previews, titles, descriptions and which ones are open.
 
 ## CLI
@@ -78,13 +80,14 @@ toucan [--canvas NAME] <command>
   canvases                    list canvases
   new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D]
   graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]
-  import FILE [--format F] [--move] [--prune]
+  import FILE [--format F] [--move] [--prune] [--propose]
   meta [--title T] [--description D]
   archive                     move a canvas aside (nothing is deleted)
   summary [--within KEY]      compact JSON of shapes
   exec -e CODE | FILE | -     run JS in the live editor; `return` a JSON value
   screenshot [OUT.png]        PNG of the page
   script list | put NAME FILE | rm NAME
+  proposals [accept|reject [KEY...]]   dashed = proposed: list, accept or reject
   selection                   what people have selected, to resolve "this"
   notes [--all]               sticky notes left for the agent, with the shapes they're on and near
   notes resolve KEY --reply T mark a note handled: green, plus a one-line reply
