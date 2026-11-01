@@ -44,7 +44,65 @@ export function makeHelpers(editor) {
 			if (s.meta && Object.keys(s.meta).length > 1) row.meta = s.meta
 			return row
 		})
-		return { page: editor.getCurrentPage().name, count: shapes.length, shapes: out }
+		const openNotes = notes().length
+		return { page: editor.getCurrentPage().name, count: shapes.length, ...(openNotes && { openNotes }), shapes: out }
+	}
+
+	// ---- notes: sticky notes on the canvas addressed to the agent ----------------------------------
+	// Convention: every tldraw `note` shape (the sticky-note tool) is for the agent. A note is open until
+	// it is resolved: then it turns green, gains a one-line reply, and keeps meta.resolved. Never deleted.
+	const keyOf = (s) => s.meta?.key ?? s.id.replace(/^shape:/, '')
+	const noteByKey = (key) => editor.getCurrentPageShapes().find((s) => s.type === 'note' && keyOf(s) === key)
+
+	/**
+	 * Open notes (or all, with resolved ones) with what they sit on and next to, so "merge these" can be
+	 * resolved spatially: `on` lists shapes the note overlaps, `near` the closest others (gap in page
+	 * px, and which side of the note they are on), `inside` the frame it is in.
+	 */
+	function notes({ all = false, radius = 240 } = {}) {
+		const page = editor.getCurrentPageShapes()
+		const others = page.filter((s) => s.type !== 'note' && s.type !== 'arrow')
+		return page
+			.filter((s) => s.type === 'note' && (all || !s.meta?.resolved))
+			.map((n) => {
+				const b = editor.getShapePageBounds(n)
+				const row = { key: keyOf(n), text: n.meta?.noteText ?? text(n), x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.w), h: Math.round(b.h) }
+				if (n.meta?.resolved) Object.assign(row, { resolved: n.meta.resolved, reply: n.meta.reply })
+				const frame = editor.getShapeAncestors(n).reverse().find((a) => a.type === 'frame')
+				if (frame) row.inside = { key: keyOf(frame), text: text(frame) }
+				const on = [], near = []
+				let nearest = null
+				for (const s of others) {
+					if (s.type === 'frame' && s.id === frame?.id) continue
+					const o = editor.getShapePageBounds(s)
+					const dx = Math.max(o.minX - b.maxX, b.minX - o.maxX, 0), dy = Math.max(o.minY - b.maxY, b.minY - o.maxY, 0)
+					const item = { key: keyOf(s), type: s.type, ...(text(s) && { text: text(s).slice(0, 80) }) }
+					if (!dx && !dy) {
+						on.push(item)
+						continue
+					}
+					if (s.type === 'frame') continue
+					const side = dx >= dy ? (o.minX >= b.maxX ? 'right' : 'left') : o.minY >= b.maxY ? 'below' : 'above'
+					const close = { ...item, gap: Math.round(Math.hypot(dx, dy)), side }
+					if (close.gap <= radius) near.push(close)
+					if (!nearest || close.gap < nearest.gap) nearest = close
+				}
+				if (on.length) row.on = on
+				// A note in empty space ("missing: …") still gets its closest shape, as an anchor.
+				if (near.length || nearest) row.near = near.length ? near.sort((p, q) => p.gap - q.gap).slice(0, 6) : [nearest]
+				return row
+			})
+	}
+
+	/** Mark a note handled: green, with `reply` as a last line. The note's own text stays; nothing is deleted. */
+	function resolveNote(key, reply) {
+		const n = noteByKey(key)
+		if (!n) throw new Error(`no note ${key} (keys come from toucan.notes())`)
+		if (!reply) throw new Error('a resolved note needs a one-line reply')
+		const original = n.meta?.noteText ?? text(n)
+		const line = String(reply).replace(/\s+/g, ' ').trim()
+		editor.updateShape({ id: n.id, type: 'note', props: { color: 'green', richText: toRichText(`${original}\n↳ ${line}`) }, meta: { ...n.meta, noteText: original, reply: line, resolved: new Date().toISOString() } })
+		return { key, reply: line }
 	}
 
 	/** Create or update a box. `move: true` repositions an existing one. */
@@ -331,5 +389,5 @@ export function makeHelpers(editor) {
 		}
 	}
 
-	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, _track }
+	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, _track }
 }

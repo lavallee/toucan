@@ -11,7 +11,8 @@ import readline from 'node:readline'
 const instructions = (canvas, engine = 'tldraw', notes = null) => `You are the agent in toucan's chat panel. The user is looking at the ${engine} canvas "${canvas}" in their browser and can also edit it by hand.
 Change the canvas with the toucan CLI (read AGENTS.md first): run \`node bin/toucan.mjs --canvas ${canvas} <cmd>\`.
 Inspect before you change: \`summary\` or \`exec\` to read shapes; \`screenshot\` to look. Prefer small, reversible edits and keep the user's hand edits.
-For lasting new behaviour, install a canvas script (\`script put\`). Reply briefly with what you changed.${engine === 'tldraw' ? '' : `
+For lasting new behaviour, install a canvas script (\`script put\`). Reply briefly with what you changed.
+Sticky notes on a tldraw canvas are addressed to you (AGENTS.md, "Notes"). When the user asks you to handle the notes, or a request points at them, run \`notes\`, act on each one using where it sits, then \`notes resolve KEY --reply "…"\`; never delete a note. If \`summary\` shows openNotes, mention them.${engine === 'tldraw' ? '' : `
 This canvas runs ${engine}, not tldraw: in exec code \`editor\` is the ${engine} API and \`tl\` its module (see AGENTS.md). The engine-neutral path is \`graph\` (read) and \`import\` (keyed upsert of a TG/Mermaid/JSON Canvas file).`}${notes ? `
 This deployment adds its own agent notes in ${notes}: read them too.` : ''}`
 

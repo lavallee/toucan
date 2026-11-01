@@ -65,6 +65,9 @@ point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works fr
   `toucan import FILE` merges JSON Canvas, Mermaid, `.excalidraw` or TG into the open canvas *by key*:
   existing shapes keep their position, new ones are laid out with ELK, nothing is deleted without `--prune`.
   The converters are in [`lib/tg.mjs`](lib/tg.mjs).
+- **Notes for the agent.** On tldraw, a sticky note is addressed to the agent: pin one where the problem
+  is, and `toucan notes` gives the agent its text and the shapes it sits on and near. A handled note turns
+  green with a one-line reply; notes are never deleted.
 - **An index of canvases** at `/`, with previews, titles, descriptions and which ones are open.
 
 ## CLI
@@ -82,6 +85,8 @@ toucan [--canvas NAME] <command>
   exec -e CODE | FILE | -     run JS in the live editor; `return` a JSON value
   screenshot [OUT.png]        PNG of the page
   script list | put NAME FILE | rm NAME
+  notes [--all]               sticky notes left for the agent, with the shapes they're on and near
+  notes resolve KEY --reply T mark a note handled: green, plus a one-line reply
 ```
 
 `--canvas` can also come from `TOUCAN_CANVAS`.

@@ -17,6 +17,8 @@ toucan new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE]
 toucan --canvas NAME graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   # no tab needed
 toucan --canvas NAME import FILE [--format F] [--move] [--prune]   # keyed upsert of a graph file
 toucan --canvas NAME meta --title T --description D
+toucan --canvas NAME notes [--all]              # sticky notes left for you, with what they're on/near
+toucan --canvas NAME notes resolve KEY --reply TEXT   # mark one handled (green + reply)
 ```
 
 `--canvas` can also come from `TOUCAN_CANVAS`. `exec`, `summary`, `screenshot` and `import` need a
@@ -24,6 +26,25 @@ browser tab open on the canvas; `graph`, `canvases`, `new` and `meta` work again
 
 Exec code is the body of an async function with `editor` (the engine's editor API), `tl` (the engine's
 module) and `toucan` (the helpers below) in scope.
+
+## Notes: sticky notes addressed to you
+
+On tldraw, **every sticky note (`note` shape) is addressed to the agent.** People pin one where a problem
+is ("same thing? merge", "missing: thumbnail step") instead of describing it in chat, so its position is
+part of the message. When asked to handle the notes:
+
+1. `toucan --canvas NAME notes` lists the open ones: key, text, box, the frame it is `inside`, the shapes
+   it is `on` (overlaps) and the ones `near` it (gap in px, and which side). Read "these" and "here" from
+   that: a note between two boxes is about those two; one in empty space is about a step to add there.
+2. Act on each note with your usual tools (`import`, `exec`), one note at a time.
+3. `toucan --canvas NAME notes resolve KEY --reply "merged Blog and Cut-down into Publish"` marks it done:
+   it turns green and gains your one-line reply. **Never delete or move a note.** If one is unclear, don't
+   resolve it: ask the person about it and leave it open.
+
+`notes --all` includes resolved ones; `summary` reports `openNotes` when there are any. In exec code:
+`toucan.notes({all})` and `toucan.resolveNote(key, reply)`. Don't use note shapes for your own diagram
+content (use `node`); a note is a person's message. Excalidraw has no sticky note, so notes are
+tldraw-only for now.
 
 ## What people see: presence and undo
 

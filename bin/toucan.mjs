@@ -15,6 +15,8 @@
 //     exec -e CODE | FILE | -     run JS in the live editor; `return` a JSON value
 //     screenshot [OUT.png]        PNG of the page (or --keys a,b; --max px, default 1800)
 //     script list | put NAME FILE | rm NAME     canvas scripts (persistent behaviour)
+//     notes [--all]               sticky notes left for the agent, with the shapes they sit on and near
+//     notes resolve KEY --reply TEXT   mark a note handled: green, plus a one-line reply (never deleted)
 //
 //   Any other command runs `toucan-<command>` from PATH with the same arguments and
 //   TOUCAN_CANVAS set, so extensions live in their own repos (see README, "Extending").
@@ -48,7 +50,7 @@ function die(msg) {
 	process.exit(1)
 }
 
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes']
 let client
 if (cmd && !BUILTIN.includes(cmd)) {
 	// An extension command: `toucan foo …` runs `toucan-foo …` from PATH.
@@ -155,6 +157,16 @@ switch (cmd) {
 		const tg = readGraph(file, flag('format'))
 		if (tg.warnings?.length) console.error(`toucan: ${tg.warnings.length} line(s) not understood:\n  ${tg.warnings.join('\n  ')}`)
 		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move: !!flag('move'), prune: !!flag('prune') })})`, 120000))
+		break
+	}
+	case 'notes': {
+		const all = argv.includes('--all') && (argv.splice(argv.indexOf('--all'), 1), true)
+		const reply = flag('reply')
+		const [, sub, key] = argv
+		const tldrawOnly = `if (toucan.engine !== 'tldraw') throw new Error('notes are a tldraw convention; this canvas runs ' + toucan.engine)\n`
+		if (sub === 'resolve' && key && typeof reply === 'string') print(await exec(`${tldrawOnly}return toucan.resolveNote(${JSON.stringify(key)}, ${JSON.stringify(reply)})`))
+		else if (!sub) print(await exec(`${tldrawOnly}return toucan.notes(${JSON.stringify({ all })})`))
+		else die('usage: notes [--all] | notes resolve KEY --reply TEXT')
 		break
 	}
 	case 'archive':
