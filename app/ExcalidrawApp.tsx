@@ -35,7 +35,8 @@ export function ExcalidrawApp() {
 		let ws: WebSocket | undefined,
 			closed = false,
 			ready = false,
-			flush: ReturnType<typeof setTimeout> | undefined
+			flush: ReturnType<typeof setTimeout> | undefined,
+			stopRelay = () => {}
 		const remember = (els: readonly any[]) => els.forEach((e) => known.current.set(e.id, e.version))
 		const apply = (incoming: any[], first: boolean) => {
 			const remote = restoreElements(incoming, null, { refreshDimensions: true, repairBindings: true })
@@ -51,6 +52,8 @@ export function ExcalidrawApp() {
 				if (msg.type === 'scene') {
 					apply(msg.elements, !ready)
 					if (!ready) {
+						// Agent code runs only once the scene is here, or it would see (and build on) an empty canvas.
+						stopRelay = connectRelay({ editor: api, tl: ex, toucan }, setRelay)
 						api.scrollToContent(undefined, { fitToContent: true })
 						// Labels measured before their font arrived are clipped to the fallback width: re-measure once it has.
 						const families = new Set(api.getSceneElements().filter((e: any) => e.type === 'text').map((e: any) => FONT_NAMES[e.fontFamily]).filter(Boolean))
@@ -82,7 +85,6 @@ export function ExcalidrawApp() {
 		})
 		connect()
 
-		const stopRelay = connectRelay({ editor: api, tl: ex, toucan }, setRelay)
 		const stopThumbnail = keepThumbnail(
 			async () => {
 				const els = api.getSceneElements()
