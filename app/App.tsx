@@ -27,11 +27,18 @@ function AgentPulses() {
 	const pulses = usePulses()
 	const groups = useValue(
 		'agent pulses',
-		() => pulses.map((p) => ({ p, boxes: p.ids.flatMap((id: any) => (editor.getShape(id) ? [editor.getShapePageBounds(id)!].map(({ x, y, w, h }) => ({ x, y, w, h })) : [])) })),
+		() =>
+			pulses.map((p) => {
+				const shapes = p.ids.map((id: any) => editor.getShape(id)).filter(Boolean)
+				const boxes = shapes.filter((s) => s.type !== 'arrow').map((s) => editor.getShapePageBounds(s)!).map(({ x, y, w, h }) => ({ x, y, w, h }))
+				// Arrows glow along their path, not their bounding box.
+				const lines = shapes.filter((s) => s.type === 'arrow').map((s) => editor.getShapePageTransform(s).applyToPoints(editor.getShapeGeometry(s).vertices).map(({ x, y }) => ({ x, y })))
+				return { p, boxes, lines }
+			}),
 		[editor, pulses],
 	)
 	const zoom = useValue('zoom', () => editor.getZoomLevel(), [editor])
-	return groups.map(({ p, boxes }) => <PulseBoxes key={p.key} pulse={p} boxes={boxes} scale={zoom} />)
+	return groups.map(({ p, boxes, lines }) => <PulseBoxes key={p.key} pulse={p} boxes={boxes} lines={lines} scale={zoom} />)
 }
 const components: TLComponents = { OnTheCanvas: AgentPulses }
 

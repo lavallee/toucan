@@ -185,5 +185,8 @@ body {
 	100% { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-	.toucan-pulse, .toucan-pulse-tag { animation-timing-function: steps(1, end); }
+	.toucan-pulse, .toucan-pulse-tag, .toucan-pulse-line { animation-timing-function: steps(1, end); }
+}
+.toucan-pulse-line {
+	animation: toucan-pulse 2.6s ease-out forwards;
 }
