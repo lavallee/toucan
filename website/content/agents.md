@@ -17,6 +17,7 @@ toucan new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE]
 toucan --canvas NAME graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   # no tab needed
 toucan --canvas NAME import FILE [--format F] [--move] [--prune]   # keyed upsert of a graph file
 toucan --canvas NAME meta --title T --description D
+toucan --canvas NAME selection                  # what people selected: resolve "this" / "these"
 toucan --canvas NAME notes [--all]              # sticky notes left for you, with what they're on/near
 toucan --canvas NAME notes resolve KEY --reply TEXT   # mark one handled (green + reply)
 ```
@@ -26,6 +27,15 @@ browser tab open on the canvas; `graph`, `canvases`, `new` and `meta` work again
 
 Exec code is the body of an async function with `editor` (the engine's editor API), `tl` (the engine's
 module) and `toucan` (the helpers below) in scope.
+
+## "This": what people have selected
+
+When a person says "this", "these" or "that box", look at what they selected before guessing:
+`toucan --canvas NAME selection` gives `here` (the selection in the tab your code runs in, which is the
+person's most recently focused tab) and, on tldraw, `others` (each other person's selection, by name,
+from live presence). `summary` also carries `selected` (keys) when anything is. If nothing is selected
+and the reference is unclear, ask. In exec code: `toucan.selection()`. Excalidraw tabs share no presence,
+so there `others` is always empty.
 
 ## Notes: sticky notes addressed to you
 

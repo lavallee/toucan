@@ -40,6 +40,9 @@ engines and canvas scripts. A deployment may add notes in its data directory's `
    by key; positions are kept unless `move: true`) or the engine's own API.
 4. **Check** with another `screenshot`, and say briefly what you changed.
 
+**"This".** When the person says "this" or "these", run `toucan --canvas NAME selection` to see what
+they have selected before guessing.
+
 **Notes.** On tldraw, every sticky note is a message to you. When asked to handle them, run
 `toucan --canvas NAME notes`, act on each one using what it sits on and near, then
 `toucan --canvas NAME notes resolve KEY --reply "what you did"`. Never delete a note.

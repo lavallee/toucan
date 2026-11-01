@@ -85,6 +85,7 @@ toucan [--canvas NAME] <command>
   exec -e CODE | FILE | -     run JS in the live editor; `return` a JSON value
   screenshot [OUT.png]        PNG of the page
   script list | put NAME FILE | rm NAME
+  selection                   what people have selected, to resolve "this"
   notes [--all]               sticky notes left for the agent, with the shapes they're on and near
   notes resolve KEY --reply T mark a note handled: green, plus a one-line reply
 ```

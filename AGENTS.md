@@ -17,6 +17,7 @@ node bin/toucan.mjs new NAME --title T [--engine tldraw|excalidraw] [--from CANV
 node bin/toucan.mjs --canvas NAME graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   # export; no tab needed
 node bin/toucan.mjs --canvas NAME import FILE [--format F] [--move] [--prune]   # keyed upsert of a graph file
 node bin/toucan.mjs --canvas NAME meta --title T --description D   # retitle / describe a canvas
+node bin/toucan.mjs --canvas NAME selection                # what people selected: resolve "this" / "these"
 node bin/toucan.mjs --canvas NAME notes [--all]            # sticky notes left for you, with what they're on/near
 node bin/toucan.mjs --canvas NAME notes resolve KEY --reply TEXT   # mark one handled (green + reply)
 ```
@@ -29,6 +30,15 @@ in its data directory; the chat agent is told where they are.
 
 Exec code is the body of an async function with `editor` (tldraw Editor), `tl` (the tldraw module)
 and `toucan` (helpers below) in scope. It needs an open browser tab on that canvas.
+
+## "This": what people have selected
+
+When a person says "this", "these" or "that box", look at what they selected before guessing:
+`toucan --canvas NAME selection` gives `here` (the selection in the tab your code runs in, which is the
+person's most recently focused tab) and, on tldraw, `others` (each other person's selection, by name,
+from live presence). `summary` also carries `selected` (keys) when anything is. If nothing is selected
+and the reference is unclear, ask. In exec code: `toucan.selection()`. Excalidraw tabs share no presence,
+so there `others` is always empty.
 
 ## Notes: sticky notes addressed to you
 

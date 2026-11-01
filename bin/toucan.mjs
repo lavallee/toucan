@@ -15,6 +15,7 @@
 //     exec -e CODE | FILE | -     run JS in the live editor; `return` a JSON value
 //     screenshot [OUT.png]        PNG of the page (or --keys a,b; --max px, default 1800)
 //     script list | put NAME FILE | rm NAME     canvas scripts (persistent behaviour)
+//     selection                   what people have selected (to resolve "this"), in the tab you run in and others
 //     notes [--all]               sticky notes left for the agent, with the shapes they sit on and near
 //     notes resolve KEY --reply TEXT   mark a note handled: green, plus a one-line reply (never deleted)
 //
@@ -50,7 +51,7 @@ function die(msg) {
 	process.exit(1)
 }
 
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection']
 let client
 if (cmd && !BUILTIN.includes(cmd)) {
 	// An extension command: `toucan foo …` runs `toucan-foo …` from PATH.
@@ -159,6 +160,9 @@ switch (cmd) {
 		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move: !!flag('move'), prune: !!flag('prune') })})`, 120000))
 		break
 	}
+	case 'selection':
+		print(await exec('return toucan.selection()'))
+		break
 	case 'notes': {
 		const all = argv.includes('--all') && (argv.splice(argv.indexOf('--all'), 1), true)
 		const reply = flag('reply')

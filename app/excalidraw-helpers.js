@@ -29,9 +29,11 @@ export function makeExcalidrawHelpers(api, ex) {
 			els = els.filter((e) => f && e.frameId === f.id)
 		}
 		const byId = new Map(live().map((e) => [e.id, e]))
+		const selected = selection().here.map((r) => r.key)
 		return {
 			engine: 'excalidraw',
 			count: els.length,
+			...(selected.length && { selected }),
 			shapes: els.slice(0, limit).map((e) => {
 				const row = { id: e.id, key: keyOf(e), type: e.type, x: Math.round(e.x), y: Math.round(e.y), w: Math.round(e.width), h: Math.round(e.height) }
 				const t = text(e)
@@ -46,6 +48,18 @@ export function makeExcalidrawHelpers(api, ex) {
 				return row
 			}),
 		}
+	}
+
+	/**
+	 * What the person selected in the tab running this code (`here`), to resolve "this" and "these".
+	 * Excalidraw tabs here share no presence, so other tabs' selections aren't visible (`others` is empty).
+	 */
+	function selection() {
+		const ids = api.getAppState().selectedElementIds ?? {}
+		const here = shapes()
+			.filter((e) => ids[e.id])
+			.map((e) => ({ key: keyOf(e), type: e.type, ...(text(e) && { text: text(e).slice(0, 120) }), x: Math.round(e.x), y: Math.round(e.y), w: Math.round(e.width), h: Math.round(e.height) }))
+		return { here, others: [] }
 	}
 
 	const graph = () => fromExcalidraw(all())
@@ -183,5 +197,5 @@ export function makeExcalidrawHelpers(api, ex) {
 		}
 	}
 
-	return { engine: 'excalidraw', get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, pulse, _track }
+	return { engine: 'excalidraw', get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, pulse, selection, _track }
 }

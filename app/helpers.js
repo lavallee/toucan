@@ -45,7 +45,26 @@ export function makeHelpers(editor) {
 			return row
 		})
 		const openNotes = notes().length
-		return { page: editor.getCurrentPage().name, count: shapes.length, ...(openNotes && { openNotes }), shapes: out }
+		const selected = editor.getSelectedShapes().map(keyOf)
+		return { page: editor.getCurrentPage().name, count: shapes.length, ...(selected.length && { selected }), ...(openNotes && { openNotes }), shapes: out }
+	}
+
+	/**
+	 * What people have selected, to resolve "this" and "these". `here`: the selection in the tab running
+	 * this code (the person's most recently focused tab). `others`: other tabs' selections on this page,
+	 * from tldraw presence, most recently active first.
+	 */
+	function selection() {
+		const row = (s) => {
+			const b = editor.getShapePageBounds(s)
+			return { key: keyOf(s), type: s.type, ...(text(s) && { text: text(s).slice(0, 120) }), x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.w), h: Math.round(b.h) }
+		}
+		const others = editor
+			.getCollaboratorsOnCurrentPage()
+			.filter((p) => p.selectedShapeIds.length)
+			.sort((a, b) => b.lastActivityTimestamp - a.lastActivityTimestamp)
+			.map((p) => ({ user: p.userName, shapes: p.selectedShapeIds.map((id) => editor.getShape(id)).filter(Boolean).map(row) }))
+		return { here: editor.getSelectedShapes().map(row), others }
 	}
 
 	// ---- notes: sticky notes on the canvas addressed to the agent ----------------------------------
@@ -389,5 +408,5 @@ export function makeHelpers(editor) {
 		}
 	}
 
-	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, _track }
+	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, _track }
 }
