@@ -40,6 +40,7 @@
     "typecheck": "tsc --noEmit -p .",
     "css:preflight": "node scripts/scope-preflight.mjs",
     "test": "node scripts/tg-check.mjs && node scripts/trail-check.mjs",
+    "test:headless": "node scripts/headless-e2e.mjs",
     "check": "node scripts/check-repo.mjs",
     "docs": "artoo build website"
   },
