@@ -12,6 +12,12 @@ it will usually write one. Install one yourself with:
 toucan --canvas NAME script put highlight-new highlight-new.js
 ```
 
+The repo ships an example in `examples/`. `tidy-arrows.js` adds a **Tidy arrows** button (tldraw) that
+re-routes every connected arrow (straight, curved either way, or elbow, whichever is best) so fewer
+arrows run through boxes or cross each other. It never moves a box, one click is one undo step, and the
+button reports the before and after counts. Agents can run it as `toucan.tidyArrows()`. How toucan could
+notice a repeated chore and *offer* a button like this is sketched in [Habits](habits.html).
+
 ## Extension commands
 
 `toucan X …` runs `toucan-X …` from your PATH, with `TOUCAN_CANVAS` (and `TOUCAN_URL`, if given) set.

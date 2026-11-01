@@ -140,3 +140,8 @@ a live overlay, a reaction to edits). Example:
 const off = editor.sideEffects.registerAfterChangeHandler('shape', (prev, next) => { /* … */ })
 return () => off()
 ```
+
+Example: `examples/tidy-arrows.js` adds a **Tidy arrows** button (tldraw) that re-routes connected arrows
+to run through fewer boxes and cross fewer arrows, without moving any box. When a person asks you to
+clean up arrows, or keeps asking for the same chore, offer to install it (`script put tidy-arrows
+examples/tidy-arrows.js`); once installed, `toucan.tidyArrows()` runs it and returns before/after counts.
