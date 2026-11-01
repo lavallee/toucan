@@ -21,10 +21,25 @@ toucan --canvas NAME proposals [accept|reject [KEY...]]   # dashed = proposed
 toucan --canvas NAME selection                  # what people selected: resolve "this" / "these"
 toucan --canvas NAME notes [--all]              # sticky notes left for you, with what they're on/near
 toucan --canvas NAME notes resolve KEY --reply TEXT   # mark one handled (green + reply)
+toucan --canvas NAME log [--since 2h]           # edits agents made while nobody had it open
 ```
 
 `--canvas` can also come from `TOUCAN_CANVAS`. `exec`, `summary`, `screenshot` and `import` need a
-browser tab open on the canvas; `graph`, `canvases`, `new` and `meta` work against the server alone.
+browser tab open on the canvas, unless the server runs in headless mode; `graph`, `canvases`, `new`,
+`meta` and `log` work against the server alone.
+
+## Headless mode
+
+If the server was started with `--headless`, `exec`, `summary`, `screenshot` and `import` still work
+when nobody has the canvas open: the server opens it in headless Chromium (the first call takes a
+second or two) and closes it when idle. A person's tab is always used first. `toucan canvases` shows
+`open` (people's tabs) and `headless` (whether the server's page is up). Without headless mode, those
+commands fail with "no browser tab has canvas … open"; ask the person to open the link from
+`toucan url --canvas NAME`.
+
+Nobody watches a headless edit land, so each one goes on the canvas's trail, and the next person to
+open the canvas is told how many there were. Make them easy to read: one purpose per exec, keyed
+shapes, and an `import` of a named Mermaid file rather than an opaque blob of code.
 
 Exec code is the body of an async function with `editor` (the engine's editor API), `tl` (the engine's
 module) and `toucan` (the helpers below) in scope.

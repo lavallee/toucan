@@ -2,13 +2,14 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Chat } from './Chat'
-import { canvasName } from './net'
+import { canvasName, headless } from './net'
+import { AwayNotice } from './AwayNotice'
 
 document.title = `${canvasName} · toucan`
 
 /** The page around any engine's canvas: the canvas, toucan's badge (index link, sync dot, chat toggle) and the chat panel. */
 export function CanvasFrame({ live, engine, badgeClassName, children }: { live: boolean; engine: string; badgeClassName?: string; children: ReactNode }) {
-	const [chatOpen, setChatOpen] = useState(() => localStorage.getItem('toucan.chat') !== 'closed')
+	const [chatOpen, setChatOpen] = useState(() => !headless && localStorage.getItem('toucan.chat') !== 'closed')
 	useEffect(() => {
 		try {
 			localStorage.setItem('toucan.chat', chatOpen ? 'open' : 'closed')
@@ -36,6 +37,7 @@ export function CanvasFrame({ live, engine, badgeClassName, children }: { live: 
 					<span className={cn('size-2 rounded-full', live ? 'bg-emerald-500' : 'bg-destructive')} title={live ? 'synced' : 'offline'} />
 					{canvasName}
 					{engine !== 'tldraw' && <span className="rounded bg-muted px-1 font-mono text-[10px]">{engine}</span>}
+					{!headless && <AwayNotice />}
 					<Button variant="outline" size="xs" onClick={() => setChatOpen((o) => !o)} aria-expanded={chatOpen}>
 						{chatOpen ? 'Hide chat' : 'Chat'}
 					</Button>

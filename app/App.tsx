@@ -4,7 +4,7 @@ import { Tldraw, inlineBase64AssetStore, react, useEditor, useValue, type Editor
 import 'tldraw/tldraw.css'
 import { useSync } from '@tldraw/sync'
 import { makeHelpers } from './helpers.js'
-import { wsUrl } from './net'
+import { wsUrl, headless } from './net'
 import { connectRelay, keepThumbnail, applySeed } from './relay'
 import { CanvasFrame } from './CanvasFrame'
 import { PulseBoxes, usePulses } from './pulses'
@@ -52,6 +52,8 @@ export function App() {
 		setHelpers({ toucan, subscribe: (f) => editor.store.listen(f) })
 		window.editor = editor
 		window.toucan = toucan
+		// The server's headless page shows up among the collaborators; say what it is.
+		if (headless) editor.user.updateUserPreferences({ name: 'agent (headless)' })
 		const stopRelay = connectRelay({ editor, tl, toucan }, setStatus)
 		const stopThumbnail = keepThumbnail(
 			async () => {

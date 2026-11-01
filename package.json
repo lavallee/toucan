@@ -39,7 +39,8 @@
     "start": "node server/index.mjs",
     "typecheck": "tsc --noEmit -p .",
     "css:preflight": "node scripts/scope-preflight.mjs",
-    "test": "node scripts/tg-check.mjs",
+    "test": "node scripts/tg-check.mjs && node scripts/trail-check.mjs",
+    "test:headless": "node scripts/headless-e2e.mjs",
     "check": "node scripts/check-repo.mjs",
     "docs": "artoo build website"
   },
@@ -73,5 +74,8 @@
     "typescript": "7.0.2",
     "vite": "^8.3.4"
   },
-  "private": true
+  "private": true,
+  "optionalDependencies": {
+    "playwright-core": "^1.64.1"
+  }
 }

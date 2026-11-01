@@ -17,7 +17,9 @@ toucan canvases          # lists canvases and how many tabs have each open
 
 If `toucan` is missing, toucan is not installed here (see https://lavallee.github.io/toucan/quickstart.html);
 say so rather than editing files by hand. `exec`, `summary`, `screenshot` and `import` need a tab open on
-the canvas; if none is, ask the person to open the link from `toucan url --canvas NAME`.
+the canvas, unless the server runs in headless mode (then it opens the canvas itself, and your edits go
+on the canvas's trail, `toucan log`); if they fail with "no browser tab", ask the person to open the
+link from `toucan url --canvas NAME`.
 
 ## The full guide
 

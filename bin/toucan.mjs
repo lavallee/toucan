@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // toucan CLI — how agents (Codex in the chat panel, or Claude Code / Codex / pi in a
-// terminal) read and change a canvas that is open in a browser tab.
+// terminal) read and change a canvas that is open in a browser tab (or, on a server started
+// with --headless, in the server's own headless page when no tab is open).
 //
 //   toucan [--canvas NAME] <command>
 //     url                         sign-in link for the browser (opens the index of canvases)
@@ -20,6 +21,7 @@
 //     selection                   what people have selected (to resolve "this"), in the tab you run in and others
 //     notes [--all]               sticky notes left for the agent, with the shapes they sit on and near
 //     notes resolve KEY --reply TEXT   mark a note handled: green, plus a one-line reply (never deleted)
+//     log [--since T]             edits agents made with no tab open (T: ISO time, or 30m, 2h, 7d ago)
 //
 //   Any other command runs `toucan-<command>` from PATH with the same arguments and
 //   TOUCAN_CANVAS set, so extensions live in their own repos (see README, "Extending").
@@ -53,7 +55,7 @@ function die(msg) {
 	process.exit(1)
 }
 
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log']
 let client
 if (cmd && !BUILTIN.includes(cmd)) {
 	// An extension command: `toucan foo …` runs `toucan-foo …` from PATH.
@@ -159,7 +161,9 @@ switch (cmd) {
 		if (!file) die('usage: import FILE [--format tg|jsoncanvas|mermaid|excalidraw] [--move] [--prune] [--propose]')
 		const tg = readGraph(file, flag('format'))
 		if (tg.warnings?.length) console.error(`toucan: ${tg.warnings.length} line(s) not understood:\n  ${tg.warnings.join('\n  ')}`)
-		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move: !!flag('move'), prune: !!flag('prune'), propose: !!flag('propose') })})`, 120000))
+		const opts = { move: !!flag('move'), prune: !!flag('prune'), propose: !!flag('propose') }
+		const label = ['import', file, opts.move && '--move', opts.prune && '--prune', opts.propose && '--propose'].filter(Boolean).join(' ')
+		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify(opts)})`, 120000, label))
 		break
 	}
 	case 'proposals': {
@@ -185,7 +189,15 @@ switch (cmd) {
 	case 'archive':
 		print(await call(cpath(`/archive`), { method: 'POST' }))
 		break
+	case 'log': {
+		// --since: an ISO time, epoch ms, or an age (30m, 2h, 7d).
+		let since = flag('since', '')
+		const age = /^(\d+)([smhd])$/.exec(since)
+		if (age) since = new Date(Date.now() - age[1] * { s: 1e3, m: 6e4, h: 36e5, d: 864e5 }[age[2]]).toISOString()
+		print((await call(cpath(`/log?since=${encodeURIComponent(since)}`))).entries)
+		break
+	}
 	default:
-		console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 20).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
+		console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 22).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
 		if (cmd) die(`unknown command ${cmd} (no toucan-${cmd} on PATH)`)
 }

@@ -71,6 +71,10 @@ point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works fr
 - **Proposals.** An agent can answer on the canvas with a proposal: dashed shapes (`import --propose`)
   that you accept (made solid) or reject (removed) from a bar above the canvas.
 - **An index of canvases** at `/`, with previews, titles, descriptions and which ones are open.
+- **Headless mode (opt-in).** Start the server with `--headless` and an agent can build or tend a canvas
+  nobody has open: the server opens it in headless Chromium, runs the code in the real editor there, and
+  closes it when idle. Those edits go on the canvas's trail (`toucan log`), and the next person to open
+  the canvas sees "N agent edits while you were away".
 
 ## CLI
 
@@ -91,9 +95,30 @@ toucan [--canvas NAME] <command>
   selection                   what people have selected, to resolve "this"
   notes [--all]               sticky notes left for the agent, with the shapes they're on and near
   notes resolve KEY --reply T mark a note handled: green, plus a one-line reply
+  log [--since T]             edits agents made with no tab open (T: ISO time, or an age: 30m, 2h, 7d)
 ```
 
-`--canvas` can also come from `TOUCAN_CANVAS`.
+`--canvas` can also come from `TOUCAN_CANVAS`. `exec`, `summary`, `screenshot` and `import` run in a
+browser tab on the canvas; without one they fail, unless the server runs in headless mode.
+
+## Headless mode
+
+```sh
+npx playwright-core install chromium   # once; playwright-core is an optional dependency
+npm start -- --headless                # or TOUCAN_HEADLESS=1 npm start
+```
+
+When an `exec` (and so `summary`, `screenshot` or `import`) finds no tab on the canvas, or no tab
+answers, the server opens the canvas itself in headless Chromium and runs the code there. It is the
+normal app, so edits go through the real editor and sync like anyone's. People's tabs always come
+first. There is at most one headless page per canvas and `TOUCAN_HEADLESS_MAX` in all; a page closes
+after `TOUCAN_HEADLESS_IDLE` seconds without an exec, and Chromium closes with the last page. Expect
+about half a second to two seconds for the first exec on a cold canvas and a few hundred MB of memory
+per open page.
+
+Edits made there are recorded in `<data>/<name>.log.jsonl`: time, source, what ran, and the keys
+added, updated or removed. `toucan log` prints them; the app shows "N agent edits while you were
+away" until you mark them seen (per browser).
 
 ## Extending
 
@@ -130,6 +155,9 @@ codex plugin add toucan@lyra-forge
 | `--host` / `TOUCAN_HOST` | `127.0.0.1` | interface to listen on |
 | `--port` / `TOUCAN_PORT` | `8893` | |
 | `--data` / `TOUCAN_DATA` | `canvases/` in the checkout | where canvases, scripts and previews live |
+| `--headless` / `TOUCAN_HEADLESS=1` | off | run exec in headless Chromium when no tab has the canvas open |
+| `TOUCAN_HEADLESS_IDLE` | `120` | seconds a headless page stays open after its last exec |
+| `TOUCAN_HEADLESS_MAX` | `2` | headless pages open at once (the least recently used idle one makes room) |
 | `TOUCAN_PUBLIC_HOST` | `127.0.0.1`, or the hostname when bound to all interfaces | host used in printed links |
 | `TOUCAN_CANVAS` | — | default canvas for the CLI |
 | `TOUCAN_URL` | from `~/.config/toucan/server.json` | server the CLI talks to |
@@ -144,6 +172,10 @@ loopback by default; only bind it wider (`--host 0.0.0.0`) on a network you trus
 HTTPS if it leaves your machine. Codex runs with `workspace-write` rooted at this checkout and
 `on-request` approval.
 
+Headless mode adds no new way in: the headless page is a local Chromium the server starts itself. It
+gets the token through a script that puts it in the page's (in-memory, throwaway) local storage, never
+in a URL, and then authenticates like any tab.
+
 ## Licences
 
 toucan's own code is [MIT](LICENSE). It builds on **tldraw**, which is *not* MIT: the
@@ -157,7 +189,8 @@ Excalidraw canvases need no key (MIT).
 ```sh
 npm run dev           # server + vite with hot reload
 npm run typecheck
-npm test              # round-trip checks for the graph converters
+npm test              # round-trip checks for the graph converters, and the trail
+npm run test:headless # end to end: a headless server builds canvases on both engines with no tab open
 npm run css:preflight # regenerate app/preflight.css after upgrading tailwindcss
 ```
 

@@ -1,7 +1,7 @@
 // toucan server: serves the canvas app, relays code from agents to the live editor,
 // persists canvases and their scripts, and hosts a Codex app-server chat.
 //
-//   node server/index.mjs [--host 0.0.0.0] [--port 8893] [--data DIR] [--dev]
+//   node server/index.mjs [--host 0.0.0.0] [--port 8893] [--data DIR] [--dev] [--headless]
 //
 // Canvases live in --data / TOUCAN_DATA (default: canvases/ in this checkout).
 //
@@ -18,6 +18,8 @@ import { fileURLToPath } from 'node:url'
 import { WebSocketServer } from 'ws'
 import { TLSocketRoom } from '@tldraw/sync-core'
 import { CodexChat } from './codex.mjs'
+import { createHeadless } from './headless.mjs'
+import * as trail from './trail.mjs'
 import { FORMATS, fromTldraw, fromExcalidraw, toExcalidrawElements } from '../lib/tg.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -61,30 +63,39 @@ const authed = (req, url) =>
 // ---- canvas connections ------------------------------------------------------
 // Tabs on a canvas share one synced document, so any of them can run agent code.
 // Try the most recently focused tab first; a tab that does not ack quickly (asleep,
-// crashed, stale build) is skipped for the next one.
+// crashed, stale build) is skipped for the next one. People's tabs always come first;
+// with --headless, the server's own headless page (server/headless.mjs) is the last resort.
 const tabs = new Map() // canvas -> [ws...] (most recently focused last)
 const pending = new Map() // exec id -> {resolve, reject, timer, acked}
 let execSeq = 0
 const ACK_MS = 2500
+const headless = createHeadless({ enabled: !!(args.headless ?? /^(1|true|yes)$/i.test(process.env.TOUCAN_HEADLESS ?? '')), port: PORT, token: TOKEN })
 
-function exec(canvas, code, timeoutMs = 30000) {
-	const candidates = [...(tabs.get(canvas) ?? [])].reverse().filter((w) => w.readyState === 1)
-	if (!candidates.length) return Promise.reject(new Error(`no browser tab has canvas "${canvas}" open — open ${publicUrl(canvas)}`))
+function exec(canvas, code, timeoutMs = 30000, label) {
+	const live = [...(tabs.get(canvas) ?? [])].reverse().filter((w) => w.readyState === 1)
+	const candidates = [...live.filter((w) => !w.headless), ...live.filter((w) => w.headless)]
+	if (!candidates.length && !headless.enabled) return Promise.reject(new Error(`no browser tab has canvas "${canvas}" open — open ${publicUrl(canvas)}`))
 	return new Promise((resolve, reject) => {
-		const tryTab = (i) => {
-			if (i >= candidates.length) return reject(new Error(`no open tab on "${canvas}" responded`))
+		const send = (ws, next) => {
 			const id = ++execSeq
-			const p = { resolve, reject, acked: false }
+			const done = (f) => (v) => (ws.headless && headless.touch(canvas, false), f(v))
+			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label }
+			if (ws.headless) headless.touch(canvas, true)
 			p.timer = setTimeout(() => {
 				pending.delete(id)
-				p.acked ? reject(new Error('exec timed out')) : tryTab(i + 1)
+				p.acked ? p.reject(new Error('exec timed out')) : (ws.headless && headless.touch(canvas, false), next())
 			}, ACK_MS)
 			p.extend = () => {
 				clearTimeout(p.timer)
-				p.timer = setTimeout(() => (pending.delete(id), reject(new Error('exec timed out'))), timeoutMs)
+				p.timer = setTimeout(() => (pending.delete(id), p.reject(new Error('exec timed out'))), timeoutMs)
 			}
 			pending.set(id, p)
-			candidates[i].send(JSON.stringify({ type: 'exec', id, code }))
+			ws.send(JSON.stringify({ type: 'exec', id, code }))
+		}
+		const tryTab = (i) => {
+			if (i < candidates.length) return send(candidates[i], () => tryTab(i + 1))
+			if (!headless.enabled || candidates.some((w) => w.headless)) return reject(new Error(`no open tab on "${canvas}" responded`))
+			headless.ensure(canvas).then((ws) => send(ws, () => reject(new Error(`the headless page on "${canvas}" did not respond`))), reject)
 		}
 		tryTab(0)
 	})
@@ -217,7 +228,8 @@ function describe(n, idx) {
 		pages,
 		seeded: existsSync(seedPath(n)),
 		scripts: listScripts(n).map((s) => s.name),
-		open: (tabs.get(n) ?? []).length,
+		open: (tabs.get(n) ?? []).filter((w) => !w.headless).length,
+		headless: headless.has(n),
 		thumb: existsSync(thumbPath(n)) ? Math.round(mtime(thumbPath(n))) : null,
 	}
 }
@@ -311,7 +323,7 @@ const server = createServer(async (req, res) => {
 			if ((tabs.get(canvas) ?? []).length || rooms.has(canvas) || scenes.has(canvas)) return json(res, 409, { error: `${canvas} is open in a tab — close it first` })
 			const dest = join(ARCHIVE, `${canvas}-${new Date().toISOString().replace(/[:.]/g, '-')}`)
 			mkdirSync(dest, { recursive: true })
-			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
+			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
 			const idx = readIndex()
 			if (idx[canvas]) writeFileSync(join(dest, 'index-entry.json'), JSON.stringify(idx[canvas], null, 2) + '\n')
 			delete idx[canvas]
@@ -325,13 +337,14 @@ const server = createServer(async (req, res) => {
 			return existsSync(docPath(canvas)) ? json(res, 200, JSON.parse(readFileSync(docPath(canvas), 'utf8'))) : json(res, 404, { error: 'empty' })
 		}
 		if (sub === 'exec' && req.method === 'POST') {
-			const { code, timeoutMs } = JSON.parse(await body(req))
+			const { code, timeoutMs, label } = JSON.parse(await body(req))
 			try {
-				return json(res, 200, { ok: true, result: await exec(canvas, code, timeoutMs) })
+				return json(res, 200, { ok: true, result: await exec(canvas, code, timeoutMs, label) })
 			} catch (e) {
 				return json(res, 200, { ok: false, error: String(e.message ?? e) })
 			}
 		}
+		if (sub === 'log' && req.method === 'GET') return json(res, 200, { entries: trail.read(CANVASES, canvas, url.searchParams.get('since')) })
 		if (sub === 'scripts' && req.method === 'GET') return json(res, 200, { scripts: listScripts(canvas) })
 		if (sub === 'scripts' && NAME.test(subName ?? '')) {
 			const file = join(scriptsDir(canvas), `${subName}.js`)
@@ -373,14 +386,15 @@ server.on('upgrade', (req, socket, head) => {
 		const canvas = url.searchParams.get('canvas')
 		if (url.pathname === '/ws/sync' && NAME.test(canvas ?? '') && engineOf(canvas) === 'tldraw') getRoom(canvas).handleSocketConnect({ sessionId: url.searchParams.get('sessionId') ?? randomBytes(8).toString('hex'), socket: ws })
 		else if (url.pathname === '/ws/excalidraw') onScene(ws, canvas)
-		else if (url.pathname === '/ws/canvas') onCanvas(ws, canvas)
+		else if (url.pathname === '/ws/canvas') onCanvas(ws, canvas, url.searchParams.get('headless'))
 		else if (url.pathname === '/ws/chat') chat.attach(ws, url.searchParams.get('canvas'))
 		else ws.close()
 	})
 })
 
-function onCanvas(ws, canvas) {
+function onCanvas(ws, canvas, nonce) {
 	if (!NAME.test(canvas ?? '')) return ws.close()
+	headless.claim(canvas, ws, nonce)
 	const list = tabs.get(canvas) ?? []
 	list.push(ws)
 	tabs.set(canvas, list)
@@ -399,6 +413,8 @@ function onCanvas(ws, canvas) {
 			const p = pending.get(msg.id)
 			pending.delete(msg.id)
 			clearTimeout(p.timer)
+			// Nobody watched a headless edit land, so it goes on the canvas's trail.
+			if (ws.headless) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
 			msg.ok ? p.resolve(msg.result) : p.reject(new Error(msg.error))
 			// Agent presence: the other tabs glow what this run added or changed (app/pulses.tsx).
 			const ids = msg.changes ? [...(msg.changes.added ?? []), ...(msg.changes.updated ?? [])].map((c) => c.id) : []
@@ -428,4 +444,7 @@ server.listen(PORT, HOST, () => {
 	console.log(`toucan listening on ${HOST}:${PORT}`)
 	console.log(`open: ${publicUrl()} — sign in once with \`node bin/toucan.mjs url\` (token stays out of logs)`)
 	if (args.dev) console.log(`dev: vite serves the app on :5173 and proxies /api and /ws here`)
+	if (headless.enabled) console.log(`headless: on — exec with no tab open runs in headless Chromium (idle close ${headless.idleMs / 1000}s, at most ${headless.max} pages)`)
 })
+// Close Chromium with the server (it would follow anyway once its pipe closes, but not always promptly).
+if (headless.enabled) for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => (setTimeout(() => process.exit(0), 3000).unref(), headless.shutdown().finally(() => process.exit(0))))
