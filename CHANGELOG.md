@@ -5,6 +5,10 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-01
+
+Collaboration channels beyond chat, and agents that can work with no tab open.
+
 ### Added
 
 - `examples/tidy-arrows.js`, a canvas script that adds a **Tidy arrows** button (tldraw): it re-routes connected arrows (straight, curved or elbow) so fewer run through boxes or cross, without moving a box, as one undo step. Also `toucan.tidyArrows()` for agents.
