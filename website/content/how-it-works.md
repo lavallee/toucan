@@ -17,8 +17,35 @@ the result. A tab that doesn't acknowledge within 2.5 seconds (asleep, crashed, 
 for the next one. Because edits go through a real editor, agent changes obey the same constraints, undo
 history and sync as yours, and you watch them land.
 
-The cost is that `exec` needs a tab open on the canvas. Reads that don't, such as `graph`, use the
-server's copy, which can trail a tab's edit by a moment.
+The cost is that `exec` needs a tab open on the canvas, unless the server runs in headless mode (below).
+Reads that don't, such as `graph`, use the server's copy, which can trail a tab's edit by a moment.
+
+## Headless mode and the trail
+
+With `--headless` (or `TOUCAN_HEADLESS=1`), the server can be its own tab. When an exec finds no tab on
+the canvas, or none acknowledges, the server starts Chromium through Playwright (`playwright-core`, an
+optional dependency), opens the ordinary app on that canvas in a fresh in-memory browser context, and
+waits for the page's relay socket. The page then syncs, renders and runs agent code exactly like a
+person's tab, so edits still go through the real editor, and `screenshot` is a real render.
+
+- **Authentication.** The page gets the token from an init script that writes it to the context's
+  local storage, the same place a person's sign-in link puts it; it never appears in a URL. The script
+  also sets a random nonce that the page's relay socket presents, so the server knows which socket is
+  the page it launched.
+- **Priority.** People's tabs are always tried first, most recently focused first; the headless page is
+  last. It isn't counted as an open tab in `toucan canvases`, and it doesn't load the chat.
+- **Lifetime.** One page per canvas, at most `TOUCAN_HEADLESS_MAX` (default 2) in all; when the cap is
+  reached, the least recently used idle page makes room. A page closes `TOUCAN_HEADLESS_IDLE` seconds
+  (default 120) after its last exec, and Chromium closes with the last page.
+- **Excalidraw** works the same way. A tab, headless or not, now takes agent code only after the
+  scene has arrived, so code never runs against an empty canvas.
+
+Headless edits land with nobody watching, which weakens "you watch them land". So the headless page
+compares each shape's summary before and after an exec and reports the keys created, changed and
+removed; the server appends an entry (time, `headless`, what ran, those keys) to
+`<data>/<name>.log.jsonl` whenever something changed. `toucan log [--since T]` prints the trail, and a
+person opening the canvas sees "N agent edits while you were away" with the list, until they mark it
+seen in that browser. Edits made while a person's tab took the exec aren't recorded: they watched.
 
 ## The graph layer
 

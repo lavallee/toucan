@@ -17,6 +17,7 @@ node bin/toucan.mjs new NAME --title T [--engine tldraw|excalidraw] [--from CANV
 node bin/toucan.mjs --canvas NAME graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   # export; no tab needed
 node bin/toucan.mjs --canvas NAME import FILE [--format F] [--move] [--prune]   # keyed upsert of a graph file
 node bin/toucan.mjs --canvas NAME meta --title T --description D   # retitle / describe a canvas
+node bin/toucan.mjs --canvas NAME log [--since 2h]           # edits agents made while nobody had it open
 ```
 
 There can be many canvases, each on one engine (tldraw or Excalidraw); name one with `--canvas` or `TOUCAN_CANVAS`. In the chat
@@ -26,7 +27,21 @@ Any other command `X` runs an extension, `toucan-X`, from PATH. A deployment can
 in its data directory; the chat agent is told where they are.
 
 Exec code is the body of an async function with `editor` (tldraw Editor), `tl` (the tldraw module)
-and `toucan` (helpers below) in scope. It needs an open browser tab on that canvas.
+and `toucan` (helpers below) in scope. It needs an open browser tab on that canvas, unless the server
+runs in headless mode.
+
+## Headless mode
+
+If the server was started with `--headless`, `exec`, `summary`, `screenshot` and `import` still work
+when nobody has the canvas open: the server opens it in headless Chromium (the first call takes a
+second or two) and closes it when idle. A person's tab is always used first. `toucan canvases` shows
+`open` (people's tabs) and `headless` (whether the server's page is up). Without headless mode, those
+commands fail with "no browser tab has canvas … open"; ask the person to open the link from
+`toucan url --canvas NAME`.
+
+Nobody watches a headless edit land, so each one goes on the canvas's trail, and the next person to
+open the canvas is told how many there were. Make them easy to read: one purpose per exec, keyed
+shapes, and an `import` of a named Mermaid file rather than an opaque blob of code.
 
 ## Graphs: the engine-neutral path
 

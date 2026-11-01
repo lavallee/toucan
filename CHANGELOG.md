@@ -5,6 +5,17 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Headless mode (`--headless` / `TOUCAN_HEADLESS=1`): with no browser tab on a canvas, `exec`, `summary`, `screenshot` and `import` run in a headless Chromium page the server opens itself (Playwright, via the optional `playwright-core` dependency), on both engines. People's tabs always come first; pages close when idle (`TOUCAN_HEADLESS_IDLE`) and are capped (`TOUCAN_HEADLESS_MAX`).
+- The trail: edits made in a headless page are recorded in `<data>/<name>.log.jsonl`, shown by `toucan log [--since T]`, and announced in the app as "N agent edits while you were away".
+- `npm run test:headless`, an end-to-end check of headless mode.
+
+### Changed
+
+- An Excalidraw tab accepts agent code only once its scene has loaded.
+- `toucan canvases` counts only people's tabs as `open`, and reports `headless`.
+
 ## [0.1.0] — 2026-10-27
 
 First public release.

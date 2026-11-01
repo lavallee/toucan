@@ -8,7 +8,7 @@ Agents: read AGENTS.md before changing a canvas. A person may be editing at the 
 
 - [Agent guide](https://github.com/lavallee/toucan/blob/main/AGENTS.md): CLI, `toucan.*` helpers, the graph format, engines, canvas scripts
 - [Quick start](https://lavallee.github.io/toucan/quickstart.html): install, sign in, first canvas
-- [How it works](https://lavallee.github.io/toucan/how-it-works.html): sync, exec relay, chat, security model
+- [How it works](https://lavallee.github.io/toucan/how-it-works.html): sync, exec relay, headless mode and the trail, chat, security model
 - [Extending](https://lavallee.github.io/toucan/extending.html): extension commands, deployment notes, configuration, licences
 
 ## Source
