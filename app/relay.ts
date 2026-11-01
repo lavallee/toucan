@@ -3,7 +3,7 @@
 // `tl` (the engine's module) and `toucan` (helpers with the same core: summary, graph, applyGraph,
 // screenshot, zoomTo, get, remove).
 
-import { wsUrl, canvasName, token } from './net'
+import { wsUrl, canvasName, token, headless } from './net'
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 
@@ -29,7 +29,7 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 	}
 
 	function connect() {
-		ws = new WebSocket(wsUrl('/ws/canvas'))
+		ws = new WebSocket(wsUrl('/ws/canvas') + (headless && `&headless=${headless}`))
 		const sock = ws
 		sock.onopen = () => setStatus('live')
 		sock.onclose = () => {

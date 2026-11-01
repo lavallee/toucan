@@ -6,6 +6,8 @@ if (hash.get('token')) {
 	history.replaceState(null, '', location.pathname + location.search)
 }
 export const token = localStorage.getItem('toucan.token') ?? ''
+// Set (to a nonce) only in the server's own headless page; see server/headless.mjs.
+export const headless: string = (window as any).__toucanHeadless ?? ''
 // No ?canvas= means the index of canvases.
 export const canvasName = new URLSearchParams(location.search).get('canvas') ?? ''
 

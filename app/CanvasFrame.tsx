@@ -2,13 +2,13 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Chat } from './Chat'
-import { canvasName } from './net'
+import { canvasName, headless } from './net'
 
 document.title = `${canvasName} · toucan`
 
 /** The page around any engine's canvas: the canvas, toucan's badge (index link, sync dot, chat toggle) and the chat panel. */
 export function CanvasFrame({ live, engine, badgeClassName, children }: { live: boolean; engine: string; badgeClassName?: string; children: ReactNode }) {
-	const [chatOpen, setChatOpen] = useState(() => localStorage.getItem('toucan.chat') !== 'closed')
+	const [chatOpen, setChatOpen] = useState(() => !headless && localStorage.getItem('toucan.chat') !== 'closed')
 	useEffect(() => {
 		try {
 			localStorage.setItem('toucan.chat', chatOpen ? 'open' : 'closed')
