@@ -41,7 +41,7 @@ person's tab, so edits still go through the real editor, and `screenshot` is a r
   scene has arrived, so code never runs against an empty canvas.
 
 Headless edits land with nobody watching, which weakens "you watch them land". So the headless page
-compares each shape's summary before and after an exec and reports the keys created, changed and
+compares each shape's summary before and after an exec and reports the shapes added, updated and
 removed; the server appends an entry (time, `headless`, what ran, those keys) to
 `<data>/<name>.log.jsonl` whenever something changed. `toucan log [--since T]` prints the trail, and a
 person opening the canvas sees "N agent edits while you were away" with the list, until they mark it

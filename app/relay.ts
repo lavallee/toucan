@@ -41,7 +41,8 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 			if (msg.type === 'scripts') return runScripts(msg.scripts)
 			if (msg.type !== 'exec') return
 			sock.send(JSON.stringify({ type: 'ack', id: msg.id }))
-			// A headless page reports which keys the code touched, for the canvas's trail.
+			// A headless page reports what the code added, updated or removed, for the canvas's trail.
+			// (Same `changes` shape as toucan._track() on the collaboration branch, which can replace this.)
 			const before = headless ? shapeStates(scope) : null
 			const changes = () => before && diffStates(before, shapeStates(scope))
 			try {
@@ -64,19 +65,20 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 	}
 }
 
-/** Each shape's summary row by key (or id), as JSON, to tell what an exec changed. */
-function shapeStates(scope: Scope): Map<string, string> {
+/** Each shape's summary row by id, to tell what an exec changed. */
+function shapeStates(scope: Scope): Map<string, any> {
 	try {
-		return new Map(scope.toucan.summary({ limit: Infinity }).shapes.map((s: any) => [s.key ?? s.id, JSON.stringify(s)]))
+		return new Map(scope.toucan.summary({ limit: Infinity }).shapes.map((s: any) => [s.id, s]))
 	} catch {
 		return new Map()
 	}
 }
-function diffStates(before: Map<string, string>, after: Map<string, string>) {
-	const created: string[] = [], changed: string[] = [], removed: string[] = []
-	for (const [k, v] of after) before.has(k) ? before.get(k) !== v && changed.push(k) : created.push(k)
-	for (const k of before.keys()) if (!after.has(k)) removed.push(k)
-	return { created, changed, removed }
+function diffStates(before: Map<string, any>, after: Map<string, any>) {
+	const row = (s: any) => ({ id: s.id, key: s.key ?? s.id, type: s.type, ...(s.text && { text: s.text.slice(0, 80) }) })
+	const added: any[] = [], updated: any[] = [], removed: any[] = []
+	for (const [id, s] of after) before.has(id) ? JSON.stringify(before.get(id)) !== JSON.stringify(s) && updated.push(row(s)) : added.push(row(s))
+	for (const [id, s] of before) if (!after.has(id)) removed.push(row(s))
+	return { added: added.slice(0, 200), updated: updated.slice(0, 200), removed: removed.slice(0, 200) }
 }
 
 /**

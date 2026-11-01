@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { api, canvasName } from './net'
 
-type Entry = { t: string; source: string; what: string; created: string[]; changed: string[]; removed: string[]; error?: string }
+type Entry = { t: string; source: string; what: string; added: string[]; updated: string[]; removed: string[]; error?: string }
 
 const SEEN = `toucan.seen.${canvasName}`
 
@@ -34,7 +34,7 @@ export function AwayNotice() {
 						{entries.map((e, i) => (
 							<li key={i}>
 								<span className="text-muted-foreground">{new Date(e.t).toLocaleString()}</span> <code className="font-mono break-all">{e.what}</code>
-								<div className="text-muted-foreground">{[keys('+', e.created), keys('~', e.changed), keys('−', e.removed)].filter(Boolean).join(' · ')}{e.error && ` · failed: ${e.error}`}</div>
+								<div className="text-muted-foreground">{[keys('+', e.added), keys('~', e.updated), keys('−', e.removed)].filter(Boolean).join(' · ')}{e.error && ` · failed: ${e.error}`}</div>
 							</li>
 						))}
 					</ol>

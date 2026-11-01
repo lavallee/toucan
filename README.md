@@ -108,7 +108,7 @@ about half a second to two seconds for the first exec on a cold canvas and a few
 per open page.
 
 Edits made there are recorded in `<data>/<name>.log.jsonl`: time, source, what ran, and the keys
-created, changed or removed. `toucan log` prints them; the app shows "N agent edits while you were
+added, updated or removed. `toucan log` prints them; the app shows "N agent edits while you were
 away" until you mark them seen (per browser).
 
 ## Extending
