@@ -19,6 +19,7 @@ import { WebSocketServer } from 'ws'
 import { TLSocketRoom } from '@tldraw/sync-core'
 import { CodexChat } from './codex.mjs'
 import { createHeadless } from './headless.mjs'
+import * as trail from './trail.mjs'
 import { FORMATS, fromTldraw, fromExcalidraw, toExcalidrawElements } from '../lib/tg.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -322,7 +323,7 @@ const server = createServer(async (req, res) => {
 			if ((tabs.get(canvas) ?? []).length || rooms.has(canvas) || scenes.has(canvas)) return json(res, 409, { error: `${canvas} is open in a tab — close it first` })
 			const dest = join(ARCHIVE, `${canvas}-${new Date().toISOString().replace(/[:.]/g, '-')}`)
 			mkdirSync(dest, { recursive: true })
-			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
+			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
 			const idx = readIndex()
 			if (idx[canvas]) writeFileSync(join(dest, 'index-entry.json'), JSON.stringify(idx[canvas], null, 2) + '\n')
 			delete idx[canvas]
@@ -336,13 +337,14 @@ const server = createServer(async (req, res) => {
 			return existsSync(docPath(canvas)) ? json(res, 200, JSON.parse(readFileSync(docPath(canvas), 'utf8'))) : json(res, 404, { error: 'empty' })
 		}
 		if (sub === 'exec' && req.method === 'POST') {
-			const { code, timeoutMs } = JSON.parse(await body(req))
+			const { code, timeoutMs, label } = JSON.parse(await body(req))
 			try {
-				return json(res, 200, { ok: true, result: await exec(canvas, code, timeoutMs) })
+				return json(res, 200, { ok: true, result: await exec(canvas, code, timeoutMs, label) })
 			} catch (e) {
 				return json(res, 200, { ok: false, error: String(e.message ?? e) })
 			}
 		}
+		if (sub === 'log' && req.method === 'GET') return json(res, 200, { entries: trail.read(CANVASES, canvas, url.searchParams.get('since')) })
 		if (sub === 'scripts' && req.method === 'GET') return json(res, 200, { scripts: listScripts(canvas) })
 		if (sub === 'scripts' && NAME.test(subName ?? '')) {
 			const file = join(scriptsDir(canvas), `${subName}.js`)
@@ -411,6 +413,8 @@ function onCanvas(ws, canvas, nonce) {
 			const p = pending.get(msg.id)
 			pending.delete(msg.id)
 			clearTimeout(p.timer)
+			// Nobody watched a headless edit land, so it goes on the canvas's trail.
+			if (ws.headless) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
 			msg.ok ? p.resolve(msg.result) : p.reject(new Error(msg.error))
 		}
 	})

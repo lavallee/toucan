@@ -41,12 +41,15 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 			if (msg.type === 'scripts') return runScripts(msg.scripts)
 			if (msg.type !== 'exec') return
 			sock.send(JSON.stringify({ type: 'ack', id: msg.id }))
+			// A headless page reports which keys the code touched, for the canvas's trail.
+			const before = headless ? shapeStates(scope) : null
+			const changes = () => before && diffStates(before, shapeStates(scope))
 			try {
 				const fn = new AsyncFunction('editor', 'tl', 'toucan', msg.code)
 				const result = await fn(scope.editor, scope.tl, scope.toucan)
-				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: true, result: JSON.parse(JSON.stringify(result ?? null)) }))
+				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: true, result: JSON.parse(JSON.stringify(result ?? null)), changes: changes() }))
 			} catch (e: any) {
-				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: false, error: `${e.name}: ${e.message}` }))
+				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: false, error: `${e.name}: ${e.message}`, changes: changes() }))
 			}
 		}
 	}
@@ -59,6 +62,21 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 		window.removeEventListener('focus', onFocus)
 		for (const [, cleanup] of cleanups) try { cleanup?.() } catch {}
 	}
+}
+
+/** Each shape's summary row by key (or id), as JSON, to tell what an exec changed. */
+function shapeStates(scope: Scope): Map<string, string> {
+	try {
+		return new Map(scope.toucan.summary({ limit: Infinity }).shapes.map((s: any) => [s.key ?? s.id, JSON.stringify(s)]))
+	} catch {
+		return new Map()
+	}
+}
+function diffStates(before: Map<string, string>, after: Map<string, string>) {
+	const created: string[] = [], changed: string[] = [], removed: string[] = []
+	for (const [k, v] of after) before.has(k) ? before.get(k) !== v && changed.push(k) : created.push(k)
+	for (const k of before.keys()) if (!after.has(k)) removed.push(k)
+	return { created, changed, removed }
 }
 
 /**

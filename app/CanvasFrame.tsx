@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Chat } from './Chat'
 import { canvasName, headless } from './net'
+import { AwayNotice } from './AwayNotice'
 
 document.title = `${canvasName} · toucan`
 
@@ -36,6 +37,7 @@ export function CanvasFrame({ live, engine, badgeClassName, children }: { live: 
 					<span className={cn('size-2 rounded-full', live ? 'bg-emerald-500' : 'bg-destructive')} title={live ? 'synced' : 'offline'} />
 					{canvasName}
 					{engine !== 'tldraw' && <span className="rounded bg-muted px-1 font-mono text-[10px]">{engine}</span>}
+					{!headless && <AwayNotice />}
 					<Button variant="outline" size="xs" onClick={() => setChatOpen((o) => !o)} aria-expanded={chatOpen}>
 						{chatOpen ? 'Hide chat' : 'Chat'}
 					</Button>
