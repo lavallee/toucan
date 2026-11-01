@@ -17,6 +17,13 @@ the result. A tab that doesn't acknowledge within 2.5 seconds (asleep, crashed, 
 for the next one. Because edits go through a real editor, agent changes obey the same constraints, undo
 history and sync as yours, and you watch them land.
 
+Each run is made visible and reversible. The tab that runs it records which shapes it added, changed
+or removed (from its own store changes). Those shapes glow for a moment, tagged "agent", in that tab, and
+the server forwards their ids to the canvas's other tabs, which glow them too. On tldraw the run starts
+with a history stopping point, so one Cmd-Z in the tab that ran it undoes the whole run, and two runs in a
+row are two steps. (Before, back-to-back runs merged into one undo step.) tldraw's undo is per tab, so
+other tabs can't undo it. On Excalidraw each `updateScene` call is an undo step, and an import makes one.
+
 The cost is that `exec` needs a tab open on the canvas. Reads that don't, such as `graph`, use the
 server's copy, which can trail a tab's edit by a moment.
 

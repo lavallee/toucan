@@ -6,6 +6,7 @@ import { makeExcalidrawHelpers } from './excalidraw-helpers.js'
 import { wsUrl } from './net'
 import { connectRelay, keepThumbnail } from './relay'
 import { CanvasFrame } from './CanvasFrame'
+import { ExcalidrawPulses } from './pulses'
 
 // Fonts are served from our own dist/ (copied there at build time), not a CDN.
 ;(window as any).EXCALIDRAW_ASSET_PATH = `${location.origin}/excalidraw/`
@@ -110,6 +111,7 @@ export function ExcalidrawApp() {
 		<CanvasFrame live={relay === 'live' && sync === 'synced'} engine="excalidraw" badgeClassName="bottom-16 left-2">
 			<div className="absolute inset-0">
 				<Excalidraw excalidrawAPI={setApi} theme={dark ? 'dark' : 'light'} UIOptions={{ canvasActions: { loadScene: false } }} />
+				<ExcalidrawPulses api={api} />
 			</div>
 		</CanvasFrame>
 	)

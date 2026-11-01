@@ -8,6 +8,7 @@
 import ELK from 'elkjs/lib/elk.bundled.js'
 import { createShapeId, createBindingId, toRichText, renderPlaintextFromRichText, fitFrameToContent } from 'tldraw'
 import { fromTldraw, layoutMissing } from '../lib/tg.mjs'
+import { pulse as glow } from './pulses'
 
 const elk = new ELK()
 
@@ -297,5 +298,38 @@ export function makeHelpers(editor) {
 		return btoa(s)
 	}
 
-	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot }
+	/** Make shapes (ids or keys) glow for a moment in this tab, as agent edits do in every tab. */
+	function pulse(idsOrKeys) {
+		glow([idsOrKeys].flat().map((k) => (String(k).startsWith('shape:') ? k : idFor(k))))
+	}
+
+	/**
+	 * Internal (the exec relay): start recording this tab's own shape changes; the returned function
+	 * stops and gives { added, updated, removed }, each a list of { id, key, type, text }.
+	 * The run is also one undo step: a history stopping point goes before it, so one Cmd-Z in the tab
+	 * that ran it undoes the whole agent action, and it doesn't merge with the action before it. (What
+	 * comes after sets its own stopping point: tldraw's tools mark each interaction, and so does the next exec.)
+	 */
+	function _track() {
+		editor.markHistoryStoppingPoint('agent exec')
+		const seen = { added: new Map(), updated: new Map(), removed: new Map() }
+		const row = (s) => ({ id: s.id, key: s.meta?.key ?? s.id.replace(/^shape:/, ''), type: s.type, ...(text(s) && { text: text(s).slice(0, 80) }) })
+		// Side effects fire synchronously (store.listen is batched), and 'user' means this tab's own changes.
+		const offs = [
+			editor.sideEffects.registerAfterCreateHandler('shape', (s, source) => source === 'user' && seen.added.set(s.id, s)),
+			editor.sideEffects.registerAfterChangeHandler('shape', (_, s, source) => source === 'user' && !seen.added.has(s.id) && seen.updated.set(s.id, s)),
+			editor.sideEffects.registerAfterDeleteHandler('shape', (s, source) => {
+				if (source !== 'user' || seen.added.delete(s.id)) return // made and removed in one run: nothing to report
+				seen.updated.delete(s.id)
+				seen.removed.set(s.id, s)
+			}),
+		]
+		return () => {
+			offs.forEach((off) => off())
+			const list = (m, cap = 200) => [...m.values()].slice(0, cap).map(row)
+			return { added: list(seen.added), updated: list(seen.updated), removed: list(seen.removed) }
+		}
+	}
+
+	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, _track }
 }

@@ -400,6 +400,9 @@ function onCanvas(ws, canvas) {
 			pending.delete(msg.id)
 			clearTimeout(p.timer)
 			msg.ok ? p.resolve(msg.result) : p.reject(new Error(msg.error))
+			// Agent presence: the other tabs glow what this run added or changed (app/pulses.tsx).
+			const ids = msg.changes ? [...(msg.changes.added ?? []), ...(msg.changes.updated ?? [])].map((c) => c.id) : []
+			if (ids.length) for (const other of tabs.get(canvas) ?? []) if (other !== ws && other.readyState === 1) other.send(JSON.stringify({ type: 'agent-edit', ids }))
 		}
 	})
 	ws.on('close', () => tabs.set(canvas, (tabs.get(canvas) ?? []).filter((w) => w !== ws)))

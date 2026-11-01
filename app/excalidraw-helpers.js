@@ -7,6 +7,7 @@
 
 import ELK from 'elkjs/lib/elk.bundled.js'
 import { fromExcalidraw, toExcalidrawElements, wrap, layoutMissing } from '../lib/tg.mjs'
+import { pulse as glow } from './pulses'
 
 const elk = new ELK()
 
@@ -149,5 +150,38 @@ export function makeExcalidrawHelpers(api, ex) {
 		return btoa(s)
 	}
 
-	return { engine: 'excalidraw', get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot }
+	/** Make elements (ids or keys) glow for a moment in this tab, as agent edits do in every tab. */
+	function pulse(idsOrKeys) {
+		const want = new Set([idsOrKeys].flat())
+		glow(shapes().filter((e) => want.has(e.id) || want.has(keyOf(e))).map((e) => e.id))
+	}
+
+	/**
+	 * Internal (the exec relay): note every element's version now; the returned function lists the
+	 * shapes (not bound labels) added, changed or deleted since, as { id, key, type, text }.
+	 */
+	function _track() {
+		const before = new Map(all().map((e) => [e.id, e.version]))
+		return () => {
+			const out = { added: [], updated: [], removed: [] }
+			const els = all()
+			const byId = new Map(els.map((e) => [e.id, e]))
+			const touched = new Set()
+			for (const e of els) {
+				if ((before.get(e.id) ?? -1) === e.version) continue
+				// A changed label counts as a change to its box.
+				touched.add(e.type === 'text' && e.containerId && byId.has(e.containerId) ? e.containerId : e.id)
+			}
+			for (const id of touched) {
+				const e = byId.get(id)
+				const row = { id, key: keyOf(e), type: e.type, ...(text(e) && { text: text(e).slice(0, 80) }) }
+				if (e.isDeleted) before.has(id) && out.removed.push(row)
+				else (before.has(id) ? out.updated : out.added).push(row)
+			}
+			for (const k of ['added', 'updated', 'removed']) out[k] = out[k].slice(0, 200)
+			return out
+		}
+	}
+
+	return { engine: 'excalidraw', get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, pulse, _track }
 }

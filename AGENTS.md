@@ -28,6 +28,16 @@ in its data directory; the chat agent is told where they are.
 Exec code is the body of an async function with `editor` (tldraw Editor), `tl` (the tldraw module)
 and `toucan` (helpers below) in scope. It needs an open browser tab on that canvas.
 
+## What people see: presence and undo
+
+- **Your edits glow.** Shapes an exec adds or changes get a short violet halo, tagged "agent", in every
+  open tab (both engines). `toucan.pulse(keys)` does the same on demand, to point at something.
+- **One exec is one undo step** on tldraw: one Cmd-Z in the tab that ran it undoes the whole run, and it
+  never merges with the person's previous action. So make one exec per idea (a feature, a fix) rather
+  than many tiny ones, or one large one that mixes unrelated changes. Undo is per tab: another tab's
+  Cmd-Z doesn't undo your run. On Excalidraw each `updateScene` call is its own undo step
+  (`applyGraph` makes one), so batch your element changes into a single `updateScene`.
+
 ## Graphs: the engine-neutral path
 
 A canvas reads and writes as a *toucan graph* (TG, `lib/tg.mjs`): `groups` (frames), `nodes` (boxes) and
@@ -61,7 +71,7 @@ Mermaid flowcharts, DOT (export only) and `.excalidraw`.
 - `node(key, {x,y,w,h,text,geo,color,fill,dash,size,parent,meta,move})` — create/update a box. Existing
   boxes keep their position unless `move: true`. `parent` is a frame key; x/y are then frame-relative.
 - `frame(key, {x,y,w,h,name,color})`, `edge(fromKey, toKey, {text,color,dash,kind,bend})` — bound arrow.
-- `get(key)`, `idFor(key)`, `text(shape)`, `find(q)`, `summary({within})`, `remove(...keys)`, `zoomTo(keys?)`
+- `get(key)`, `idFor(key)`, `text(shape)`, `find(q)`, `summary({within})`, `remove(...keys)`, `zoomTo(keys?)`, `pulse(keys)`
 - `await layout(keys | null, {within: frameKey, direction: 'RIGHT'|'DOWN', spacing, layerSpacing})` — ELK.
 
 Colours: black grey light-violet violet blue light-blue yellow orange green light-green light-red red white.

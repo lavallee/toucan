@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react'
 import * as tl from 'tldraw'
-import { Tldraw, inlineBase64AssetStore, react, type Editor } from 'tldraw'
+import { Tldraw, inlineBase64AssetStore, react, useEditor, useValue, type Editor, type TLComponents } from 'tldraw'
 import 'tldraw/tldraw.css'
 import { useSync } from '@tldraw/sync'
 import { makeHelpers } from './helpers.js'
 import { wsUrl } from './net'
 import { connectRelay, keepThumbnail, applySeed } from './relay'
 import { CanvasFrame } from './CanvasFrame'
+import { PulseBoxes, usePulses } from './pulses'
 
 declare global {
 	interface Window {
@@ -18,6 +19,20 @@ declare global {
 // The chat panel's shadcn theme follows tldraw's resolved colour mode (which defaults to the OS).
 const setDark = (dark: boolean) => document.documentElement.classList.toggle('dark', dark)
 setDark(matchMedia('(prefers-color-scheme: dark)').matches)
+
+/** Halos on shapes an agent just changed, drawn in page space on the canvas. */
+function AgentPulses() {
+	const editor = useEditor()
+	const pulses = usePulses()
+	const groups = useValue(
+		'agent pulses',
+		() => pulses.map((p) => ({ p, boxes: p.ids.flatMap((id: any) => (editor.getShape(id) ? [editor.getShapePageBounds(id)!].map(({ x, y, w, h }) => ({ x, y, w, h })) : [])) })),
+		[editor, pulses],
+	)
+	const zoom = useValue('zoom', () => editor.getZoomLevel(), [editor])
+	return groups.map(({ p, boxes }) => <PulseBoxes key={p.key} pulse={p} boxes={boxes} scale={zoom} />)
+}
+const components: TLComponents = { OnTheCanvas: AgentPulses }
 
 /** The tldraw engine. */
 export function App() {
@@ -52,7 +67,7 @@ export function App() {
 
 	return (
 		<CanvasFrame live={status === 'live' && store.status === 'synced-remote'} engine="tldraw">
-			<Tldraw store={store} onMount={onMount} colorScheme="system" licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY} />
+			<Tldraw store={store} onMount={onMount} components={components} colorScheme="system" licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY} />
 		</CanvasFrame>
 	)
 }

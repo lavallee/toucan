@@ -156,3 +156,34 @@ html {
 body {
   background: var(--background);
 }
+
+/* Agent presence (app/pulses.tsx): a halo on shapes an agent just changed. */
+.toucan-pulse {
+	position: absolute;
+	pointer-events: none;
+	box-shadow: 0 0 0 var(--pulse-w, 3px) rgb(139 92 246 / 0.9), 0 0 18px 4px rgb(139 92 246 / 0.45);
+	animation: toucan-pulse 2.6s ease-out forwards;
+}
+.toucan-pulse-tag {
+	position: absolute;
+	pointer-events: none;
+	padding: 1px 6px;
+	margin-bottom: 4px;
+	border-radius: 4px;
+	background: rgb(139 92 246);
+	color: white;
+	font: 600 11px/16px system-ui, sans-serif;
+	white-space: nowrap;
+	animation: toucan-pulse 2.6s ease-out forwards;
+}
+@keyframes toucan-pulse {
+	0% { opacity: 0; }
+	12% { opacity: 1; }
+	30% { opacity: 0.55; }
+	45% { opacity: 1; }
+	75% { opacity: 0.9; }
+	100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.toucan-pulse, .toucan-pulse-tag { animation-timing-function: steps(1, end); }
+}

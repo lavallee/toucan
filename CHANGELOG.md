@@ -5,6 +5,14 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Agent presence: shapes an exec adds or changes glow briefly, tagged "agent", in every open tab, on tldraw and Excalidraw. `toucan.pulse(keys)` does it on demand.
+
+### Changed
+
+- On tldraw, each exec is one undo step in the tab that ran it. Back-to-back execs used to merge into a single Cmd-Z.
+
 ## [0.1.0] — 2026-10-27
 
 First public release.

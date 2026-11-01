@@ -39,14 +39,24 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 		sock.onmessage = async (ev) => {
 			const msg = JSON.parse(ev.data)
 			if (msg.type === 'scripts') return runScripts(msg.scripts)
+			// Another tab ran agent code: glow what it added or changed (agent presence, app/pulses.tsx).
+			if (msg.type === 'agent-edit') return scope.toucan.pulse?.(msg.ids)
 			if (msg.type !== 'exec') return
 			sock.send(JSON.stringify({ type: 'ack', id: msg.id }))
+			// One undo step per run, and a record of which shapes it added, changed or removed.
+			const done = scope.toucan._track?.()
+			const finish = () => {
+				const changes = done?.()
+				const ids = changes ? [...changes.added, ...changes.updated].map((c: any) => c.id) : []
+				if (ids.length) scope.toucan.pulse?.(ids)
+				return changes
+			}
 			try {
 				const fn = new AsyncFunction('editor', 'tl', 'toucan', msg.code)
 				const result = await fn(scope.editor, scope.tl, scope.toucan)
-				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: true, result: JSON.parse(JSON.stringify(result ?? null)) }))
+				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: true, result: JSON.parse(JSON.stringify(result ?? null)), changes: finish() }))
 			} catch (e: any) {
-				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: false, error: `${e.name}: ${e.message}` }))
+				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: false, error: `${e.name}: ${e.message}`, changes: finish() }))
 			}
 		}
 	}
