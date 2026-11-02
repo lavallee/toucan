@@ -8,14 +8,37 @@ import { connectRelay, keepThumbnail } from './relay'
 import { CanvasFrame } from './CanvasFrame'
 import { ExcalidrawPulses } from './pulses'
 import { ProposalBar } from './ProposalBar'
+import { getAppearance, useAppearance } from './theme'
 
 // Fonts are served from our own dist/ (copied there at build time), not a CDN.
 ;(window as any).EXCALIDRAW_ASSET_PATH = `${location.origin}/excalidraw/`
 
 const FONT_NAMES: Record<number, string> = Object.fromEntries(Object.entries(ex.FONT_FAMILY).map(([name, id]) => [id, name]))
 
-const dark = matchMedia('(prefers-color-scheme: dark)').matches
-document.documentElement.classList.toggle('dark', dark)
+// "Clean" lettering: what people draw here starts in a plain font with clean lines. Unlike on tldraw,
+// Excalidraw's fonts can't be swapped underneath existing text; the "Straighten sketchy lines" routine converts it.
+const initialAppState = getAppearance().lettering === 'clean' ? { currentItemFontFamily: ex.FONT_FAMILY.Helvetica, currentItemRoughness: 0 } : {}
+
+/** A saved version, read-only, stepped through without touching the live canvas. */
+function VersionPreview({ data }: { data: any }) {
+	const [api, setApi] = useState<any>(null)
+	const { dark } = useAppearance()
+	const scene = (d: any) => restoreElements(d.elements.filter((e: any) => !e.isDeleted), null, { refreshDimensions: true, repairBindings: true })
+	// The first version arrives as initialData (Excalidraw would overwrite a scene set while it starts up); steps follow by update.
+	const [first] = useState(() => ({ elements: scene(data) }))
+	const shown = useRef(data)
+	useEffect(() => {
+		if (!api) return
+		const t = setTimeout(() => api.scrollToContent(undefined, { fitToContent: true }), 100)
+		return () => clearTimeout(t)
+	}, [api])
+	useEffect(() => {
+		if (!api || shown.current === data) return
+		shown.current = data
+		api.updateScene({ elements: scene(data), captureUpdate: CaptureUpdateAction.NEVER })
+	}, [api, data])
+	return <Excalidraw excalidrawAPI={setApi} initialData={first} viewModeEnabled theme={dark ? 'dark' : 'light'} UIOptions={{ canvasActions: { loadScene: false } }} />
+}
 
 /**
  * The Excalidraw engine. The server keeps one element list per canvas (/ws/excalidraw): this tab
@@ -28,6 +51,7 @@ export function ExcalidrawApp() {
 	const [sync, setSync] = useState('connecting')
 	const known = useRef(new Map<string, number>()) // element id -> version last sent or received
 	const [helpers, setHelpers] = useState<{ toucan: any; subscribe: (f: () => void) => () => void } | null>(null)
+	const { dark } = useAppearance()
 
 	useEffect(() => {
 		if (!api) return
@@ -113,9 +137,9 @@ export function ExcalidrawApp() {
 	}, [api])
 
 	return (
-		<CanvasFrame live={relay === 'live' && sync === 'synced'} engine="excalidraw" badgeClassName="bottom-16 left-2">
+		<CanvasFrame live={relay === 'live' && sync === 'synced'} engine="excalidraw" preview={VersionPreview}>
 			<div className="absolute inset-0">
-				<Excalidraw excalidrawAPI={setApi} theme={dark ? 'dark' : 'light'} UIOptions={{ canvasActions: { loadScene: false } }} />
+				<Excalidraw excalidrawAPI={setApi} theme={dark ? 'dark' : 'light'} initialData={{ appState: initialAppState }} UIOptions={{ canvasActions: { loadScene: false } }} />
 				<ExcalidrawPulses api={api} />
 				{helpers && <ProposalBar {...helpers} />}
 			</div>

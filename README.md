@@ -57,7 +57,7 @@ point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works fr
 
 - **Hand edits and agent edits on one document.** Tabs on any machine share a live document; agents
   change it through an exec relay into the most recently focused tab, so you see every edit land.
-- **Chat.** The right-hand panel talks to Codex. It inspects the canvas, makes edits, and can install
+- **Chat.** A panel talks to Codex; dock it left, right or along the bottom, or float it over the canvas. It inspects the canvas, makes edits, and can install
   *canvas scripts* — persistent behaviour (a button, a live overlay, a reaction to edits) that runs
   whenever the canvas loads. Anything outside Codex's sandbox asks you first.
 - **Two engines.** Each canvas is tldraw (default) or Excalidraw. Copying a canvas converts it between them.
@@ -70,6 +70,13 @@ point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works fr
   green with a one-line reply; notes are never deleted.
 - **Proposals.** An agent can answer on the canvas with a proposal: dashed shapes (`import --propose`)
   that you accept (made solid) or reject (removed) from a bar above the canvas.
+- **History.** Every canvas keeps its own versions: after each agent run, when your edits go quiet, and whenever
+  you name one. Step back and forward through them read-only, and restore any of them for everyone; what was
+  there is saved first, so a restore can be undone too. `toucan versions` does the same from the CLI.
+- **Routines.** Bank a chore once and run it on any canvas from the Routines menu or `toucan routine run`, as
+  one undo step. Ask the chat to "bank that", or paste code. Tidy arrows and Straighten sketchy lines ship with toucan.
+- **Your look.** A light/dark/system override, and clean lettering by default in place of tldraw's handwritten
+  font (switch back under Appearance). It's per browser, and it doesn't change the canvases.
 - **An index of canvases** at `/`, with previews, titles, descriptions and which ones are open.
 - **Headless mode (opt-in).** Start the server with `--headless` and an agent can build or tend a canvas
   nobody has open: the server opens it in headless Chromium, runs the code in the real editor there, and
@@ -88,7 +95,7 @@ toucan [--canvas NAME] <command>
   meta [--title T] [--description D]
   archive                     move a canvas aside (nothing is deleted)
   summary [--within KEY]      compact JSON of shapes
-  exec -e CODE | FILE | -     run JS in the live editor; `return` a JSON value
+  exec -e CODE | FILE | - [--label T]   run JS in the live editor; `return` a JSON value
   screenshot [OUT.png]        PNG of the page
   script list | put NAME FILE | rm NAME
   proposals [accept|reject [KEY...]]   dashed = proposed: list, accept or reject
@@ -96,6 +103,8 @@ toucan [--canvas NAME] <command>
   notes [--all]               sticky notes left for the agent, with the shapes they're on and near
   notes resolve KEY --reply T mark a note handled: green, plus a one-line reply
   log [--since T]             edits agents made with no tab open (T: ISO time, or an age: 30m, 2h, 7d)
+  versions [save LABEL | show N [--format F] | restore N]   the canvas's history
+  routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
 ```
 
 `--canvas` can also come from `TOUCAN_CANVAS`. `exec`, `summary`, `screenshot` and `import` run in a
@@ -122,7 +131,7 @@ away" until you mark them seen (per browser).
 
 ## Extending
 
-- **Canvas scripts** grow a single canvas; see [AGENTS.md](AGENTS.md).
+- **Canvas scripts** grow a single canvas, and **routines** are chores for every canvas; see [AGENTS.md](AGENTS.md).
 - **Extension commands.** `toucan X …` runs `toucan-X …` from your PATH, with `TOUCAN_CANVAS` set, so
   domain-specific tooling (a diagram generated from your own data, say) lives in its own repo. From
   Node, use the same client the CLI does:

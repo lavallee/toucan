@@ -20,6 +20,8 @@ import { TLSocketRoom } from '@tldraw/sync-core'
 import { CodexChat } from './codex.mjs'
 import { createHeadless } from './headless.mjs'
 import * as trail from './trail.mjs'
+import * as versions from './versions.mjs'
+import { createRoutines } from './routines.mjs'
 import { FORMATS, fromTldraw, fromExcalidraw, toExcalidrawElements } from '../lib/tg.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -72,6 +74,9 @@ const ACK_MS = 2500
 const headless = createHeadless({ enabled: !!(args.headless ?? /^(1|true|yes)$/i.test(process.env.TOUCAN_HEADLESS ?? '')), port: PORT, token: TOKEN })
 
 function exec(canvas, code, timeoutMs = 30000, label) {
+	// An agent's run starts from a saved state, so the person's edits and the agent's are separate steps.
+	// (A previous run still reaching the server's copy waits its turn: quick runs share one version.)
+	if (!unsaved.get(canvas)?.label) snapshotNow(canvas)
 	const live = [...(tabs.get(canvas) ?? [])].reverse().filter((w) => w.readyState === 1)
 	const candidates = [...live.filter((w) => !w.headless), ...live.filter((w) => w.headless)]
 	if (!candidates.length && !headless.enabled) return Promise.reject(new Error(`no browser tab has canvas "${canvas}" open — open ${publicUrl(canvas)}`))
@@ -118,16 +123,19 @@ function getRoom(canvas) {
 			entry.changed = Date.now()
 			clearTimeout(entry.timer)
 			entry.timer = setTimeout(persist, 1000)
+			snapshotSoon(canvas)
 		},
 		onSessionRemoved: (room, { numSessionsRemaining }) => {
 			if (numSessionsRemaining > 0) return
 			clearTimeout(entry.timer)
 			persist()
+			snapshotNow(canvas)
 			room.close()
 			rooms.delete(canvas)
 		},
 	})
 	rooms.set(canvas, entry)
+	snapshotNow(canvas) // anything from before this server ran, and a first version for an older canvas
 	return entry.room
 }
 
@@ -142,6 +150,7 @@ function getScene(canvas) {
 	const scene = { elements: new Map(saved.elements.map((e) => [e.id, e])), sockets: new Set(), timer: null, changed: 0 }
 	scene.persist = () => writeFileSync(scenePath(canvas), JSON.stringify({ type: 'excalidraw', version: 2, source: 'toucan', elements: [...scene.elements.values()], appState: {}, files: {} }))
 	scenes.set(canvas, scene)
+	snapshotNow(canvas)
 	return scene
 }
 const sceneElements = (n) => (scenes.has(n) ? [...scenes.get(n).elements.values()] : existsSync(scenePath(n)) ? JSON.parse(readFileSync(scenePath(n), 'utf8')).elements : [])
@@ -162,12 +171,14 @@ function onScene(ws, canvas) {
 		for (const other of scene.sockets) if (other !== ws && other.readyState === 1) other.send(JSON.stringify({ type: 'update', elements: kept }))
 		clearTimeout(scene.timer)
 		scene.timer = setTimeout(scene.persist, 1000)
+		snapshotSoon(canvas)
 	})
 	ws.on('close', () => {
 		scene.sockets.delete(ws)
 		if (scene.sockets.size) return
 		clearTimeout(scene.timer)
 		scene.persist()
+		snapshotNow(canvas)
 		scenes.delete(canvas)
 	})
 }
@@ -238,6 +249,93 @@ function broadcast(canvas, msg) {
 	for (const ws of tabs.get(canvas) ?? []) ws.send(JSON.stringify(msg))
 }
 
+// ---- versions: the evolution of a canvas (server/versions.mjs) ---------------------------------
+// A version is saved once edits go quiet (or every few minutes during a long session), after each agent
+// run that changed something, when the last tab leaves, and whenever someone names one.
+const QUIET_MS = Number(process.env.TOUCAN_VERSION_QUIET ?? 30) * 1000
+const MAX_WAIT_MS = Number(process.env.TOUCAN_VERSION_MAX_WAIT ?? 300) * 1000
+const AFTER_AGENT_MS = 1500 // the tab's edit reaches the server's copy just after its result does
+const unsaved = new Map() // canvas -> { timer, since, label }
+
+function currentDocument(n) {
+	if (engineOf(n) === 'excalidraw') {
+		const elements = sceneElements(n)
+		return { data: { elements }, shapes: excalidrawShapes(elements) }
+	}
+	const room = rooms.has(n) ? rooms.get(n).room.getCurrentSnapshot() : existsSync(docPath(n)) ? JSON.parse(readFileSync(docPath(n), 'utf8')).room : null
+	return room ? { data: { room }, shapes: tldrawShapes(room) } : null
+}
+// A tab joining writes a `user` record into the document; that isn't an edit to the canvas.
+const tldrawShapes = (room) => Object.fromEntries((room.documents ?? []).filter((d) => d.state.typeName !== 'user').map(({ state: r }) => [r.typeName === 'shape' ? r.meta?.key ?? r.id.replace(/^shape:/, '') : `~${r.id}`, JSON.stringify(r)]))
+// Excalidraw's bookkeeping changes on every save, and deleted elements are still in the list.
+function excalidrawShapes(elements) {
+	const out = {}
+	for (const { version, versionNonce, updated, seed, ...e } of elements) if (!e.isDeleted) out[e.id] = JSON.stringify(e)
+	return out
+}
+
+function saveVersion(n, opts = {}) {
+	const doc = currentDocument(n)
+	if (!doc) return null
+	if (!opts.named && !Object.keys(doc.shapes).some((k) => !k.startsWith('~')) && !versions.list(CANVASES, n).length) return null // never edited
+	return versions.save(CANVASES, n, { ...doc, ...opts })
+}
+function snapshotNow(n, opts) {
+	const due = unsaved.get(n)
+	if (due) clearTimeout(due.timer)
+	unsaved.delete(n)
+	try {
+		return saveVersion(n, { ...(due?.label && { label: due.label, source: 'agent' }), ...opts })
+	} catch (e) {
+		console.error(`version of ${n} failed: ${e.message}`) // never let history get in the way of an edit
+		return null
+	}
+}
+function snapshotSoon(n, { label, delay = QUIET_MS } = {}) {
+	const due = unsaved.get(n) ?? { since: Date.now() }
+	clearTimeout(due.timer)
+	if (label) due.label = label
+	const wait = Math.min(due.label ? AFTER_AGENT_MS : delay, Math.max(0, due.since + MAX_WAIT_MS - Date.now()))
+	due.timer = setTimeout(() => snapshotNow(n), wait)
+	unsaved.set(n, due)
+}
+
+/** Puts a version's document back. Every tab follows; what was there is saved first, and this is a version too. */
+function restoreVersion(n, version) {
+	const before = currentDocument(n)
+	snapshotNow(n, { label: `Before restoring v${version.n}`, source: 'edit' })
+	const label = `Restored v${version.n}${version.label ? ` (${version.label})` : ''}`
+	if (engineOf(n) === 'excalidraw') restoreScene(n, version.data.elements)
+	else if (rooms.has(n)) rooms.get(n).room.loadSnapshot(version.data.room)
+	else writeFileSync(docPath(n), JSON.stringify({ room: version.data.room }))
+	const saved = snapshotNow(n, { label, source: 'restore' })
+	// Nobody may be watching this one land.
+	const after = currentDocument(n)
+	if (!(tabs.get(n) ?? []).some((w) => !w.headless) && before && after) trail.record(CANVASES, n, { source: 'restore', label, changes: versions.diffShapes(before.shapes, after.shapes) })
+	return saved ?? { n: version.n, label }
+}
+/** Excalidraw merges by element version, so restored elements must outrank what tabs hold now. */
+function restoreScene(n, target) {
+	const open = scenes.get(n)
+	const current = open ? open.elements : new Map(sceneElements(n).map((e) => [e.id, e]))
+	const wanted = new Map(target.map((e) => [e.id, e]))
+	const next = []
+	for (const id of new Set([...current.keys(), ...wanted.keys()])) {
+		const was = current.get(id), e = wanted.get(id)
+		const version = Math.max(was?.version ?? 0, e?.version ?? 0) + 1
+		next.push({ ...(e ?? was), ...(!e && { isDeleted: true }), version, versionNonce: randomBytes(4).readUInt32LE() })
+	}
+	if (!open) return writeFileSync(scenePath(n), JSON.stringify({ type: 'excalidraw', version: 2, source: 'toucan', elements: next, appState: {}, files: {} }))
+	for (const e of next) open.elements.set(e.id, e)
+	open.changed = Date.now()
+	open.persist()
+	for (const ws of open.sockets) if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'update', elements: next }))
+}
+
+// ---- routines: chores banked once, run on any canvas (server/routines.mjs) ---------------------
+const routines = createRoutines({ shipped: join(ROOT, 'routines'), data: CANVASES })
+const routineRow = ({ code, ...r }) => r
+
 // ---- http ------------------------------------------------------------------
 const MIME = { '.html': 'text/html', '.ttf': 'font/ttf', '.woff': 'font/woff', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.json': 'application/json' }
 const publicUrl = (canvas) => `http://${PUBLIC_HOST}:${PORT}/${canvas ? `?canvas=${canvas}` : ''}`
@@ -282,6 +380,22 @@ const server = createServer(async (req, res) => {
 			else if (seed) writeFileSync(seedPath(name), JSON.stringify(seed))
 			return json(res, 201, describe(name, idx))
 		}
+		if (route === 'routines') {
+			const name = canvas // /api/routines/<name>
+			if (!name && req.method === 'GET') return json(res, 200, { routines: routines.list().map((r) => (url.searchParams.has('code') ? r : routineRow(r))) })
+			if (!NAME.test(name ?? '')) return json(res, 404, { error: 'not found' })
+			if (req.method === 'GET') {
+				const r = routines.get(name)
+				return r ? json(res, 200, r) : json(res, 404, { error: `no routine ${name}` })
+			}
+			if (req.method === 'PUT') {
+				const { code, title, description, engines } = JSON.parse(await body(req))
+				if (typeof code !== 'string' || !code.trim()) return json(res, 400, { error: 'code: the routine to bank' })
+				return json(res, 200, routineRow(routines.save(name, { code, title, description, engines })))
+			}
+			if (req.method === 'DELETE') return routines.remove(name) ? json(res, 200, { ok: true, restored: routines.get(name)?.source === 'shipped' }) : json(res, 404, { error: `${name} isn't banked here` })
+			return json(res, 405, { error: 'method' })
+		}
 		if (route !== 'canvases' || !NAME.test(canvas ?? '')) return json(res, 404, { error: 'not found' })
 
 		if (sub === 'info' && req.method === 'GET') return json(res, 200, canvasNames().includes(canvas) ? describe(canvas, readIndex()) : { name: canvas, engine: 'tldraw', new: true })
@@ -323,7 +437,7 @@ const server = createServer(async (req, res) => {
 			if ((tabs.get(canvas) ?? []).length || rooms.has(canvas) || scenes.has(canvas)) return json(res, 409, { error: `${canvas} is open in a tab — close it first` })
 			const dest = join(ARCHIVE, `${canvas}-${new Date().toISOString().replace(/[:.]/g, '-')}`)
 			mkdirSync(dest, { recursive: true })
-			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
+			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
 			const idx = readIndex()
 			if (idx[canvas]) writeFileSync(join(dest, 'index-entry.json'), JSON.stringify(idx[canvas], null, 2) + '\n')
 			delete idx[canvas]
@@ -343,6 +457,42 @@ const server = createServer(async (req, res) => {
 			} catch (e) {
 				return json(res, 200, { ok: false, error: String(e.message ?? e) })
 			}
+		}
+		if (sub === 'routines' && NAME.test(subName ?? '') && url.pathname.endsWith('/run') && req.method === 'POST') {
+			const routine = routines.get(subName)
+			if (!routine) return json(res, 404, { error: `no routine ${subName}` })
+			if (!routine.engines.includes(engineOf(canvas))) return json(res, 400, { error: `${routine.title} runs on ${routine.engines.join(', ')}; this canvas runs ${engineOf(canvas)}` })
+			const { args } = JSON.parse((await body(req)) || '{}')
+			try {
+				return json(res, 200, { ok: true, result: await exec(canvas, routines.program(routine, args), 120000, `routine ${subName}`) })
+			} catch (e) {
+				return json(res, 200, { ok: false, error: String(e.message ?? e) })
+			}
+		}
+		if (sub === 'versions') {
+			const n = /^\d+$/.test(subName ?? '') ? Number(subName) : null
+			const action = url.pathname.split('/')[6]
+			if (subName === undefined && req.method === 'GET') return json(res, 200, { versions: versions.list(CANVASES, canvas), current: (() => { const d = currentDocument(canvas); return !d || versions.isCurrent(CANVASES, canvas, d.shapes) })() })
+			if (subName === undefined && req.method === 'POST') {
+				const { label, source } = JSON.parse((await body(req)) || '{}')
+				if (typeof label !== 'string' || !label.trim()) return json(res, 400, { error: 'label: what to call this version' })
+				const saved = snapshotNow(canvas, { label: label.trim(), named: true, source: source === 'agent' ? 'agent' : 'edit' })
+				return saved ? json(res, 201, saved) : json(res, 404, { error: 'nothing to save yet' })
+			}
+			if (n === null) return json(res, 404, { error: 'not found' })
+			const version = versions.read(CANVASES, canvas, n)
+			if (!version) return json(res, 404, { error: `no version ${n}` })
+			if (!action && req.method === 'GET') return json(res, 200, { ...version, engine: engineOf(canvas) })
+			if (action === 'graph' && req.method === 'GET') {
+				const format = url.searchParams.get('format') ?? 'tg'
+				if (!FORMATS[format]?.export) return json(res, 400, { error: `format: one of ${Object.keys(FORMATS).join(', ')}` })
+				const tg = { ...(engineOf(canvas) === 'excalidraw' ? fromExcalidraw(version.data.elements) : fromTldraw((version.data.room.documents ?? []).map((d) => d.state))), canvas }
+				if (format === 'tg') return json(res, 200, tg)
+				res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
+				return res.end(FORMATS[format].export(tg, {}))
+			}
+			if (action === 'restore' && req.method === 'POST') return json(res, 200, restoreVersion(canvas, version))
+			return json(res, 405, { error: 'method' })
 		}
 		if (sub === 'log' && req.method === 'GET') return json(res, 200, { entries: trail.read(CANVASES, canvas, url.searchParams.get('since')) })
 		if (sub === 'scripts' && req.method === 'GET') return json(res, 200, { scripts: listScripts(canvas) })
@@ -415,6 +565,7 @@ function onCanvas(ws, canvas, nonce) {
 			clearTimeout(p.timer)
 			// Nobody watched a headless edit land, so it goes on the canvas's trail.
 			if (ws.headless) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
+			if (msg.changes && (msg.changes.added?.length || msg.changes.updated?.length || msg.changes.removed?.length)) snapshotSoon(canvas, { label: p.label ?? 'Agent edit' })
 			msg.ok ? p.resolve(msg.result) : p.reject(new Error(msg.error))
 			// Agent presence: the other tabs glow what this run added or changed (app/pulses.tsx).
 			const ids = msg.changes ? [...(msg.changes.added ?? []), ...(msg.changes.updated ?? [])].map((c) => c.id) : []

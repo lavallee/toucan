@@ -1,18 +1,16 @@
 # Habits: from a repeated request to a button
 
-*A design note, not a feature. Nothing here is built yet beyond the example script; it records how
-toucan could notice a chore and offer to automate it, so the idea can be argued with before it is coded.*
+*A design note, not a feature. Banking a chore is built (routines); noticing one isn't. This records how
+toucan could notice a chore and offer to bank it, so the idea can be argued with before it is coded.*
 
 ## Where things stand
 
-A canvas script is lasting behaviour stored with one canvas. [`examples/tidy-arrows.js`](https://github.com/lavallee/toucan/blob/main/examples/tidy-arrows.js)
-is one: it adds a **Tidy arrows** button that re-routes arrows (straight, curved either way, or elbow)
-to run through fewer boxes and cross fewer arrows, without moving a box. Install it with
-`toucan --canvas NAME script put tidy-arrows examples/tidy-arrows.js`; an agent can call it as
-`toucan.tidyArrows()`, which returns the before and after counts.
+A routine is a chore banked once for every canvas on a server, listed in the Routines menu and run with a
+click or `toucan routine run`. [`routines/tidy-arrows.js`](https://github.com/lavallee/toucan/blob/main/routines/tidy-arrows.js)
+is one: it re-routes arrows (straight, curved either way, or elbow) to run through fewer boxes and cross
+fewer arrows, without moving a box, and reports the before and after counts.
 
-Today a person notices the pattern ("I keep asking for this; make it a button") and asks an agent to
-write the script. The aim is for the system to notice the pattern and **offer**. It should never install
+Today a person notices the pattern ("I keep asking for this; bank it") and asks an agent to write the routine. The aim is for the system to notice the pattern and **offer**. It should never install
 anything on its own.
 
 ## Noticing
@@ -56,8 +54,7 @@ The offer belongs in the place the request was made, after the third run succeed
 - **Detection:** in the server, after a chat turn completes, since it sees both the request and the exec
   results. Terminal agents could report requests through a CLI hook (`toucan habit note "…"`), or the
   check could stay chat-only at first.
-- **Promotion:** a button that proves itself on one canvas could be offered for others ("you have this
-  on 3 canvases; make it a default?"), which is where a shared script library would come in.
+- **Promotion:** already answered by the routine bank, which every canvas on a server shares.
 
 ## Open questions
 

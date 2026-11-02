@@ -81,7 +81,7 @@ export function makeHelpers(editor) {
 		editor.markHistoryStoppingPoint('accept proposals')
 		editor.updateShapes(shapes.map((s) => {
 			// tldraw merges meta on update, so the flag is cleared to null rather than left out.
-			const dash = s.meta.proposed.dash ?? (s.type === 'arrow' ? 'solid' : 'draw')
+			const dash = s.meta.proposed.dash ?? 'solid'
 			return { id: s.id, type: s.type, props: { dash }, meta: { ...s.meta, proposed: null } }
 		}))
 		return { accepted: shapes.map(keyOf) }
@@ -176,7 +176,7 @@ export function makeHelpers(editor) {
 	}
 
 	/** Create or update a box. `move: true` repositions an existing one. */
-	function node(key, { x = 0, y = 0, w = 180, h = 64, text: label = key, geo = 'rectangle', color = 'black', fill = 'semi', dash = 'draw', size = 's', parent, meta = {}, move = false, proposed = false } = {}) {
+	function node(key, { x = 0, y = 0, w = 180, h = 64, text: label = key, geo = 'rectangle', color = 'black', fill = 'semi', dash = 'solid', size = 's', parent, meta = {}, move = false, proposed = false } = {}) {
 		const id = idFor(key)
 		// Always explicit: without it tldraw drops new shapes into whatever frame is under them.
 		const parentId = parent ? idFor(parent) : editor.getCurrentPageId()

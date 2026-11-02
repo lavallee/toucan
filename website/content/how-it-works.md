@@ -53,6 +53,15 @@ the shapes each exec added, updated and removed (the same record that drives the
 person opening the canvas sees "N agent edits while you were away" with the list, until they mark it
 seen in that browser. Edits made while a person's tab took the exec aren't recorded: they watched.
 
+## Versions
+
+Each canvas has a directory of gzipped full snapshots beside it (`<name>.versions/`), with an index saying what
+each one changed. The server saves one when an exec reports changes, when edits go quiet, when the last tab
+leaves, and when someone names one; a save with no change to the shapes is skipped. A person previews a version
+in a second, read-only editor instance over the live canvas, so stepping back never touches the shared document.
+Restoring saves the present first, then loads the snapshot: on tldraw through the sync room, which reconnects every
+tab; on Excalidraw by re-issuing each element at a higher version, so tabs' normal merge accepts it.
+
 ## The graph layer
 
 `lib/tg.mjs` defines the *toucan graph* (TG): groups, nodes and edges, each with a stable key, an

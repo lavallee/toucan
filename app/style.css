@@ -149,12 +149,23 @@ body,
   margin: 0;
   height: 100%;
 }
-/* tldraw's UI inherits the page font; keep the system sans it had before Tailwind. */
+/* One typeface for the whole page, tldraw's and Excalidraw's menus included where they inherit. */
 html {
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 body {
   background: var(--background);
+}
+
+/* The chat panel's resize handle: invisible until reached. */
+.toucan-dock-handle {
+  transition: background-color 120ms;
+  outline: none;
+}
+.toucan-dock-handle:hover,
+.toucan-dock-handle:focus-visible,
+.toucan-dock-handle:active {
+  background-color: color-mix(in oklch, var(--foreground) 22%, transparent);
 }
 
 /* Agent presence (app/pulses.tsx): a halo on shapes an agent just changed. */

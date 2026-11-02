@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Index } from './Index'
 import { api, token, canvasName } from './net'
+import './theme'
 // Tailwind's layers sit under tldraw's unlayered CSS, and its preflight is scoped to .toucan-ui
 // (see style.css), so the canvas keeps its own styling. tldraw (and its CSS) loads with App, so the
 // index stays light.

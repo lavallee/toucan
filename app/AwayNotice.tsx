@@ -29,7 +29,7 @@ export function AwayNotice() {
 				{entries.length} agent {entries.length === 1 ? 'edit' : 'edits'} while you were away
 			</Button>
 			{open && (
-				<div className="absolute bottom-full left-0 mb-2 w-96 max-w-[80vw] rounded-lg border bg-background p-2 text-xs text-foreground shadow-md">
+				<div className="absolute top-full left-0 z-[800] mt-2 w-96 max-w-[80vw] rounded-lg border bg-background p-2 text-xs text-foreground shadow-md">
 					<ol className="max-h-72 space-y-1.5 overflow-auto">
 						{entries.map((e, i) => (
 							<li key={i}>

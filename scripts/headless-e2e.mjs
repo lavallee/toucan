@@ -92,12 +92,36 @@ try {
 		assert.deepEqual(log[1].what, 'import ' + mermaid)
 		assert.ok(log[1].added.includes('c') && log[1].added.includes('d'))
 		step(`${engine}: log → ${log.map((e) => `[${e.what.slice(0, 40)}… +${e.added.length} ~${e.updated.length} −${e.removed.length}]`).join(' ')}`)
+
 		assert.equal((await json('--canvas', name, 'log', '--since', log[0].t)).length, 1, '--since filters by time')
 		assert.equal((await json('--canvas', name, 'log', '--since', '1h')).length, 2, '--since takes an age')
 		const listed = (await json('canvases')).find((c) => c.name === name)
 		assert.equal(listed.open, 0, 'the headless page is not counted as an open tab')
 		assert.equal(listed.headless, true)
 		console.log(`    headless Chromium resident memory with ${engine === 'tldraw' ? 1 : 2} canvas page(s): ${await chromiumRss()} MB`)
+	}
+	for (const engine of ['tldraw', 'excalidraw']) {
+		const hist = `hist-${engine}`
+		await toucan('new', hist, '--engine', engine)
+		await toucan('--canvas', hist, 'exec', '--label', 'first boxes', '-e', 'await toucan.applyGraph({groups:[],nodes:[{key:"a",text:"Alpha",box:{x:0,y:0,w:180,h:64}}],edges:[]}); return 1')
+		// History and routines work with nobody watching too.
+		await new Promise((r) => setTimeout(r, 2500)) // a version lands just after the run it records
+		const versions = await json('--canvas', hist, 'versions')
+		assert.equal(versions[0].source, 'agent', 'agent edits became a version')
+		const checkpoint = (await json('--canvas', hist, 'versions', 'save', 'checkpoint')).n
+		const shapeCount = 'return toucan.summary().shapes.length'
+		const atCheckpoint = (await toucan('--canvas', hist, 'exec', '-e', shapeCount)).out
+		await toucan('--canvas', hist, 'exec', '--label', 'add z', '-e', 'await toucan.applyGraph({groups:[],nodes:[{key:"z",text:"Zed",box:{x:0,y:400,w:180,h:64}}],edges:[]}); return 1')
+		await new Promise((r) => setTimeout(r, 2500))
+		assert.equal((await json('--canvas', hist, 'versions'))[0].label, 'add z', 'exec --label names the version')
+		const restored = await json('--canvas', hist, 'versions', 'restore', String(checkpoint))
+		assert.equal(restored.source, 'restore')
+		await new Promise((r) => setTimeout(r, 1500)) // the page reconnects, or takes the merge
+		assert.equal((await toucan('--canvas', hist, 'exec', '-e', shapeCount)).out, atCheckpoint, 'restore put the canvas back')
+		assert.ok((await json('--canvas', hist, 'log')).some((e) => e.source === 'restore'), 'a restore nobody watched goes on the trail')
+		const ran = await json('--canvas', hist, 'routine', 'run', 'straighten-lines')
+		assert.equal(typeof ran.summary, 'string')
+		step(`${engine}: versions: named, edited, restored; routine → ${ran.summary}`)
 	}
 
 	// A person opens each canvas through the sign-in link.
