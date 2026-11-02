@@ -2,6 +2,7 @@
 // the current state, and thinning keeps what it promises.
 //   node scripts/versions-check.mjs
 import assert from 'node:assert/strict'
+import { randomBytes } from 'node:crypto'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -56,6 +57,15 @@ try {
 	assert.ok(pruned > 0)
 	assert.ok(!existsSync(join(versionsDir(dir, 't'), '2.json.gz')) || kept.some((v) => v.n === 2), 'a thinned version loses its file')
 	assert.ok(read(dir, 't', kept.at(-1).n), 'kept versions can still be read')
+	// The size cap: oldest automatic versions go first; named ones and the newest stay.
+	const big = (i) => ({ data: { blob: randomBytes(4000).toString('hex'), i }, shapes: { a: String(i) } })
+	save(dir, 'cap', { ...big(0), named: true, label: 'keep', maxBytes: 12000 })
+	for (let j = 1; j <= 6; j++) save(dir, 'cap', { ...big(j), maxBytes: 12000 })
+	const capped = list(dir, 'cap')
+	assert.ok(capped.length < 7, 'over the cap, versions go')
+	assert.equal(capped[0].n, 7, 'the newest stays')
+	assert.equal(capped.at(-1).label, 'keep', 'a named version stays')
+	assert.equal(read(dir, 'cap', 2), null, 'the oldest automatic one went first')
 	console.log('ok  versions')
 } finally {
 	rmSync(dir, { recursive: true, force: true })

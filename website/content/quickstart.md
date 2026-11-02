@@ -33,7 +33,7 @@ ln -s "$PWD/bin/toucan.mjs" ~/.local/bin/toucan
 
 From the index page at `/`, or from a terminal:
 
-![The index page: a form to make a canvas, and cards for three canvases (an Excalidraw onboarding flow, a tldraw roadmap and a tldraw architecture diagram), each with a preview, description and shape count.](assets/toucan-index.png)
+![The index page: a New canvas button, and cards for three canvases (a tldraw diagram of a shop's services, an Excalidraw publishing flow and a tldraw roadmap), each with a preview, description and shape count.](assets/toucan-index.png)
 
 
 ```sh

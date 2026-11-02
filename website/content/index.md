@@ -9,7 +9,7 @@ one shared document.
 
 [Get started →](quickstart.html) · [Source on GitHub ↗](https://github.com/lavallee/toucan)
 
-![A tldraw canvas of a shop's services beside the Codex chat panel. The person asked for a Redis cache between Catalog and Postgres and for the core services in blue; the panel shows Codex reading the guide, inspecting the canvas, and making both edits.](assets/toucan-canvas-chat.png)
+![A tldraw canvas of a shop's services with the History panel open: an earlier version, named Before the cache, is shown read-only over the live canvas, with Restore below the list of versions. The Codex chat panel sits to the right.](assets/toucan-history.png)
 
 ## What you can do with it
 

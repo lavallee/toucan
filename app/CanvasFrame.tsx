@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { HistoryIcon, MessageSquareIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,7 @@ export function CanvasFrame({ live, engine, preview, children }: { live: boolean
 	const [historyOpen, setHistoryOpen] = useState(false)
 	const [title, setTitle] = useState(canvasName)
 	const [draftRequest, setDraftRequest] = useState<{ text: string } | null>(null)
+	const takeDraft = useCallback(() => setDraftRequest(null), [])
 	const stage = useRef<HTMLDivElement>(null)
 	const chat = useChatLayout()
 	useEffect(() => {
@@ -74,7 +75,7 @@ export function CanvasFrame({ live, engine, preview, children }: { live: boolean
 				</div>
 				{chatOpen && (
 					<ChatDock chat={chat} stage={stage}>
-						{(startDrag) => <Chat toolbar={<DockButtons dock={chat.dock} onDock={(dock) => chat.set((l) => ({ ...l, dock }))} />} onHeaderPointerDown={startDrag} draftRequest={draftRequest} />}
+						{(startDrag) => <Chat toolbar={<DockButtons dock={chat.dock} onDock={(dock) => chat.set((l) => ({ ...l, dock }))} />} onHeaderPointerDown={startDrag} draftRequest={draftRequest} onDraftTaken={takeDraft} />}
 					</ChatDock>
 				)}
 			</div>

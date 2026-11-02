@@ -7,7 +7,7 @@ An infinite canvas in the browser that you edit by hand while agents edit it bes
 
 **[Read the docs →](https://lavallee.github.io/toucan/)**
 
-![A tldraw canvas of a shop's services beside the Codex chat panel, where Codex has just added a Redis cache and coloured the core services blue.](website/site/assets/toucan-canvas-chat.png)
+![A tldraw canvas of a shop's services with the History panel open, showing an earlier version read-only, beside the Codex chat panel.](website/site/assets/toucan-history.png)
 
 Each canvas runs on [tldraw](https://tldraw.dev) or [Excalidraw](https://excalidraw.com). A small Node
 server keeps every open tab in sync, a chat panel drives [Codex](https://github.com/openai/codex) on your

@@ -31,12 +31,19 @@ export function parse(name, source) {
 	return { name, title: meta.routine || name, description: meta.description ?? '', engines: engines.length ? engines : ENGINES, code: source }
 }
 
-/** A routine file from its parts. A header already in the code gives way to the fields passed. */
+/** A routine file from its parts. The code's own header stays, except for the fields passed. */
 export function compose({ title, description, engines, code }) {
-	const body = code.split('\n').filter((l) => !HEADER.test(l)).join('\n').replace(/^\n+/, '')
-	const head = [title && `// routine: ${oneLine(title)}`, description && `// description: ${oneLine(description)}`, engines?.length && `// engines: ${engines.join(', ')}`].filter(Boolean)
+	const lines = code.split('\n')
+	let start = 0 // where the code proper begins: the header can only be in the comments above it
+	while (start < lines.length && (lines[start].startsWith('//') || !lines[start].trim())) start++
+	const kept = parse('', code)
+	const named = { routine: title, description, engines: engines?.join(', ') }
+	const fields = { routine: named.routine ?? (kept.title || undefined), description: named.description ?? (kept.description || undefined), engines: named.engines ?? headerValue(lines.slice(0, start), 'engines') }
+	const head = Object.entries(fields).filter(([, v]) => v).map(([k, v]) => `// ${k}: ${oneLine(v)}`)
+	const body = [...lines.slice(0, start).filter((l) => !HEADER.test(l)), ...lines.slice(start)].join('\n').replace(/^\n+/, '')
 	return `${head.join('\n')}${head.length ? '\n\n' : ''}${body}`
 }
+const headerValue = (lines, field) => lines.map((l) => HEADER.exec(l)).find((m) => m?.[1] === field)?.[2]
 const oneLine = (s) => String(s).replace(/\s+/g, ' ').trim()
 
 export function createRoutines({ shipped, data }) {

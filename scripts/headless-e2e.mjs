@@ -89,7 +89,7 @@ try {
 		const log = await json('--canvas', name, 'log')
 		assert.equal(log.length, 2, 'two edits on the trail (exec, import); reads are not logged')
 		assert.ok(log.every((e) => e.source === 'headless'))
-		assert.deepEqual(log[1].what, 'import ' + mermaid)
+		assert.deepEqual(log[1].what, 'import flow.mmd')
 		assert.ok(log[1].added.includes('c') && log[1].added.includes('d'))
 		step(`${engine}: log → ${log.map((e) => `[${e.what.slice(0, 40)}… +${e.added.length} ~${e.updated.length} −${e.removed.length}]`).join(' ')}`)
 

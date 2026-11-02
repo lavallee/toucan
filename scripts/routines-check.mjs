@@ -18,6 +18,10 @@ try {
 	const composed = compose({ title: 'New\ntitle', engines: ['excalidraw'], code: '// routine: Old\nreturn 2' })
 	assert.equal(composed, '// routine: New title\n// engines: excalidraw\n\nreturn 2', 'fields passed replace the header')
 
+	assert.equal(compose({ code: '// routine: Keep\n// description: me\n// engines: tldraw\n\nreturn 1' }), '// routine: Keep\n// description: me\n// engines: tldraw\n\nreturn 1', 'a header stays when no fields are passed')
+	assert.equal(compose({ title: 'New', code: '// routine: Old\n// engines: tldraw\n\nreturn 1' }), '// routine: New\n// engines: tldraw\n\nreturn 1', 'only the fields passed change')
+	assert.equal(compose({ code: 'const s = 1\n// routine: inside\nreturn s' }), 'const s = 1\n// routine: inside\nreturn s', 'header-like lines in the code are left alone')
+
 	const shipped = join(dir, 'shipped')
 	mkdirSync(shipped)
 	writeFileSync(join(shipped, 'a.js'), '// routine: Shipped A\nreturn "shipped"')

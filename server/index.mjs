@@ -74,9 +74,11 @@ const ACK_MS = 2500
 const headless = createHeadless({ enabled: !!(args.headless ?? /^(1|true|yes)$/i.test(process.env.TOUCAN_HEADLESS ?? '')), port: PORT, token: TOKEN })
 
 function exec(canvas, code, timeoutMs = 30000, label) {
-	// An agent's run starts from a saved state, so the person's edits and the agent's are separate steps.
+	// So the person's edits and the agent's stay separate steps, note the unsaved state before a run; it's
+	// saved only if the run turns out to change something, so reads (summary, notes) cost nothing.
 	// (A previous run still reaching the server's copy waits its turn: quick runs share one version.)
-	if (!unsaved.get(canvas)?.label) snapshotNow(canvas)
+	const pendingEdits = unsaved.get(canvas)
+	const before = pendingEdits && !pendingEdits.label ? currentDocument(canvas) : null
 	const live = [...(tabs.get(canvas) ?? [])].reverse().filter((w) => w.readyState === 1)
 	const candidates = [...live.filter((w) => !w.headless), ...live.filter((w) => w.headless)]
 	if (!candidates.length && !headless.enabled) return Promise.reject(new Error(`no browser tab has canvas "${canvas}" open — open ${publicUrl(canvas)}`))
@@ -84,7 +86,7 @@ function exec(canvas, code, timeoutMs = 30000, label) {
 		const send = (ws, next) => {
 			const id = ++execSeq
 			const done = (f) => (v) => (ws.headless && headless.touch(canvas, false), f(v))
-			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label }
+			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before }
 			if (ws.headless) headless.touch(canvas, true)
 			p.timer = setTimeout(() => {
 				pending.delete(id)
@@ -267,18 +269,27 @@ function currentDocument(n) {
 }
 // A tab joining writes a `user` record into the document; that isn't an edit to the canvas.
 const tldrawShapes = (room) => Object.fromEntries((room.documents ?? []).filter((d) => d.state.typeName !== 'user').map(({ state: r }) => [r.typeName === 'shape' ? r.meta?.key ?? r.id.replace(/^shape:/, '') : `~${r.id}`, JSON.stringify(r)]))
-// Excalidraw's bookkeeping changes on every save, and deleted elements are still in the list.
+// Excalidraw's bookkeeping changes on every save, and deleted elements are still in the list. A box's
+// label is a separate element here, so it counts as part of the box.
 function excalidrawShapes(elements) {
 	const out = {}
-	for (const { version, versionNonce, updated, seed, ...e } of elements) if (!e.isDeleted) out[e.id] = JSON.stringify(e)
+	const live = elements.filter((e) => !e.isDeleted)
+	const keyOf = (e) => e.customData?.key ?? e.id
+	const clean = ({ version, versionNonce, updated, seed, ...e }) => JSON.stringify(e)
+	const byId = new Map(live.map((e) => [e.id, e]))
+	for (const e of live) if (!(e.containerId && byId.has(e.containerId))) out[keyOf(e)] = clean(e)
+	for (const e of live) if (e.containerId && byId.has(e.containerId)) out[keyOf(byId.get(e.containerId))] += clean(e)
 	return out
 }
 
+function saveDocument(n, doc, opts = {}) {
+	if (!opts.named && !Object.keys(doc.shapes).some((k) => !k.startsWith('~')) && !versions.list(CANVASES, n).length) return null // never edited
+	return versions.save(CANVASES, n, { ...doc, ...opts })
+}
 function saveVersion(n, opts = {}) {
 	const doc = currentDocument(n)
 	if (!doc) return null
-	if (!opts.named && !Object.keys(doc.shapes).some((k) => !k.startsWith('~')) && !versions.list(CANVASES, n).length) return null // never edited
-	return versions.save(CANVASES, n, { ...doc, ...opts })
+	return saveDocument(n, doc, opts)
 }
 function snapshotNow(n, opts) {
 	const due = unsaved.get(n)
@@ -289,6 +300,14 @@ function snapshotNow(n, opts) {
 	} catch (e) {
 		console.error(`version of ${n} failed: ${e.message}`) // never let history get in the way of an edit
 		return null
+	}
+}
+/** The unsaved state from before an agent run that changed something. */
+function saveBefore(n, doc) {
+	try {
+		saveDocument(n, doc)
+	} catch (e) {
+		console.error(`version of ${n} failed: ${e.message}`)
 	}
 }
 function snapshotSoon(n, { label, delay = QUIET_MS } = {}) {
@@ -303,16 +322,22 @@ function snapshotSoon(n, { label, delay = QUIET_MS } = {}) {
 /** Puts a version's document back. Every tab follows; what was there is saved first, and this is a version too. */
 function restoreVersion(n, version) {
 	const before = currentDocument(n)
-	snapshotNow(n, { label: `Before restoring v${version.n}`, source: 'edit' })
+	// This one must succeed: it is what makes a restore safe. Unlike other saves, a failure stops here.
+	const due = unsaved.get(n)
+	if (due) clearTimeout(due.timer)
+	unsaved.delete(n)
+	saveVersion(n, { label: due?.label ?? `Before restoring v${version.n}`, source: due?.label ? 'agent' : 'edit' })
+	const undo = versions.list(CANVASES, n)[0]?.n ?? null
 	const label = `Restored v${version.n}${version.label ? ` (${version.label})` : ''}`
 	if (engineOf(n) === 'excalidraw') restoreScene(n, version.data.elements)
 	else if (rooms.has(n)) rooms.get(n).room.loadSnapshot(version.data.room)
 	else writeFileSync(docPath(n), JSON.stringify({ room: version.data.room }))
 	const saved = snapshotNow(n, { label, source: 'restore' })
+	if (!saved) return { ...version, data: undefined, unchanged: true } // it already looked like that
 	// Nobody may be watching this one land.
 	const after = currentDocument(n)
 	if (!(tabs.get(n) ?? []).some((w) => !w.headless) && before && after) trail.record(CANVASES, n, { source: 'restore', label, changes: versions.diffShapes(before.shapes, after.shapes) })
-	return saved ?? { n: version.n, label }
+	return { ...saved, undo }
 }
 /** Excalidraw merges by element version, so restored elements must outrank what tabs hold now. */
 function restoreScene(n, target) {
@@ -565,7 +590,10 @@ function onCanvas(ws, canvas, nonce) {
 			clearTimeout(p.timer)
 			// Nobody watched a headless edit land, so it goes on the canvas's trail.
 			if (ws.headless) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
-			if (msg.changes && (msg.changes.added?.length || msg.changes.updated?.length || msg.changes.removed?.length)) snapshotSoon(canvas, { label: p.label ?? 'Agent edit' })
+			if (msg.changes && (msg.changes.added?.length || msg.changes.updated?.length || msg.changes.removed?.length)) {
+				if (p.before) saveBefore(canvas, p.before)
+				snapshotSoon(canvas, { label: p.label ?? 'Agent edit' })
+			}
 			msg.ok ? p.resolve(msg.result) : p.reject(new Error(msg.error))
 			// Agent presence: the other tabs glow what this run added or changed (app/pulses.tsx).
 			const ids = msg.changes ? [...(msg.changes.added ?? []), ...(msg.changes.updated ?? [])].map((c) => c.id) : []

@@ -10,11 +10,12 @@ const KEY = 'toucan.chatLayout'
 const DEFAULT: Layout = { dock: 'right', width: 380, height: 300, float: { x: 80, y: 40, w: 380, h: 520 } }
 const MIN_W = 280, MIN_H = 180, EDGE = 64
 
+const DOCK_NAMES = ['right', 'left', 'bottom', 'float']
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(n, Math.max(lo, hi)))
 function load(): Layout {
 	try {
 		const saved = JSON.parse(localStorage.getItem(KEY) ?? 'null')
-		return saved?.float ? { ...DEFAULT, ...saved } : DEFAULT
+		return saved?.float && DOCK_NAMES.includes(saved.dock) ? { ...DEFAULT, ...saved } : DEFAULT
 	} catch {
 		return DEFAULT
 	}
@@ -117,7 +118,8 @@ export function ChatDock({ chat, stage, children }: { chat: Chat; stage: RefObje
 					set((l) => ({ ...l, dock: 'float', float: { ...l.float, x: clamp(ev.clientX - r.left - grabX, 0, r.width - 120), y: clamp(ev.clientY - r.top - grabY, 0, r.height - 48) } }))
 				},
 				() => {
-					if (dragging && zoneRef.current) set((l) => ({ ...l, dock: zoneRef.current! }))
+					const dropped = zoneRef.current
+					if (dragging && dropped) set((l) => ({ ...l, dock: dropped }))
 					zoneRef.current = null
 					setZone(null)
 				},
@@ -150,10 +152,10 @@ export function ChatDock({ chat, stage, children }: { chat: Chat; stage: RefObje
 	const size = narrow
 		? { height: '45%' }
 		: dock === 'bottom'
-			? { height: layout.height }
+			? { height: layout.height, maxHeight: 'calc(100% - 200px)' }
 			: dock === 'float'
-				? { left: layout.float.x, top: layout.float.y, width: layout.float.w, height: layout.float.h }
-				: { width: layout.width }
+				? { left: layout.float.x, top: layout.float.y, width: layout.float.w, height: layout.float.h, maxWidth: '100%', maxHeight: '100%' }
+				: { width: layout.width, maxWidth: 'calc(100% - 320px)' }
 	const handleClass = cn(
 		'toucan-dock-handle absolute z-10',
 		dock === 'right' && '-left-1 inset-y-0 w-2 cursor-col-resize',

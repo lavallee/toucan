@@ -53,17 +53,29 @@ export function History({ Preview, onClose }: { Preview: VersionPreview; onClose
 	const older = () => versions?.length && setSelected(versions[Math.min(index + 1, versions.length - 1)].n)
 	const newer = () => versions && setSelected(index > 0 ? versions[index - 1].n : null)
 	useEffect(() => {
+		const typing = (e: Event) => !!(e.target as HTMLElement).closest?.('input, textarea, [contenteditable]')
 		const onKey = (e: KeyboardEvent) => {
-			if ((e.target as HTMLElement).closest?.('input, textarea, [contenteditable]')) return
-			if (e.key === 'Escape') return selected === null ? onClose() : setSelected(null)
-			if (e.key === 'ArrowLeft') older()
+			if (typing(e)) return
+			if (e.key === 'Escape') selected === null ? onClose() : setSelected(null)
+			else if (e.key === 'ArrowLeft') older()
 			else if (e.key === 'ArrowRight') newer()
-			else return
+			else {
+				// Read-only means it: with a version on screen, no shortcut reaches the live editor beneath.
+				if (selected !== null) e.stopPropagation()
+				return
+			}
 			e.preventDefault()
 			e.stopPropagation()
 		}
+		const shield = (e: Event) => {
+			if (selected !== null && !typing(e)) e.stopPropagation()
+		}
 		window.addEventListener('keydown', onKey, true)
-		return () => window.removeEventListener('keydown', onKey, true)
+		for (const type of ['keyup', 'paste', 'cut', 'copy']) window.addEventListener(type, shield, true)
+		return () => {
+			window.removeEventListener('keydown', onKey, true)
+			for (const type of ['keyup', 'paste', 'cut', 'copy']) window.removeEventListener(type, shield, true)
+		}
 	})
 
 	async function save(e: FormEvent) {
@@ -84,9 +96,7 @@ export function History({ Preview, onClose }: { Preview: VersionPreview; onClose
 			setVersions(r.versions)
 			setCurrent(r.current)
 			setSelected(null)
-			// What was on the canvas is now the version just before the restore.
-			const at = r.versions.findIndex((x: VersionRow) => x.n === v.n)
-			setRestored({ n, undo: r.versions[at + 1]?.n ?? null })
+			setRestored(v.unchanged ? null : { n, undo: v.undo })
 		} catch (err: any) {
 			setError(err.message)
 		}

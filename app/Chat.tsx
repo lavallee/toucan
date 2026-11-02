@@ -62,7 +62,7 @@ type Send = (msg: Record<string, unknown>) => void
 
 // Chat panel for the Codex agent: the shadcn AI Elements "Chat" pattern, fed by
 // server/codex.mjs over /ws/chat through the adapter in lib/codex-messages.ts.
-export function Chat({ toolbar, onHeaderPointerDown, draftRequest }: { toolbar?: React.ReactNode; onHeaderPointerDown?: (e: React.PointerEvent) => void; draftRequest?: { text: string } | null }) {
+export function Chat({ toolbar, onHeaderPointerDown, draftRequest, onDraftTaken }: { toolbar?: React.ReactNode; onHeaderPointerDown?: (e: React.PointerEvent) => void; draftRequest?: { text: string } | null; onDraftTaken?: () => void }) {
 	const transcript = React.useRef(new CodexTranscript())
 	const [view, setView] = React.useState(() => transcript.current.snapshot())
 	const [online, setOnline] = React.useState(false)
@@ -77,7 +77,8 @@ export function Chat({ toolbar, onHeaderPointerDown, draftRequest }: { toolbar?:
 		if (!draftRequest) return
 		setDraft(draftRequest.text)
 		inputRef.current?.focus()
-	}, [draftRequest])
+		onDraftTaken?.()
+	}, [draftRequest, onDraftTaken])
 
 	React.useEffect(() => {
 		let closed = false

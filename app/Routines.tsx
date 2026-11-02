@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ChevronRightIcon, LoaderCircleIcon, PlayIcon, Trash2Icon, WandSparklesIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +24,7 @@ export function Routines({ engine, onAskAgent }: { engine: string; onAskAgent: (
 	const [banking, setBanking] = useState(false)
 	const [draft, setDraft] = useState({ title: '', description: '', code: '' })
 	const [error, setError] = useState('')
+	const asking = useRef(false) // leaving for the chat: focus goes to its input, not back to this button
 
 	const load = () => api('/api/routines?code').then((r) => setRoutines(r.routines), (e) => setError(String(e.message ?? e)))
 	useEffect(() => {
@@ -74,7 +75,13 @@ export function Routines({ engine, onAskAgent }: { engine: string; onAskAgent: (
 					<span className="max-lg:hidden">Routines</span>
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent className="w-96 p-0">
+			<PopoverContent
+				className="w-96 p-0"
+				onCloseAutoFocus={(e) => {
+					if (asking.current) e.preventDefault()
+					asking.current = false
+				}}
+			>
 				<header className="border-b px-3 py-2">
 					<h2 className="font-medium">Routines</h2>
 					<p className="text-xs text-muted-foreground">Chores banked once, for every canvas. A run is one undo step.</p>
@@ -140,6 +147,7 @@ export function Routines({ engine, onAskAgent }: { engine: string; onAskAgent: (
 								size="sm"
 								className="flex-1"
 								onClick={() => {
+									asking.current = true
 									setOpen(false)
 									onAskAgent()
 								}}

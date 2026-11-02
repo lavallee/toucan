@@ -30,7 +30,7 @@
 //   TOUCAN_CANVAS set, so extensions live in their own repos (see README, "Extending").
 
 import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { FORMATS } from '../lib/tg.mjs'
@@ -167,7 +167,7 @@ switch (cmd) {
 		const tg = readGraph(file, flag('format'))
 		if (tg.warnings?.length) console.error(`toucan: ${tg.warnings.length} line(s) not understood:\n  ${tg.warnings.join('\n  ')}`)
 		const opts = { move: !!flag('move'), prune: !!flag('prune'), propose: !!flag('propose') }
-		const label = ['import', file, opts.move && '--move', opts.prune && '--prune', opts.propose && '--propose'].filter(Boolean).join(' ')
+		const label = ['import', basename(file), opts.move && '--move', opts.prune && '--prune', opts.propose && '--propose'].filter(Boolean).join(' ')
 		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify(opts)})`, 120000, label))
 		break
 	}

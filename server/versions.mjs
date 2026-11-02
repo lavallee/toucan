@@ -5,12 +5,14 @@
 // A key starting with ~ is other content (a page, a binding): it counts as a change but isn't reported.
 //
 // Restoring never loses anything: the current state is saved first, and a restore is a new version too.
+// A snapshot holds the whole document, inline images included, so each canvas's history has a size cap.
 
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { gunzipSync, gzipSync } from 'node:zlib'
 
+const DEFAULT_MAX_BYTES = Number(process.env.TOUCAN_VERSION_MAX_MB ?? 500) * 1e6
 const HOUR = 36e5
 const DAY = 24 * HOUR
 
@@ -27,10 +29,11 @@ function writeStore(dir, canvas, store) {
 	renameSync(tmp, indexPath(dir, canvas))
 }
 
+const digest = (s) => createHash('sha256').update(s).digest('base64url').slice(0, 22)
+const digests = (shapes) => Object.fromEntries(Object.entries(shapes).map(([k, v]) => [k, digest(v)]))
 const hashOf = (shapes) => {
-	const h = createHash('sha256')
-	for (const k of Object.keys(shapes).sort()) h.update(`${k}\0${shapes[k]}\0`)
-	return h.digest('base64url').slice(0, 22)
+	const d = digests(shapes)
+	return digest(Object.keys(d).sort().map((k) => `${k}\0${d[k]}`).join('\0'))
 }
 
 const shapeKeys = (shapes) => Object.keys(shapes).filter((k) => !k.startsWith('~'))
@@ -53,23 +56,26 @@ const summarise = ({ added, updated, removed }) => ({
  * Saves a version; returns it, or null when nothing changed since the last one (unless the save is
  * named: naming the current state labels the latest version instead of copying it).
  */
-export function save(dir, canvas, { label, source = 'edit', data, shapes, named = false, now = Date.now() }) {
+export function save(dir, canvas, { label, source = 'edit', data, shapes, named = false, now = Date.now(), maxBytes = DEFAULT_MAX_BYTES }) {
 	mkdirSync(versionsDir(dir, canvas), { recursive: true })
 	const store = readStore(dir, canvas)
 	const hash = hashOf(shapes)
 	const last = store.versions.at(-1)
+	const priorDigests = store.digests ?? {}
 	if (last?.hash === hash) {
 		if (!named) return null
 		Object.assign(last, { label, named: true })
 		writeStore(dir, canvas, store)
 		return last
 	}
-	const prior = last && existsSync(filePath(dir, canvas, last.n)) ? JSON.parse(gunzipSync(readFileSync(filePath(dir, canvas, last.n)))).shapes : {}
+	const current = digests(shapes)
 	const n = store.next++
-	writeFileSync(filePath(dir, canvas, n), gzipSync(JSON.stringify({ data, shapes })))
-	const version = { n, t: new Date(now).toISOString(), source, hash, count: shapeKeys(shapes).length, ...summarise(diffShapes(prior, shapes)), ...(label && { label: String(label).slice(0, 200) }), ...(named && { named: true }) }
+	const file = gzipSync(JSON.stringify({ data }))
+	writeFileSync(filePath(dir, canvas, n), file)
+	store.digests = current
+	const version = { n, t: new Date(now).toISOString(), source, hash, size: file.length, count: shapeKeys(shapes).length, ...summarise(diffShapes(priorDigests, current)), ...(label && { label: String(label).slice(0, 200) }), ...(named && { named: true }) }
 	store.versions.push(version)
-	for (const gone of prune(store.versions, now)) rmSync(filePath(dir, canvas, gone.n), { force: true })
+	for (const gone of prune(store.versions, now, maxBytes)) rmSync(filePath(dir, canvas, gone.n), { force: true })
 	store.versions = store.versions.filter((v) => !v.pruned)
 	writeStore(dir, canvas, store)
 	return version
@@ -77,9 +83,10 @@ export function save(dir, canvas, { label, source = 'edit', data, shapes, named 
 
 /**
  * Thins automatic versions as they age: every one for a day, then the last of each hour for a week,
- * then the last of each day. Named versions and restores stay, and so does the newest.
+ * then the last of each day. Named versions and restores stay, and so does the newest. Over the size
+ * cap, the oldest automatic versions go first, whatever their age.
  */
-function prune(versions, now) {
+function prune(versions, now, maxBytes) {
 	const gone = []
 	const seen = new Set()
 	for (let i = versions.length - 2; i >= 0; i--) {
@@ -88,6 +95,14 @@ function prune(versions, now) {
 		const bucket = age < 7 * DAY ? `h${Math.floor(Date.parse(v.t) / HOUR)}` : `d${Math.floor(Date.parse(v.t) / DAY)}`
 		if (seen.has(bucket)) (v.pruned = true), gone.push(v)
 		else seen.add(bucket)
+	}
+	let total = versions.reduce((sum, v) => sum + (v.pruned ? 0 : v.size ?? 0), 0)
+	for (const v of versions.slice(0, -1)) {
+		if (total <= maxBytes) break
+		if (v.pruned || v.named || v.source === 'restore') continue
+		v.pruned = true
+		gone.push(v)
+		total -= v.size ?? 0
 	}
 	return gone
 }
