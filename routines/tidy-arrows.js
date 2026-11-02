@@ -1,16 +1,15 @@
-// Tidy arrows: a canvas script (tldraw) that adds a "Tidy arrows" button. It re-routes arrows so fewer
-// of them run through boxes or cross each other, without moving any box: the arrangement stays yours.
-//
-//   toucan --canvas NAME script put tidy-arrows examples/tidy-arrows.js
-//
-// For each arrow bound at both ends it tries a straight line, curves of several bends either way, and
-// an elbow route, measures each on the real arrow geometry, and keeps the best:
-//   score = 1000 × boxes it runs through + 100 × arrows it crosses + a little for length and curvature.
-// Two passes, so later arrows' choices feed back into earlier ones. One click is one undo step.
-// Agents can run it too: `toucan --canvas NAME exec -e 'return toucan.tidyArrows()'` returns the
-// before and after counts.
+// routine: Tidy arrows
+// description: Re-route arrows so fewer cross or run through boxes. No box moves.
+// engines: tldraw
 
-const BENDS = [0, 40, -40, 80, -80, 140, -140, 220, -220]
+// For each arrow bound at both ends it tries a straight line, curves of several bends either way, and
+// elbow routes, measures each on the real arrow geometry, and keeps the best:
+//   score = 10000 × boxes it runs through + 100 × arrows it crosses + a little for length and curvature.
+// Two passes, so later arrows' choices feed back into earlier ones. If that leaves more arrows through
+// boxes than it started with, every arrow goes back as it was.
+
+const BENDS = [0, 40, -40, 80, -80, 140, -140, 220, -220, 350, -350, 500, -500, 750, -750, 1100, -1100]
+const ELBOW_MIDPOINTS = [0.1, 0.25, 0.5, 0.75, 0.9]
 
 /** Page-space polyline of a shape's geometry (arrows: the drawn path). */
 const pathOf = (shape) => {
@@ -73,55 +72,39 @@ function measure() {
 
 function tidy() {
 	const before = measure()
-	editor.markHistoryStoppingPoint('tidy arrows')
 	const boxes = editor.getCurrentPageShapes().filter((s) => s.type !== 'arrow' && s.type !== 'frame').map((s) => ({ id: s.id, b: editor.getShapePageBounds(s) }))
 	const arrows = arrowsWithEnds()
+	const originals = new Map(arrows.map((a) => {
+		const { kind, bend, elbowMidPoint } = editor.getShape(a.id).props
+		return [a.id, { kind, bend, elbowMidPoint }]
+	}))
 	const paths = new Map(arrows.map((a) => [a.id, pathOf(editor.getShape(a.id))]))
-	const candidates = [...BENDS.map((bend) => ({ kind: 'arc', bend })), { kind: 'elbow', bend: 0 }]
+	const candidates = [...BENDS.map((bend) => ({ kind: 'arc', bend, elbowMidPoint: 0.5 })),
+		...ELBOW_MIDPOINTS.map((elbowMidPoint) => ({ kind: 'elbow', bend: 0, elbowMidPoint }))]
 	for (let pass = 0; pass < 2; pass++) {
 		for (const a of arrows) {
 			const obstacles = obstaclesFor(a, boxes)
 			const others = arrows.filter((o) => o.id !== a.id && ![...a.ends].some((e) => o.ends.has(e)))
 			let best = null
 			for (const c of candidates) {
-				editor.updateShape({ id: a.id, type: 'arrow', props: { kind: c.kind, bend: c.bend } })
+				editor.updateShape({ id: a.id, type: 'arrow', props: { kind: c.kind, bend: c.bend, elbowMidPoint: c.elbowMidPoint } })
 				const path = pathOf(editor.getShape(a.id))
 				const thru = obstacles.filter((o) => through(path, o.b)).length
 				const crossed = others.reduce((n, o) => n + crossings(path, paths.get(o.id)), 0)
-				const score = 1000 * thru + 100 * crossed + 0.05 * length(path) + 0.1 * Math.abs(c.bend) + (c.kind === 'elbow' ? 15 : 0)
+				const score = 10000 * thru + 100 * crossed + 0.02 * length(path) + 0.03 * Math.abs(c.bend) + (c.kind === 'elbow' ? 15 : 0)
 				if (!best || score < best.score) best = { ...c, score, path }
 			}
-			editor.updateShape({ id: a.id, type: 'arrow', props: { kind: best.kind, bend: best.bend } })
+			editor.updateShape({ id: a.id, type: 'arrow', props: { kind: best.kind, bend: best.bend, elbowMidPoint: best.elbowMidPoint } })
 			paths.set(a.id, best.path)
 		}
 	}
-	const after = measure()
+	let after = measure()
+	if (after.throughBoxes > before.throughBoxes) {
+		for (const a of arrows) editor.updateShape({ id: a.id, type: 'arrow', props: originals.get(a.id) })
+		after = measure()
+	}
 	return { before, after }
 }
 
-// The button, in the canvas's top-left corner under tldraw's menu.
-const button = document.createElement('button')
-button.textContent = 'Tidy arrows'
-button.title = 'Re-route arrows to cross less and avoid boxes (boxes stay put)'
-Object.assign(button.style, {
-	position: 'absolute', top: '52px', left: '8px', zIndex: 300, padding: '4px 10px', font: '500 12px system-ui, sans-serif',
-	background: 'var(--color-panel, white)', color: 'var(--color-text, #1d1d1d)', border: '1px solid var(--color-muted-2, #ddd)',
-	borderRadius: '6px', boxShadow: '0 1px 3px rgb(0 0 0 / 0.12)', cursor: 'pointer',
-})
-let reset
-button.onclick = () => {
-	const { before, after } = tidy()
-	button.textContent = `Tidy arrows: ${before.throughBoxes}→${after.throughBoxes} through boxes, ${before.crossings}→${after.crossings} crossings`
-	clearTimeout(reset)
-	reset = setTimeout(() => (button.textContent = 'Tidy arrows'), 4000)
-}
-editor.getContainer().appendChild(button)
-toucan.tidyArrows = tidy
-toucan.arrowStats = measure
-
-return () => {
-	clearTimeout(reset)
-	button.remove()
-	delete toucan.tidyArrows
-	delete toucan.arrowStats
-}
+const { before, after } = tidy()
+return { summary: `${before.throughBoxes} → ${after.throughBoxes} through boxes, ${before.crossings} → ${after.crossings} crossings`, before, after }

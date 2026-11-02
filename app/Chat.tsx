@@ -62,7 +62,7 @@ type Send = (msg: Record<string, unknown>) => void
 
 // Chat panel for the Codex agent: the shadcn AI Elements "Chat" pattern, fed by
 // server/codex.mjs over /ws/chat through the adapter in lib/codex-messages.ts.
-export function Chat() {
+export function Chat({ toolbar, onHeaderPointerDown, draftRequest, onDraftTaken }: { toolbar?: React.ReactNode; onHeaderPointerDown?: (e: React.PointerEvent) => void; draftRequest?: { text: string } | null; onDraftTaken?: () => void }) {
 	const transcript = React.useRef(new CodexTranscript())
 	const [view, setView] = React.useState(() => transcript.current.snapshot())
 	const [online, setOnline] = React.useState(false)
@@ -70,6 +70,15 @@ export function Chat() {
 	const [draft, setDraft] = React.useState('')
 	const ws = React.useRef<WebSocket | null>(null)
 	const formRef = React.useRef<HTMLFormElement>(null)
+	const inputRef = React.useRef<HTMLTextAreaElement>(null)
+
+	// Something outside the panel starts a message for the person to finish (the Routines menu).
+	React.useEffect(() => {
+		if (!draftRequest) return
+		setDraft(draftRequest.text)
+		inputRef.current?.focus()
+		onDraftTaken?.()
+	}, [draftRequest, onDraftTaken])
 
 	React.useEffect(() => {
 		let closed = false
@@ -118,13 +127,13 @@ export function Chat() {
 	const { messages } = view
 	return (
 		<aside
-			className="toucan-ui flex min-h-0 min-w-0 flex-col border-l bg-background text-sm text-foreground max-md:border-t max-md:border-l-0"
+			className="toucan-ui flex min-h-0 min-w-0 flex-1 flex-col bg-background text-sm text-foreground"
 			// Keep typing, shortcuts and paste in the panel away from tldraw's document listeners.
 			onKeyDown={(e) => e.stopPropagation()}
 			onKeyUp={(e) => e.stopPropagation()}
 			onPaste={(e) => e.stopPropagation()}
 		>
-			<header className="flex items-center gap-2 border-b px-4 py-2.5">
+			<header className="flex items-center gap-2 border-b py-1.5 pr-1.5 pl-4 md:cursor-grab md:active:cursor-grabbing" onPointerDown={onHeaderPointerDown}>
 				<span className="font-medium">Codex</span>
 				<span
 					className={cn('size-2 rounded-full', online ? 'bg-emerald-500' : 'bg-destructive')}
@@ -132,7 +141,9 @@ export function Chat() {
 					aria-label={online ? 'connected' : 'offline'}
 					title={online ? 'connected' : 'offline'}
 				/>
-				<Button variant="ghost" size="sm" className="ml-auto" onClick={() => send({ type: 'new' })} disabled={!online}>
+				<span className="flex-1" />
+				{toolbar}
+				<Button variant="ghost" size="sm" onClick={() => send({ type: 'new' })} disabled={!online}>
 					<PlusIcon />
 					New chat
 				</Button>
@@ -201,6 +212,7 @@ export function Chat() {
 				<form ref={formRef} onSubmit={onSubmit} className="w-full">
 					<InputGroup>
 						<InputGroupTextarea
+							ref={inputRef}
 							value={draft}
 							onChange={(event) => setDraft(event.target.value)}
 							placeholder={online ? 'Message Codex…' : 'Reconnecting…'}

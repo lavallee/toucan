@@ -52,5 +52,12 @@ they have selected before guessing.
 `toucan --canvas NAME notes`, act on each one using what it sits on and near, then
 `toucan --canvas NAME notes resolve KEY --reply "what you did"`. Never delete a note.
 
+**Routines.** Before doing a chore by hand, check `toucan routine list` and `toucan --canvas NAME routine run
+NAME`. When the person says "bank that", write it as a routine and `toucan routine save NAME FILE --title T
+--description D --engines E`; it joins their Routines menu on every canvas.
+
+**History.** Every canvas keeps versions. Name one before a sweeping change (`toucan --canvas NAME versions save
+LABEL`), give an exec a `--label`, and `versions restore N` only when asked.
+
 For lasting behaviour (a button, an overlay, a reaction to edits), install a canvas script:
 `toucan --canvas NAME script put NAME FILE.js`. Never archive a canvas unless asked.

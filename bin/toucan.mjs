@@ -14,7 +14,7 @@
 //     meta [--title T] [--description D]        retitle/describe --canvas
 //     archive                     move --canvas aside to canvases/.archive/ (no tabs may have it open)
 //     summary [--within KEY]      compact JSON of shapes on the page
-//     exec -e CODE | FILE | -     run JS in the live editor; `return` a JSON value
+//     exec -e CODE | FILE | - [--label TEXT]   run JS in the live editor; `return` a JSON value (--label names it in the history)
 //     screenshot [OUT.png]        PNG of the page (or --keys a,b; --max px, default 1800)
 //     script list | put NAME FILE | rm NAME     canvas scripts (persistent behaviour)
 //     proposals [accept|reject [KEY...]]   dashed = proposed: list, or accept (solid) / reject (remove)
@@ -22,12 +22,15 @@
 //     notes [--all]               sticky notes left for the agent, with the shapes they sit on and near
 //     notes resolve KEY --reply TEXT   mark a note handled: green, plus a one-line reply (never deleted)
 //     log [--since T]             edits agents made with no tab open (T: ISO time, or 30m, 2h, 7d ago)
+//     versions [save LABEL | show N [--format F] | restore N]   the canvas's history: step back, name a point, restore one
+//     routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
+//                                 chores banked once and run on any canvas (no --canvas needed to list, show, save or rm)
 //
 //   Any other command runs `toucan-<command>` from PATH with the same arguments and
 //   TOUCAN_CANVAS set, so extensions live in their own repos (see README, "Extending").
 
 import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { FORMATS } from '../lib/tg.mjs'
@@ -55,7 +58,7 @@ function die(msg) {
 	process.exit(1)
 }
 
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine']
 let client
 if (cmd && !BUILTIN.includes(cmd)) {
 	// An extension command: `toucan foo …` runs `toucan-foo …` from PATH.
@@ -103,10 +106,12 @@ switch (cmd) {
 		break
 	}
 	case 'exec': {
-		const i = rest.findIndex((a) => a === '-e' || a === '--eval')
-		const src = i >= 0 ? rest[i + 1] : rest[0] === '-' || !rest[0] ? readFileSync(0, 'utf8') : readFileSync(rest[0], 'utf8')
-		if (src === undefined) die('usage: exec -e CODE | FILE | -')
-		print(await exec(src, 120000))
+		const label = flag('label')
+		const args = positional()
+		const i = args.findIndex((a) => a === '-e' || a === '--eval')
+		const src = i >= 0 ? args[i + 1] : args[0] === '-' || !args[0] ? readFileSync(0, 'utf8') : readFileSync(args[0], 'utf8')
+		if (src === undefined) die('usage: exec -e CODE | FILE | - [--label TEXT]')
+		print(await exec(src, 120000, typeof label === 'string' ? label : undefined))
 		break
 	}
 	case 'screenshot': {
@@ -162,7 +167,7 @@ switch (cmd) {
 		const tg = readGraph(file, flag('format'))
 		if (tg.warnings?.length) console.error(`toucan: ${tg.warnings.length} line(s) not understood:\n  ${tg.warnings.join('\n  ')}`)
 		const opts = { move: !!flag('move'), prune: !!flag('prune'), propose: !!flag('propose') }
-		const label = ['import', file, opts.move && '--move', opts.prune && '--prune', opts.propose && '--propose'].filter(Boolean).join(' ')
+		const label = ['import', basename(file), opts.move && '--move', opts.prune && '--prune', opts.propose && '--propose'].filter(Boolean).join(' ')
 		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify(opts)})`, 120000, label))
 		break
 	}
@@ -197,7 +202,35 @@ switch (cmd) {
 		print((await call(cpath(`/log?since=${encodeURIComponent(since)}`))).entries)
 		break
 	}
+	case 'versions': {
+		const format = flag('format')
+		const [, sub, arg, ...more] = argv
+		if (!sub) print((await call(cpath('/versions'))).versions)
+		else if (sub === 'save' && arg) print(await call(cpath('/versions'), { method: 'POST', body: JSON.stringify({ label: [arg, ...more].join(' '), source: 'agent' }) }))
+		else if (sub === 'show' && arg) {
+			const out = await call(cpath(`/versions/${arg}/graph?format=${format ?? 'tg'}`), {}, { text: !!format && format !== 'tg' })
+			print(out)
+		} else if (sub === 'restore' && arg) print(await call(cpath(`/versions/${arg}/restore`), { method: 'POST' }))
+		else die('usage: versions [save LABEL | show N [--format F] | restore N]')
+		break
+	}
+	case 'routine': {
+		const title = flag('title'), description = flag('description'), engines = flag('engines'), args = flag('args')
+		const [, sub, name, file] = argv
+		if (sub === 'list' || !sub) print((await call('/api/routines')).routines)
+		else if (sub === 'show' && name) print((await call(`/api/routines/${name}`)).code)
+		else if (sub === 'run' && name) {
+			const r = await call(cpath(`/routines/${name}/run`), { method: 'POST', body: JSON.stringify({ args: typeof args === 'string' ? JSON.parse(args) : undefined }) })
+			if (!r.ok) die(r.error)
+			print(r.result ?? 'done')
+		} else if (sub === 'save' && name && file) {
+			const code = readFileSync(file === '-' ? 0 : file, 'utf8')
+			print(await call(`/api/routines/${name}`, { method: 'PUT', body: JSON.stringify({ code, title, description, engines: typeof engines === 'string' ? engines.split(/[,\s]+/) : undefined }) }))
+		} else if (sub === 'rm' && name) print(await call(`/api/routines/${name}`, { method: 'DELETE' }))
+		else die('usage: routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME')
+		break
+	}
 	default:
-		console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 22).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
+		console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 25).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
 		if (cmd) die(`unknown command ${cmd} (no toucan-${cmd} on PATH)`)
 }

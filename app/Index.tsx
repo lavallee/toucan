@@ -2,8 +2,10 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ArchiveIcon, PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { api, token } from './net'
+import { AppearanceMenu } from './Appearance'
 
 type Canvas = {
 	engine: string
@@ -19,7 +21,6 @@ type Canvas = {
 	thumb: number | null
 }
 
-document.documentElement.classList.toggle('dark', matchMedia('(prefers-color-scheme: dark)').matches)
 document.title = 'toucan'
 
 const ago = (ms: number | null) => {
@@ -74,42 +75,52 @@ export function Index() {
 	return (
 		<div className="toucan-ui min-h-full bg-background text-foreground">
 			<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-				<header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-					<div>
-						<h1 className="text-2xl font-semibold tracking-tight">toucan</h1>
-						<p className="text-sm text-muted-foreground">Canvases on this server, in tldraw or Excalidraw. Each has its own chat thread and scripts; a copy converts between engines.</p>
+				<header className="mb-6 flex items-center gap-2">
+					<div className="min-w-0 flex-1">
+						<h1 className="text-xl font-semibold tracking-tight">toucan</h1>
+						<p className="text-sm text-muted-foreground">Canvases you and your agents share.</p>
 					</div>
-					<form onSubmit={create} className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-						<Input
-							className="sm:w-56"
-							placeholder="New canvas title"
-							value={title}
-							onChange={(e) => setTitle(e.target.value)}
-							aria-label="Title"
-						/>
-						<Input
-							className="font-mono sm:w-40"
-							placeholder="name"
-							value={nameEdited ? name : slug(title)}
-							onChange={(e) => (setNameEdited(true), setName(slug(e.target.value)))}
-							aria-label="Name (used in the URL and the CLI's --canvas)"
-						/>
-						<select className={SELECT} value={engine} onChange={(e) => setEngine(e.target.value)} aria-label="Engine">
-							<option value="tldraw">tldraw</option>
-							<option value="excalidraw">Excalidraw</option>
-						</select>
-						<select className={cn(SELECT, "max-w-52")} value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Start from">
-							<option value="">Blank</option>
-							{canvases?.map((c) => (
-								<option key={c.name} value={c.name}>
-									Copy of {c.title}
-								</option>
-							))}
-						</select>
-						<Button type="submit" disabled={!(nameEdited ? name : slug(title))}>
-							<PlusIcon /> New
-						</Button>
-					</form>
+					<AppearanceMenu />
+					<Popover>
+						<PopoverTrigger asChild>
+							<Button>
+								<PlusIcon /> New canvas
+							</Button>
+						</PopoverTrigger>
+						<PopoverContent>
+							<form onSubmit={create} className="space-y-2">
+								<label className="block space-y-1 text-xs font-medium">
+									Title
+									<Input placeholder="Launch plan" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+								</label>
+								<label className="block space-y-1 text-xs font-medium">
+									Name, for the URL and the CLI
+									<Input className="font-mono" placeholder="launch-plan" value={nameEdited ? name : slug(title)} onChange={(e) => (setNameEdited(true), setName(slug(e.target.value)))} />
+								</label>
+								<label className="block space-y-1 text-xs font-medium">
+									Engine
+									<select className={cn(SELECT, 'w-full font-normal')} value={engine} onChange={(e) => setEngine(e.target.value)}>
+										<option value="tldraw">tldraw</option>
+										<option value="excalidraw">Excalidraw</option>
+									</select>
+								</label>
+								<label className="block space-y-1 text-xs font-medium">
+									Start from
+									<select className={cn(SELECT, 'w-full font-normal')} value={from} onChange={(e) => setFrom(e.target.value)}>
+										<option value="">Blank</option>
+										{canvases?.map((c) => (
+											<option key={c.name} value={c.name}>
+												Copy of {c.title}
+											</option>
+										))}
+									</select>
+								</label>
+								<Button type="submit" className="w-full" disabled={!(nameEdited ? name : slug(title))}>
+									Create
+								</Button>
+							</form>
+						</PopoverContent>
+					</Popover>
 				</header>
 
 				{error && (
@@ -124,10 +135,10 @@ export function Index() {
 					<p className="text-sm text-muted-foreground">No canvases yet. Make one above.</p>
 				) : (
 					<ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-						{canvases.map((c) => (
+						{[...canvases].sort((a, b) => (b.updated ?? 0) - (a.updated ?? 0)).map((c) => (
 							<li key={c.name} className="group relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-xs transition-shadow hover:shadow-md">
 								<a href={href(c.name)} className="flex flex-1 flex-col focus-visible:outline-none">
-									<div className="flex aspect-[16/10] items-center justify-center overflow-hidden border-b bg-muted">
+									<div className={cn('flex aspect-[16/10] items-center justify-center overflow-hidden border-b', c.thumb ? 'bg-white' : 'bg-muted')}>
 										{c.thumb ? (
 											<img
 												src={`/api/canvases/${c.name}/thumb?v=${c.thumb}&token=${encodeURIComponent(token)}`}
@@ -146,8 +157,8 @@ export function Index() {
 											{c.open > 0 && <span className="size-2 shrink-0 rounded-full bg-emerald-500" title={`open in ${c.open} tab${c.open > 1 ? 's' : ''}`} />}
 										</div>
 										{c.description && <p className="line-clamp-2 text-sm text-muted-foreground">{c.description}</p>}
-										<p className="font-mono text-xs text-muted-foreground">
-											{c.name} · {c.shapes} shape{c.shapes === 1 ? '' : 's'}
+										<p className="text-xs text-muted-foreground" title={c.name}>
+											{c.shapes} shape{c.shapes === 1 ? '' : 's'}
 											{c.scripts.length > 0 && ` · ${c.scripts.length} script${c.scripts.length > 1 ? 's' : ''}`} · {ago(c.updated)}
 										</p>
 									</div>

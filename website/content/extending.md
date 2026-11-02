@@ -12,11 +12,21 @@ it will usually write one. Install one yourself with:
 toucan --canvas NAME script put highlight-new highlight-new.js
 ```
 
-The repo ships an example in `examples/`. `tidy-arrows.js` adds a **Tidy arrows** button (tldraw) that
-re-routes every connected arrow (straight, curved either way, or elbow, whichever is best) so fewer
-arrows run through boxes or cross each other. It never moves a box, one click is one undo step, and the
-button reports the before and after counts. Agents can run it as `toucan.tidyArrows()`. How toucan could
-notice a repeated chore and *offer* a button like this is sketched in [Habits](habits.html).
+## Routines
+
+A script is behaviour one canvas always has. A chore you run now and then, on any canvas, is a **routine**:
+a file banked once on the server, listed in the **Routines** menu of every canvas, and run with a click or
+`toucan --canvas NAME routine run NAME` as one undo step. toucan ships **Tidy arrows**, which re-routes every
+connected arrow (straight, curved or elbow, whichever is best) so fewer run through boxes or cross, without
+moving a box; and **Straighten sketchy lines**. Bank your own by asking the chat to "bank that", by pasting
+code into the menu, or with:
+
+```sh
+toucan routine save count-open count-open.js --title "Count open items" --description "How many boxes aren't green"
+```
+
+The file format is in the [agent guide](agents.html). Banked routines live in `<data>/_routines/`. How toucan
+could notice a repeated chore and *offer* to bank it is sketched in [Habits](habits.html).
 
 ## Extension commands
 

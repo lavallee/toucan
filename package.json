@@ -1,6 +1,6 @@
 {
   "name": "toucan",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "An infinite canvas in the browser (tldraw or Excalidraw) that you edit by hand while agents edit it through a CLI and a built-in Codex chat.",
   "license": "MIT",
   "author": "Marc Lavallee <mlavallee@gmail.com>",
@@ -39,7 +39,7 @@
     "start": "node server/index.mjs",
     "typecheck": "tsc --noEmit -p .",
     "css:preflight": "node scripts/scope-preflight.mjs",
-    "test": "node scripts/tg-check.mjs && node scripts/trail-check.mjs",
+    "test": "node scripts/tg-check.mjs && node scripts/trail-check.mjs && node scripts/versions-check.mjs && node scripts/routines-check.mjs",
     "test:headless": "node scripts/headless-e2e.mjs",
     "check": "node scripts/check-repo.mjs",
     "docs": "artoo build website"

@@ -5,6 +5,26 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-11-02
+
+Creature comforts: move through a canvas's past, keep your chores, and make the room your own.
+
+### Added
+
+- History: every canvas keeps versions, on both engines, with or without a tab open. One is saved after each agent run that changed something, when edits go quiet (`TOUCAN_VERSION_QUIET`, default 30s; `TOUCAN_VERSION_MAX_WAIT`, default 300s, during steady editing), when the last tab leaves, and when someone names one. The **History** panel steps through them read-only over the live canvas (← and →) and restores any of them for everyone. What was there is saved first, so a restore can be undone. Old automatic versions are thinned; named ones are kept. `toucan versions [save LABEL | show N [--format F] | restore N]` does the same from the CLI.
+- Routines: chores banked once for every canvas on a server, in `<data>/_routines/`, and run from the **Routines** menu or `toucan routine run NAME`, as one undo step. Bank one by asking the chat, pasting code, or `toucan routine save`. **Tidy arrows** and **Straighten sketchy lines** ship in `routines/`.
+- Theme override: system, light or dark, under **Appearance** in the app bar and on the index, per browser. tldraw's and Excalidraw's menus follow it.
+- The chat panel moves: dock it left, right or along the bottom, or float it over the canvas, with the buttons in its header or by dragging the header to an edge. Drag its edge to resize. Per browser.
+- `toucan exec --label TEXT` names a run in the history and on the trail.
+
+### Changed
+
+- Clean lettering by default. tldraw's handwritten font is drawn in Geist in this browser, without changing any shape; **Appearance → Canvas lettering → Handwritten** brings it back. New shapes get solid outlines rather than hand-drawn ones, including `toucan.node`'s default, and new Excalidraw text starts in a plain font. The **Straighten sketchy lines** routine converts what's already on a canvas.
+- An app bar replaces the floating badge, so toucan's controls no longer sit on the canvas. It shows the canvas's title rather than its name.
+- A tldraw canvas opens fitted to its content rather than at the page origin.
+- The index sorts by most recently edited, and new-canvas details are behind a **New canvas** button.
+- `examples/tidy-arrows.js` is now the routine `routines/tidy-arrows.js`, with a wider search (bigger bends, several elbow positions) that never leaves more arrows through boxes than it found. It has no button of its own. A canvas that installed the old script keeps it until `toucan script rm tidy-arrows`; `toucan.tidyArrows()` works only there.
+
 ## [0.2.0] — 2026-11-01
 
 Collaboration channels beyond chat, and agents that can work with no tab open.
