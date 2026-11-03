@@ -23,6 +23,7 @@ import * as trail from './trail.mjs'
 import * as versions from './versions.mjs'
 import { createRoutines } from './routines.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
+import * as threads from './threads.mjs'
 import { FORMATS, fromTldraw, fromExcalidraw, toExcalidrawElements } from '../lib/tg.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -242,6 +243,7 @@ function describe(n, idx) {
 		pages,
 		seeded: existsSync(seedPath(n)),
 		scripts: listScripts(n).map((s) => s.name),
+		openThreads: threads.list(CANVASES, n).filter((t) => t.status === 'open').length,
 		open: (tabs.get(n) ?? []).filter((w) => !w.headless).length,
 		headless: headless.has(n),
 		thumb: existsSync(thumbPath(n)) ? Math.round(mtime(thumbPath(n))) : null,
@@ -249,7 +251,7 @@ function describe(n, idx) {
 }
 
 function broadcast(canvas, msg) {
-	for (const ws of tabs.get(canvas) ?? []) ws.send(JSON.stringify(msg))
+	for (const ws of tabs.get(canvas) ?? []) if (ws.readyState === 1) ws.send(JSON.stringify(msg))
 }
 
 // ---- versions: the evolution of a canvas (server/versions.mjs) ---------------------------------
@@ -463,7 +465,8 @@ const server = createServer(async (req, res) => {
 			if ((tabs.get(canvas) ?? []).length || rooms.has(canvas) || scenes.has(canvas)) return json(res, 409, { error: `${canvas} is open in a tab — close it first` })
 			const dest = join(ARCHIVE, `${canvas}-${new Date().toISOString().replace(/[:.]/g, '-')}`)
 			mkdirSync(dest, { recursive: true })
-			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
+			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
+			chat.forgetThreads(canvas)
 			const idx = readIndex()
 			if (idx[canvas]) writeFileSync(join(dest, 'index-entry.json'), JSON.stringify(idx[canvas], null, 2) + '\n')
 			delete idx[canvas]
@@ -493,6 +496,55 @@ const server = createServer(async (req, res) => {
 				return json(res, 200, { ok: true, result: await exec(canvas, routines.program(routine, args), 120000, `routine ${subName}`) })
 			} catch (e) {
 				return json(res, 200, { ok: false, error: String(e.message ?? e) })
+			}
+		}
+		if (sub === 'threads') {
+			const n = /^\d+$/.test(subName ?? '') ? Number(subName) : null
+			const action = url.pathname.split('/')[6]
+			const input = req.method === 'POST' ? JSON.parse((await body(req)) || '{}') : {}
+			try {
+				if (subName === undefined && req.method === 'GET') {
+					const all = threadsView(canvas).filter((t) => url.searchParams.has('all') || t.status === 'open')
+					const notes = pagesOf(canvas).reduce((n, page) => n + threads.adoptableNotes(CANVASES, canvas, graphOf(canvas, page ? { page } : undefined)).length, 0)
+					return json(res, 200, { threads: all.map((t) => ({ ...t, attached: threads.describeAnchor(t, graphForThread(canvas, t)) })), notes })
+				}
+				if (subName === 'adopt-notes' && req.method === 'POST') {
+					const adopted = pagesOf(canvas).flatMap((page) => threads.adoptNotes(CANVASES, canvas, graphOf(canvas, page ? { page } : undefined), page))
+					announceThreads(canvas)
+					return json(res, 200, { adopted: adopted.length })
+				}
+				if (subName === undefined && req.method === 'POST') {
+					const thread = threads.create(CANVASES, canvas, { anchor: input.anchor, author: input.author, text: input.text })
+					routeThread(canvas, thread, input.ask, input.mode)
+					announceThreads(canvas)
+					return json(res, 201, thread)
+				}
+				if (n === null) return json(res, 404, { error: 'not found' })
+				if (!action && req.method === 'GET') return json(res, 200, { ...threads.get(CANVASES, canvas, n), attached: threads.describeAnchor(threads.get(CANVASES, canvas, n), graphForThread(canvas, threads.get(CANVASES, canvas, n))) })
+				if (req.method !== 'POST') return json(res, 405, { error: 'method' })
+				let thread
+				if (action === 'messages') {
+					thread = threads.reply(CANVASES, canvas, n, { author: input.author, text: input.text })
+					routeThread(canvas, thread, input.ask, input.mode)
+				} else if (action === 'close') thread = threads.close(CANVASES, canvas, n, { by: input.author, reply: input.text })
+				else if (action === 'reopen') thread = threads.reopen(CANVASES, canvas, n)
+				else if (action === 'route') {
+					thread = threads.get(CANVASES, canvas, n)
+					routeThread(canvas, thread, input.ask, input.mode, true)
+				} else if (action === 'stop') {
+					thread = threads.get(CANVASES, canvas, n)
+					workOf(canvas, n).stop = true // if its turn hasn't started yet, it stops as soon as it does
+					await chat.stopThread(canvas, n)
+				} else if (action === 'approve') {
+					thread = threads.get(CANVASES, canvas, n)
+					chat.answer(input.key, input.decision)
+				} else return json(res, 404, { error: 'not found' })
+				announceThreads(canvas)
+				return json(res, 200, thread)
+			} catch (e) {
+				if (e instanceof threads.NotFound) return json(res, 404, { error: e.message })
+				if (e instanceof threads.Invalid) return json(res, 400, { error: e.message })
+				throw e
 			}
 		}
 		if (sub === 'versions') {
@@ -552,16 +604,97 @@ function serveStatic(url, res) {
 
 // ---- websockets --------------------------------------------------------------
 const wss = new WebSocketServer({ noServer: true })
-const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect })
+const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, onThread: onThreadEvent })
+
+// ---- comment threads (server/threads.mjs) -------------------------------------------------------
+// What's in the file is the conversation. What an agent is doing right now isn't worth saving: it lives here, and
+// every tab gets it along with the threads.
+const threadWork = new Map() // "canvas#id" -> { working, approvals, last, error, stop }
+const workOf = (canvas, id) => {
+	const key = `${canvas}#${id}`
+	if (!threadWork.has(key)) threadWork.set(key, {})
+	return threadWork.get(key)
+}
+const threadsView = (canvas) =>
+	threads.list(CANVASES, canvas).map((t) => {
+		const { working, approvals } = threadWork.get(`${canvas}#${t.id}`) ?? {}
+		return { ...t, ...(working && { working: true }), ...(approvals?.length && { approval: approvals[0] }) }
+	})
+const announceThreads = (canvas) => broadcast(canvas, { type: 'threads', threads: threadsView(canvas) })
+
+function onThreadEvent(canvas, id, e) {
+	const work = workOf(canvas, id)
+	const say = (text) => threads.agentAnswered(CANVASES, canvas, id, text)
+	try {
+		if (e.type === 'item' && e.phase === 'completed' && e.item?.type === 'agentMessage' && e.item.text) work.last = e.item.text
+		else if (e.type === 'approval') (work.approvals ??= []).push({ key: e.key, command: Array.isArray(e.command) ? e.command.join(' ') : e.command, reason: e.reason, kind: e.kind })
+		else if (e.type === 'approved') work.approvals = (work.approvals ?? []).filter((a) => a.key !== e.key)
+		else if (e.type === 'error') work.error = e.message // the turn's end reports it, once
+		else if (e.type === 'send-failed') {
+			work.working = false
+			say(`Couldn't start: ${e.message}`)
+		} else if (e.type === 'direct-done') work.working = false // nothing was running when asked to stop
+		else if (e.type === 'turn') {
+			work.working = e.status === 'inProgress'
+			if (work.working && work.stop) chat.stopThread(canvas, id)
+			if (!work.working) {
+				delete work.approvals
+				delete work.stop
+				const said = work.last ?? (e.status === 'interrupted' ? 'Stopped.' : e.error || work.error ? `Couldn't finish: ${e.error || work.error}` : null)
+				delete work.last
+				delete work.error
+				if (said) say(said)
+			}
+		} else return
+		announceThreads(canvas)
+	} catch (err) {
+		// The canvas may have been archived mid-turn. That mustn't take the server down.
+		if (!(err instanceof threads.NotFound)) console.error(`thread ${canvas}#${id}: ${err.message}`)
+	}
+}
+
+/** A tldraw thread is about one page; its anchor says which. */
+const graphForThread = (canvas, thread) => graphOf(canvas, thread.anchor.page ? { page: thread.anchor.page } : undefined)
+function pagesOf(canvas) {
+	if (engineOf(canvas) !== 'tldraw') return [undefined]
+	const snapshot = rooms.has(canvas) ? rooms.get(canvas).room.getCurrentSnapshot() : existsSync(docPath(canvas)) ? JSON.parse(readFileSync(docPath(canvas), 'utf8')).room : null
+	const pages = (snapshot?.documents ?? []).filter((d) => d.state.typeName === 'page').map((d) => d.state.id)
+	return pages.length ? pages : [undefined]
+}
+
+const openThreadLines = (canvas) =>
+	threads.list(CANVASES, canvas).filter((t) => t.status === 'open').map((t) => {
+		const last = t.messages.at(-1)
+		return `#${t.id} ${threads.anchorLine(t, graphForThread(canvas, t))}: ${last.author.name} said "${last.text.replace(/\s+/g, ' ').slice(0, 120)}"`
+	})
+
+/** Sends a thread somewhere for an answer. Its own agent by default; the main chat steers whatever's happening there. */
+function routeThread(canvas, thread, ask, mode, handover = false) {
+	if (ask === 'chat') {
+		const said = thread.messages.at(-1)
+		const about = `About comment thread #${thread.id}, ${threads.anchorLine(thread, graphForThread(canvas, thread))}.`
+		// A new message is the request; handing over a thread with nothing new means the whole conversation is.
+		const text = handover ? `${about} Take this thread from here. The conversation so far:\n${threads.transcript(thread)}` : `${about} ${said.author.name} says: ${said.text}`
+		chat.enqueue(canvas, text, mode).catch((e) => console.error(`chat: ${e.message}`))
+	} else if (ask === 'agent') {
+		workOf(canvas, thread.id).working = true
+		const prompt = threads.promptFor(thread, graphForThread(canvas, thread))
+		threads.markSeen(CANVASES, canvas, thread.id)
+		chat.askThread(canvas, thread.id, prompt, mode).catch((e) => onThreadEvent(canvas, thread.id, { type: 'send-failed', message: e.message ?? String(e) }))
+	}
+}
 
 /** Selection and notes need a person's tab; with none, or a slow one, the brief goes without them. */
 async function chatBrief(canvas) {
-	if (!(tabs.get(canvas) ?? []).some((w) => !w.headless)) return formatBrief(graphOf(canvas))
+	if (!(tabs.get(canvas) ?? []).some((w) => !w.headless)) {
+		return formatBrief(graphOf(canvas), null, openThreadLines(canvas))
+	}
 	const asked = exec(canvas, `const s = toucan.summary({ limit: 0 }), sel = toucan.selection?.()
 return { page: toucan.engine === 'tldraw' ? editor.getCurrentPageId() : undefined, selected: s.selected ?? [], openNotes: s.openNotes, others: (sel?.others ?? []).map((o) => ({ user: o.user, shapes: o.shapes.map((x) => x.key) })) }`, 1000)
 	const live = await Promise.race([asked, new Promise((r) => setTimeout(r, 800))]).catch(() => null)
 	// The brief describes the page the person is on, not just the first one.
-	return formatBrief(graphOf(canvas, live?.page ? { page: live.page } : undefined), live)
+	const tg = graphOf(canvas, live?.page ? { page: live.page } : undefined)
+	return formatBrief(tg, live, openThreadLines(canvas))
 }
 
 /** A message that needs no agent: run it, and return what to say. Null: it's for the agent. */
@@ -604,6 +737,7 @@ function onCanvas(ws, canvas, nonce) {
 	list.push(ws)
 	tabs.set(canvas, list)
 	ws.send(JSON.stringify({ type: 'scripts', scripts: listScripts(canvas) }))
+	ws.send(JSON.stringify({ type: 'threads', threads: threadsView(canvas) }))
 	ws.on('message', (raw) => {
 		const msg = JSON.parse(raw)
 		if (msg.type === 'focus') {

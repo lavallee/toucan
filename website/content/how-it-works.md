@@ -53,6 +53,14 @@ the shapes each exec added, updated and removed (the same record that drives the
 person opening the canvas sees "N agent edits while you were away" with the list, until they mark it
 seen in that browser. Edits made while a person's tab took the exec aren't recorded: they watched.
 
+## Threads
+
+Comment threads are a small file beside each canvas (`<name>.threads.json`), and the server pushes the whole list to
+every tab when one changes. Pins and thread cards are drawn in a layer over the canvas, placed through each engine's
+coordinates, so they follow shapes and the camera on both engines without touching the document. An anchor is a list of
+shape keys or a page region; a shape's last known box is kept, so a thread outlives it. Each thread can have its own
+Codex conversation, keyed by canvas and thread, and that conversation's last message in a turn becomes its reply.
+
 ## Versions
 
 Each canvas has a directory of gzipped full snapshots beside it (`<name>.versions/`), with an index saying what

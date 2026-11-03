@@ -4,6 +4,7 @@
 // screenshot, zoomTo, get, remove).
 
 import { wsUrl, canvasName, token, headless } from './net'
+import { getThreads, setThreads } from './threads-store'
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 
@@ -39,6 +40,7 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 		sock.onmessage = async (ev) => {
 			const msg = JSON.parse(ev.data)
 			if (msg.type === 'scripts') return runScripts(msg.scripts)
+			if (msg.type === 'threads') return setThreads(msg.threads)
 			// Another tab ran agent code: glow what it added or changed (agent presence, app/pulses.tsx).
 			if (msg.type === 'agent-edit') return scope.toucan.pulse?.(msg.ids)
 			if (msg.type !== 'exec') return
@@ -49,7 +51,9 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 				const changes = done?.()
 				const ids = changes ? [...changes.added, ...changes.updated].map((c: any) => c.id) : []
 				if (ids.length) scope.toucan.pulse?.(ids)
-				if (changes?.added.length) scope.toucan.reveal?.(changes.added.map((c: any) => c.id))
+				// Don't move the canvas under someone reading or writing in a thread.
+				const { active, draft } = getThreads()
+				if (changes?.added.length && active === null && !draft) scope.toucan.reveal?.(changes.added.map((c: any) => c.id))
 				return changes
 			}
 			try {

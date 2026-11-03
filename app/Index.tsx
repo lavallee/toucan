@@ -17,6 +17,7 @@ type Canvas = {
 	shapes: number
 	pages: number
 	scripts: string[]
+	openThreads?: number
 	open: number
 	thumb: number | null
 }
@@ -159,6 +160,7 @@ export function Index() {
 										{c.description && <p className="line-clamp-2 text-sm text-muted-foreground">{c.description}</p>}
 										<p className="text-xs text-muted-foreground" title={c.name}>
 											{c.shapes} shape{c.shapes === 1 ? '' : 's'}
+											{(c.openThreads ?? 0) > 0 && ` · ${c.openThreads} open thread${c.openThreads === 1 ? '' : 's'}`}
 											{c.scripts.length > 0 && ` · ${c.scripts.length} script${c.scripts.length > 1 ? 's' : ''}`} · {ago(c.updated)}
 										</p>
 									</div>

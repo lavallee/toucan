@@ -8,6 +8,8 @@ import { connectRelay, keepThumbnail } from './relay'
 import { CanvasFrame } from './CanvasFrame'
 import { ExcalidrawPulses } from './pulses'
 import { ProposalBar } from './ProposalBar'
+import { ThreadsLayer } from './Threads'
+import { startComment } from './threads-store'
 import { getAppearance, useAppearance } from './theme'
 
 // Fonts are served from our own dist/ (copied there at build time), not a CDN.
@@ -137,11 +139,12 @@ export function ExcalidrawApp() {
 	}, [api])
 
 	return (
-		<CanvasFrame live={relay === 'live' && sync === 'synced'} engine="excalidraw" preview={VersionPreview}>
+		<CanvasFrame live={relay === 'live' && sync === 'synced'} engine="excalidraw" preview={VersionPreview} onComment={() => startComment(helpers?.toucan)}>
 			<div className="absolute inset-0">
 				<Excalidraw excalidrawAPI={setApi} theme={dark ? 'dark' : 'light'} initialData={{ appState: initialAppState }} UIOptions={{ canvasActions: { loadScene: false } }} />
 				<ExcalidrawPulses api={api} />
 				{helpers && <ProposalBar {...helpers} />}
+				{helpers && <ThreadsLayer {...helpers} />}
 			</div>
 		</CanvasFrame>
 	)

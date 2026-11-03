@@ -5,6 +5,24 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-11-03
+
+Comments that are conversations: attach them to a shape or a region, work them with agents and people, and close them out.
+
+### Added
+
+- Threads: comment on a shape, several selected shapes, or a dragged-out region, and go back and forth until someone closes it. Pins follow what they're on, and show whose move it is. Each message goes to the thread's own agent (several threads can be worked at once, and a reply mid-run steers that agent), to the main chat (adjusting its turn in progress), or to people. Both engines, with or without a tab open. `toucan threads` does the same from the CLI, and the chat's brief lists open threads.
+- `threads adopt-notes` and a button in the Threads panel bring sticky notes in as threads, keeping their replies and resolutions. The notes stay.
+- Your name, under Appearance, shown on your comments.
+
+### Changed
+
+- On Excalidraw too, a run that adds shapes outside the view brings them into view. Neither engine moves the canvas while a thread is open.
+
+### Fixed
+
+- `toucan.frame` on an existing frame changes only what you pass. It used to reset the name and colour you didn't mention.
+
 ## [0.4.0] — 2026-11-03
 
 Instructions reach the canvas much sooner.

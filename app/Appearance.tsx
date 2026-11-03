@@ -2,6 +2,8 @@ import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
+import { myName, setMyName } from './threads-store'
 import { setLettering, setTheme, useAppearance, type Lettering, type Theme } from './theme'
 
 const THEMES: { value: Theme; label: string; Icon: typeof SunIcon }[] = [
@@ -52,6 +54,10 @@ export function AppearanceMenu() {
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent className="w-64 space-y-3">
+				<label className="block space-y-1.5 text-xs font-medium">
+					Your name
+					<Input className="h-7 text-xs font-normal" defaultValue={myName()} placeholder="Shown on your comments" onChange={(e) => setMyName(e.target.value.trim())} />
+				</label>
 				<div className="space-y-1.5">
 					<p className="text-xs font-medium">Theme</p>
 					<Segmented label="Theme" value={theme} options={THEMES} onChange={setTheme} />

@@ -23,6 +23,8 @@
 //     notes resolve KEY --reply TEXT   mark a note handled: green, plus a one-line reply (never deleted)
 //     log [--since T]             edits agents made with no tab open (T: ISO time, or 30m, 2h, 7d ago)
 //     versions [save LABEL | show N [--format F] | restore N]   the canvas's history: step back, name a point, restore one
+//     threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes
+//                                 comment threads on shapes and regions (--as NAME: speak as a person; default: as the agent)
 //     routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
 //                                 chores banked once and run on any canvas (no --canvas needed to list, show, save or rm)
 //
@@ -58,7 +60,7 @@ function die(msg) {
 	process.exit(1)
 }
 
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads']
 let client
 if (cmd && !BUILTIN.includes(cmd)) {
 	// An extension command: `toucan foo …` runs `toucan-foo …` from PATH.
@@ -215,6 +217,23 @@ switch (cmd) {
 		else die('usage: versions [save LABEL | show N [--format F] | restore N]')
 		break
 	}
+	case 'threads': {
+		const all = !!flag('all'), on = flag('on'), region = flag('region'), reply = flag('reply'), as = flag('as'), ask = flag('ask')
+		const author = typeof as === 'string' ? { kind: 'person', name: as } : { kind: 'agent' }
+		const [, sub, ...args] = argv
+		const post = (path, body) => call(cpath(`/threads${path}`), { method: 'POST', body: JSON.stringify({ author, ...body }) })
+		if (!sub) print((await call(cpath(`/threads${all ? '?all' : ''}`))).threads)
+		else if (sub === 'show' && args[0]) print(await call(cpath(`/threads/${args[0]}`)))
+		else if (sub === 'new' && args.length && (on || region)) {
+			const [x, y, w, h] = String(region).split(',').map(Number)
+			print(await post('', { text: args.join(' '), anchor: on ? { shapes: String(on).split(',') } : { region: { x, y, w, h } }, ask: ask ? 'agent' : undefined }))
+		} else if (sub === 'reply' && args[1]) print(await post(`/${args[0]}/messages`, { text: args.slice(1).join(' '), ask: ask ? 'agent' : undefined }))
+		else if (sub === 'close' && args[0]) print(await post(`/${args[0]}/close`, { text: typeof reply === 'string' ? reply : undefined }))
+		else if (sub === 'reopen' && args[0]) print(await post(`/${args[0]}/reopen`))
+		else if (sub === 'adopt-notes') print(await post('/adopt-notes'))
+		else die('usage: threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes')
+		break
+	}
 	case 'routine': {
 		const title = flag('title'), description = flag('description'), engines = flag('engines'), args = flag('args')
 		const [, sub, name, file] = argv
@@ -232,6 +251,6 @@ switch (cmd) {
 		break
 	}
 	default:
-		console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 25).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
+		console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 27).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
 		if (cmd) die(`unknown command ${cmd} (no toucan-${cmd} on PATH)`)
 }

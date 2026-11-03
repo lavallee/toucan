@@ -67,6 +67,9 @@ point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works fr
   `toucan import FILE` merges JSON Canvas, Mermaid, `.excalidraw` or TG into the open canvas *by key*:
   existing shapes keep their position, new ones are laid out with ELK, nothing is deleted without `--prune`.
   The converters are in [`lib/tg.mjs`](lib/tg.mjs).
+- **Threads.** Comment on a shape or drag out a region. Each comment is a thread you go back and forth in and close
+  out: give it to its own agent (several can work at once, and you can steer each one), send it into the main chat, or
+  leave it for people. They work on both engines and with no tab open, and `toucan threads` does the same from the CLI.
 - **Notes for the agent.** On tldraw, a sticky note is addressed to the agent: pin one where the problem
   is, and `toucan notes` gives the agent its text and the shapes it sits on and near. A handled note turns
   green with a one-line reply; notes are never deleted.
@@ -106,6 +109,7 @@ toucan [--canvas NAME] <command>
   notes resolve KEY --reply T mark a note handled: green, plus a one-line reply
   log [--since T]             edits agents made with no tab open (T: ISO time, or an age: 30m, 2h, 7d)
   versions [save LABEL | show N [--format F] | restore N]   the canvas's history
+  threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes
   routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
 ```
 

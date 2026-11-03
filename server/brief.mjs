@@ -11,7 +11,7 @@ const box = (b) => (b ? ` @${Math.round(b.x)},${Math.round(b.y)} ${Math.round(b.
  * A toucan graph, plus what the tab reports, as compact lines for the model. `live` is what a person's tab said
  * about selection and notes; without it, selection is unknown rather than empty, and the brief says so.
  */
-export function formatBrief(tg, live = null) {
+export function formatBrief(tg, live = null, threads = []) {
 	const groups = tg.groups ?? [], nodes = tg.nodes ?? [], edges = tg.edges ?? [], skipped = tg.skipped?.length ?? 0
 	const lines = [`<canvas_brief>The canvas as this message was sent (keys, text, position and size). Trust it instead of reading the canvas again.`]
 	if (!nodes.length && !groups.length && !skipped) lines.push('The canvas is empty.')
@@ -28,6 +28,8 @@ export function formatBrief(tg, live = null) {
 		if (others.length) lines.push(`Selected by others: ${others.join('; ')}`)
 		if (live.openNotes) lines.push(`${live.openNotes} open sticky note${live.openNotes === 1 ? '' : 's'}; \`notes\` lists them.`)
 	} else lines.push("Selection unknown (no answer from a person's tab): run `selection` if they say \"this\" or \"these\".")
+	for (const t of threads.slice(0, 15)) lines.push(`Open comment thread ${t}`)
+	if (threads.length > 15) lines.push(`… and ${threads.length - 15} more open threads; \`threads\` lists them.`)
 	lines.push('</canvas_brief>')
 	return lines.join('\n')
 }

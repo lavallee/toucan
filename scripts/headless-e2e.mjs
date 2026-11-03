@@ -125,6 +125,16 @@ try {
 		await new Promise((r) => setTimeout(r, 1500)) // the page reconnects, or takes the merge
 		assert.equal((await toucan('--canvas', hist, 'exec', '-e', shapeCount)).out, atCheckpoint, 'restore put the canvas back')
 		assert.ok((await json('--canvas', hist, 'log')).some((e) => e.source === 'restore'), 'a restore nobody watched goes on the trail')
+		// Threads need no tab at all, and an agent answers through the CLI.
+		const made = await json('--canvas', hist, 'threads', 'new', 'Is', 'this', 'right?', '--on', 'a', '--as', 'Marc')
+		assert.deepEqual(made.anchor.shapes, ['a'])
+		await toucan('--canvas', hist, 'threads', 'reply', String(made.id), 'Yes.')
+		const seen = (await json('--canvas', hist, 'threads'))[0]
+		assert.deepEqual(seen.messages.map((m) => [m.author.kind, m.author.name]), [['person', 'Marc'], ['agent', 'Agent']])
+		assert.equal(seen.attached.on[0].text, 'Alpha', 'a thread says what it is on')
+		await toucan('--canvas', hist, 'threads', 'close', String(made.id), '--reply', 'Done.')
+		assert.equal((await json('--canvas', hist, 'threads')).length, 0, 'a closed thread leaves the open list')
+		assert.equal((await json('--canvas', hist, 'threads', '--all')).length, 1)
 		const ran = await json('--canvas', hist, 'routine', 'run', 'straighten-lines')
 		assert.equal(typeof ran.summary, 'string')
 		step(`${engine}: versions: named, edited, restored; routine → ${ran.summary}`)

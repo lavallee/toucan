@@ -240,5 +240,62 @@ export function makeExcalidrawHelpers(api, ex) {
 		}
 	}
 
-	return { engine: 'excalidraw', get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track }
+	// ---- the canvas as comment threads see it (app/Threads.tsx): page coordinates, and what's where ------
+	const boxOf = (e) => ({ x: Math.min(e.x, e.x + e.width), y: Math.min(e.y, e.y + e.height), w: Math.abs(e.width), h: Math.abs(e.height) })
+	const boundsOf = (keys) => {
+		const found = keys.map(get).filter(Boolean).map(boxOf)
+		if (!found.length) return null
+		const x = Math.min(...found.map((b) => b.x)), y = Math.min(...found.map((b) => b.y))
+		return { x, y, w: Math.max(...found.map((b) => b.x + b.w)) - x, h: Math.max(...found.map((b) => b.y + b.h)) - y }
+	}
+	const inside = (b, p) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h
+	/** Internal (the exec relay): an edit nobody can see hasn't landed. See the tldraw helpers. */
+	function reveal(addedIds) {
+		const added = live().filter((e) => addedIds.includes(e.id))
+		const state = api.getAppState()
+		if (!added.length || state.newElement || state.resizingElement || state.selectedElementsAreBeingDragged || state.editingTextElement) return
+		const corner = (x, y) => ex.sceneCoordsToViewportCoords({ sceneX: x, sceneY: y }, state)
+		const out = added.some((e) => {
+			const b = boxOf(e), a = corner(b.x, b.y), z = corner(b.x + b.w, b.y + b.h)
+			return a.x < state.offsetLeft || a.y < state.offsetTop || z.x > state.offsetLeft + state.width || z.y > state.offsetTop + state.height
+		})
+		if (out) api.scrollToContent(undefined, { fitToContent: true, animate: true })
+	}
+
+	const threadView = {
+		boundsOf,
+		/** The topmost shape at a point; a frame only counts when nothing's on top of it. */
+		shapeAt: (p) => {
+			const at = shapes().filter((e) => inside(boxOf(e), p))
+			const hit = [...at].reverse().find((e) => e.type !== 'frame') ?? at.at(-1)
+			return hit ? keyOf(hit) : null
+		},
+		shapesIn: (box) => shapes().filter((e) => {
+			if (e.type === 'frame' || e.type === 'arrow') return false
+			const b = boxOf(e)
+			return b.x < box.x + box.w && box.x < b.x + b.w && b.y < box.y + box.h && box.y < b.y + b.h
+		}).map(keyOf),
+		toViewport: ({ x, y }) => {
+			const state = api.getAppState()
+			const p = ex.sceneCoordsToViewportCoords({ sceneX: x, sceneY: y }, state)
+			return { x: p.x - state.offsetLeft, y: p.y - state.offsetTop }
+		},
+		fromClient: ({ x, y }) => {
+			const p = ex.viewportCoordsToSceneCoords({ clientX: x, clientY: y }, api.getAppState())
+			return { x: p.x, y: p.y }
+		},
+		onCamera: (f) => api.onScrollChange(f),
+		showBox: (box) => {
+			const state = api.getAppState()
+			const a = ex.sceneCoordsToViewportCoords({ sceneX: box.x, sceneY: box.y }, state), z = ex.sceneCoordsToViewportCoords({ sceneX: box.x + box.w, sceneY: box.y + box.h }, state)
+			if (a.x >= state.offsetLeft && a.y >= state.offsetTop && z.x <= state.offsetLeft + state.width && z.y <= state.offsetTop + state.height) return
+			const near = shapes().filter((e) => {
+				const b = boxOf(e)
+				return b.x < box.x + box.w && box.x < b.x + b.w && b.y < box.y + box.h && box.y < b.y + b.h
+			})
+			if (near.length) api.scrollToContent(near, { fitToContent: false, animate: true })
+		},
+	}
+
+	return { engine: 'excalidraw', get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
 }

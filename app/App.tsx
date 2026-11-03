@@ -9,6 +9,8 @@ import { connectRelay, keepThumbnail, applySeed } from './relay'
 import { CanvasFrame } from './CanvasFrame'
 import { PulseBoxes, usePulses } from './pulses'
 import { ProposalBar } from './ProposalBar'
+import { ThreadsLayer } from './Threads'
+import { myName, startComment } from './threads-store'
 import { getAppearance, setTheme, useAppearance, type Theme } from './theme'
 import geist from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url'
 import geistItalic from '@fontsource-variable/geist/files/geist-latin-wght-italic.woff2?url'
@@ -89,6 +91,7 @@ export function App() {
 		window.toucan = toucan
 		// The server's headless page shows up among the collaborators; say what it is.
 		if (headless) editor.user.updateUserPreferences({ name: 'agent (headless)' })
+		else if (myName()) editor.user.updateUserPreferences({ name: myName() })
 		const stopRelay = connectRelay({ editor, tl, toucan }, setStatus)
 		const stopThumbnail = keepThumbnail(
 			async () => {
@@ -118,8 +121,9 @@ export function App() {
 	const store = useSync({ uri: wsUrl('/ws/sync'), assets: inlineBase64AssetStore })
 
 	return (
-		<CanvasFrame live={status === 'live' && store.status === 'synced-remote'} engine="tldraw" preview={VersionPreview}>
+		<CanvasFrame live={status === 'live' && store.status === 'synced-remote'} engine="tldraw" preview={VersionPreview} onComment={() => startComment(helpers?.toucan)}>
 			{helpers && <ProposalBar {...helpers} />}
+			{helpers && <ThreadsLayer {...helpers} />}
 			<Tldraw store={store} onMount={onMount} components={components} assetUrls={assetUrls} colorScheme="system" licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY} />
 		</CanvasFrame>
 	)
