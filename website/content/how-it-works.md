@@ -75,6 +75,11 @@ their positions unless asked to move. New shapes without a position are laid out
 
 ## The chat
 
+Speed comes first, because someone is watching the canvas. Each message carries a compact brief of the canvas
+(built from the server's copy, plus the person's selection and open notes), so the agent's first move can be the
+edit rather than a read. Messages that need no judgement skip the model: `/routine-name` and a message that is
+only a Mermaid flowchart are applied directly. A message sent mid-turn steers the turn in progress.
+
 The chat panel talks to one `codex app-server` child process over stdio JSON-RPC, with one Codex thread
 per canvas. Codex runs on the machine's ChatGPT sign-in (`codex login`); toucan never holds a model key.
 It edits the canvas the same way a terminal agent does, by running the CLI, so both share one path.

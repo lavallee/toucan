@@ -57,7 +57,9 @@ point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works fr
 
 - **Hand edits and agent edits on one document.** Tabs on any machine share a live document; agents
   change it through an exec relay into the most recently focused tab, so you see every edit land.
-- **Chat.** A panel talks to Codex; dock it left, right or along the bottom, or float it over the canvas. It inspects the canvas, makes edits, and can install
+- **Chat.** A panel talks to Codex; dock it left, right or along the bottom, or float it over the canvas. Fast
+  (the default) acts right away, and Thorough thinks longer. Add to a request while it's running. `/routine-name`
+  or a pasted Mermaid flowchart lands at once, with no agent. It inspects the canvas, makes edits, and can install
   *canvas scripts* — persistent behaviour (a button, a live overlay, a reaction to edits) that runs
   whenever the canvas loads. Anything outside Codex's sandbox asks you first.
 - **Two engines.** Each canvas is tldraw (default) or Excalidraw. Copying a canvas converts it between them.
@@ -91,7 +93,7 @@ toucan [--canvas NAME] <command>
   canvases                    list canvases
   new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D]
   graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]
-  import FILE [--format F] [--move] [--prune] [--propose]
+  import FILE|- [--format F] [--move] [--prune] [--propose] [--label T]
   meta [--title T] [--description D]
   archive                     move a canvas aside (nothing is deleted)
   summary [--within KEY]      compact JSON of shapes
@@ -165,6 +167,8 @@ codex plugin add toucan@lyra-forge
 | `--port` / `TOUCAN_PORT` | `8893` | |
 | `--data` / `TOUCAN_DATA` | `canvases/` in the checkout | where canvases, scripts and previews live |
 | `--headless` / `TOUCAN_HEADLESS=1` | off | run exec in headless Chromium when no tab has the canvas open |
+| `TOUCAN_CHAT_FAST_MODEL`, `TOUCAN_CHAT_THOROUGH_MODEL` | Codex's default | model for each chat speed |
+| `TOUCAN_CHAT_FAST_EFFORT`, `TOUCAN_CHAT_THOROUGH_EFFORT` | `low`, `medium` | reasoning effort for each chat speed |
 | `TOUCAN_HEADLESS_IDLE` | `120` | seconds a headless page stays open after its last exec |
 | `TOUCAN_HEADLESS_MAX` | `2` | headless pages open at once (the least recently used idle one makes room) |
 | `TOUCAN_PUBLIC_HOST` | `127.0.0.1`, or the hostname when bound to all interfaces | host used in printed links |

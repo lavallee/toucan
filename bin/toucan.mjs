@@ -9,7 +9,7 @@
 //     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D]
 //                                 make a canvas; --from copies another canvas (or a graph file) via TG
 //     graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   export (no tab needed)
-//     import FILE [--format F] [--move] [--prune] [--propose]   keyed upsert of a graph file into the open canvas
+//     import FILE|- [--format F] [--move] [--prune] [--propose] [--label T]   keyed upsert of a graph file into the open canvas
 //                                 (--propose: what it adds arrives dashed, as a proposal)
 //     meta [--title T] [--description D]        retitle/describe --canvas
 //     archive                     move --canvas aside to canvases/.archive/ (no tabs may have it open)
@@ -167,7 +167,8 @@ switch (cmd) {
 		const tg = readGraph(file, flag('format'))
 		if (tg.warnings?.length) console.error(`toucan: ${tg.warnings.length} line(s) not understood:\n  ${tg.warnings.join('\n  ')}`)
 		const opts = { move: !!flag('move'), prune: !!flag('prune'), propose: !!flag('propose') }
-		const label = ['import', basename(file), opts.move && '--move', opts.prune && '--prune', opts.propose && '--propose'].filter(Boolean).join(' ')
+		const named = flag('label')
+		const label = typeof named === 'string' ? named : ['import', file === '-' ? 'from stdin' : basename(file), opts.move && '--move', opts.prune && '--prune', opts.propose && '--propose'].filter(Boolean).join(' ')
 		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify(opts)})`, 120000, label))
 		break
 	}

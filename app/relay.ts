@@ -49,6 +49,7 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 				const changes = done?.()
 				const ids = changes ? [...changes.added, ...changes.updated].map((c: any) => c.id) : []
 				if (ids.length) scope.toucan.pulse?.(ids)
+				if (changes?.added.length) scope.toucan.reveal?.(changes.added.map((c: any) => c.id))
 				return changes
 			}
 			try {

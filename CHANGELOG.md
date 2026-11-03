@@ -5,6 +5,28 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-11-03
+
+Instructions reach the canvas much sooner.
+
+### Added
+
+- **Fast** and **Thorough** in the chat panel, kept per browser. Fast is the default: Codex's default model at low effort. `TOUCAN_CHAT_FAST_MODEL`, `TOUCAN_CHAT_FAST_EFFORT`, `TOUCAN_CHAT_THOROUGH_MODEL` and `TOUCAN_CHAT_THOROUGH_EFFORT` override them.
+- Send a message while the agent is working: it adjusts the turn in progress rather than waiting for it to end.
+- Some messages skip the agent and land at once: `/routine-name` (typing `/` lists them) and a message that is only a Mermaid flowchart.
+- `toucan import -` reads a graph from stdin, and `import --label` names it in the history.
+
+### Changed
+
+- The chat agent gets a brief of the canvas with each message, and is told to put the edit on the canvas first and refine after, instead of reading the guide and the canvas before it starts.
+- The chat starts Codex when a panel opens, not on the first message.
+- On tldraw, a run that adds shapes outside the view, or starts an empty canvas, brings them into view, unless the person is mid-gesture.
+
+### Fixed
+
+- `toucan.node` on an existing box changes only what you pass. It used to reset the text, size, colour and fill you didn't mention, so `toucan.node('a', {color: 'blue'})` relabelled the box "a". Code relying on the reset must now pass those fields.
+- `toucan.node` with no position puts a new box somewhere free, growing its frame if it needs to, rather than at 0,0 on top of whatever is there.
+
 ## [0.3.0] — 2026-11-02
 
 Creature comforts: move through a canvas's past, keep your chores, and make the room your own.

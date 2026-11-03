@@ -15,7 +15,7 @@ node bin/toucan.mjs --canvas NAME script list|put NAME FILE|rm NAME   # persiste
 node bin/toucan.mjs canvases                               # every canvas: title, description, shapes, open tabs
 node bin/toucan.mjs new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE]   # make a canvas
 node bin/toucan.mjs --canvas NAME graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   # export; no tab needed
-node bin/toucan.mjs --canvas NAME import FILE [--format F] [--move] [--prune] [--propose]   # keyed upsert of a graph file
+node bin/toucan.mjs --canvas NAME import FILE|- [--format F] [--move] [--prune] [--propose] [--label T]   # keyed upsert of a graph file
 node bin/toucan.mjs --canvas NAME meta --title T --description D   # retitle / describe a canvas
 node bin/toucan.mjs --canvas NAME proposals [accept|reject [KEY...]]   # dashed = proposed (see below)
 node bin/toucan.mjs --canvas NAME selection                # what people selected: resolve "this" / "these"
@@ -98,6 +98,8 @@ selected proposals, or all of them. Leave that choice to them: run `toucan propo
 
 ## What people see: presence and undo
 
+- **New shapes come into view.** On tldraw, a run that adds shapes outside the view fits the canvas in view,
+  unless the person is mid-gesture, so don't call `zoomTo` just to show your work.
 - **Your edits glow.** Shapes an exec adds or changes get a short violet halo, tagged "agent", in every
   open tab (both engines). `toucan.pulse(keys)` does the same on demand, to point at something.
 - **One exec is one undo step** on tldraw: one Cmd-Z in the tab that ran it undoes the whole run, and it
@@ -136,8 +138,9 @@ Mermaid flowcharts, DOT (export only) and `.excalidraw`.
 
 ## Helpers (`toucan.*`) — prefer these; they are idempotent by key
 
-- `node(key, {x,y,w,h,text,geo,color,fill,dash,size,parent,meta,move,proposed})` — create/update a box. Existing
-  boxes keep their position unless `move: true`. `parent` is a frame key; x/y are then frame-relative.
+- `node(key, {x,y,w,h,text,geo,color,fill,dash,size,parent,meta,move,proposed})` — create/update a box. An existing
+  box changes only in what you pass, and keeps its position unless `move: true`. A new box with no position goes
+  somewhere free. `parent` is a frame key; x/y are then frame-relative.
 - `frame(key, {x,y,w,h,name,color})`, `edge(fromKey, toKey, {text,color,dash,kind,bend,proposed})` — bound arrow.
 - `propose(...keys)`, `proposals()`, `accept(...keys)`, `reject(...keys)` — see Proposals.
 - `get(key)`, `idFor(key)`, `text(shape)`, `find(q)`, `summary({within})`, `remove(...keys)`, `zoomTo(keys?)`, `pulse(keys)`
@@ -204,4 +207,4 @@ const off = editor.sideEffects.registerAfterChangeHandler('shape', (prev, next) 
 return () => off()
 ```
 
-For a chore someone runs now and then, like cleaning up arrows, bank a routine instead (below); a script is for behaviour that should always be there.
+For a chore someone runs now and then, like cleaning up arrows, bank a routine instead (above); a script is for behaviour that should always be there.

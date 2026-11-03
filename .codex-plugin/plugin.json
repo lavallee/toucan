@@ -1,6 +1,6 @@
 {
   "name": "toucan",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Read and change a live tldraw or Excalidraw canvas through the toucan CLI while a person edits it by hand.",
   "author": {
     "name": "Marc Lavallee",
