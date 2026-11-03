@@ -11,12 +11,15 @@ const box = (b) => (b ? ` @${Math.round(b.x)},${Math.round(b.y)} ${Math.round(b.
  * A toucan graph, plus what the tab reports, as compact lines for the model. `live` is what a person's tab said
  * about selection and notes; without it, selection is unknown rather than empty, and the brief says so.
  */
-export function formatBrief(tg, live = null, threads = []) {
-	const groups = tg.groups ?? [], nodes = tg.nodes ?? [], edges = tg.edges ?? [], skipped = tg.skipped?.length ?? 0
+export function formatBrief(tg, live = null, threads = [], guide = null) {
+	const groups = tg.groups ?? [], nodes = tg.nodes ?? [], edges = tg.edges ?? []
+	// A graph counts what it can't represent by reason: { 'draw shape': 3 }.
+	const skipped = Object.values(tg.skipped ?? {}).reduce((n, c) => n + c, 0)
 	const lines = [`<canvas_brief>The canvas as this message was sent (keys, text, position and size). Trust it instead of reading the canvas again.`]
+	if (guide) lines.push(guide)
 	if (!nodes.length && !groups.length && !skipped) lines.push('The canvas is empty.')
 	for (const g of groups.slice(0, 60)) lines.push(`frame ${g.key}: ${clip(g.label)}${box(g.box)}`)
-	for (const n of nodes.slice(0, MAX_NODES)) lines.push(`box ${n.key}${n.group ? ` in ${n.group}` : ''}: ${clip(n.text)}${box(n.box)}`)
+	for (const n of nodes.slice(0, MAX_NODES)) lines.push(`box ${n.key}${n.group ? ` in ${n.group}` : ''}: ${clip(n.text)}${box(n.box)}${n.meta?.detail ? ` [detail: ${clip(n.meta.detail)}]` : ''}`)
 	if (nodes.length > MAX_NODES) lines.push(`… and ${nodes.length - MAX_NODES} more boxes; use \`summary\` if you need them.`)
 	for (const e of edges.slice(0, MAX_EDGES)) lines.push(`arrow ${e.from} -> ${e.to}${e.label ? `: ${clip(e.label)}` : ''}`)
 	if (edges.length > MAX_EDGES) lines.push(`… and ${edges.length - MAX_EDGES} more arrows.`)

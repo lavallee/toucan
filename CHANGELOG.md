@@ -5,6 +5,20 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Details: a box stays short, and selecting it opens a card with what's behind it (`meta.detail`), its open threads, and jumps to related boxes (`meta.see`). Both engines. A plain canvas with no details behaves as before.
+- Formats: **Story map**, **Ideas map** and **System diagram**, chosen in the app bar or with `toucan meta --format` and `new --format`. A format moves nothing. It lets ← and → walk the canvas from the card, along arrows or along a frame, and tells agents how to work there.
+- The **Air out** routine converts a dense diagram: long box text moves into the details, names get larger, and things spread a little. One undo reverses it.
+
+### Changed
+
+- The demo maps are rebuilt on this: short titles, quotations in the card, and cross-references as jumps instead of long arrows.
+
+### Fixed
+
+- The chat's brief no longer calls a canvas empty when it holds only shapes a graph can't represent, such as sketches and images. It was reading their count wrongly.
+
 ## [0.6.0] — 2026-11-03
 
 A place for what agents write, and two books to try threads on.

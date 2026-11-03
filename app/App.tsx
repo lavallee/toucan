@@ -10,6 +10,7 @@ import { CanvasFrame } from './CanvasFrame'
 import { PulseBoxes, usePulses } from './pulses'
 import { ProposalBar } from './ProposalBar'
 import { ThreadsLayer } from './Threads'
+import { DetailsCard } from './Details'
 import { myName, startComment } from './threads-store'
 import { getAppearance, setTheme, useAppearance, type Theme } from './theme'
 import geist from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url'
@@ -124,6 +125,7 @@ export function App() {
 		<CanvasFrame live={status === 'live' && store.status === 'synced-remote'} engine="tldraw" preview={VersionPreview} onComment={() => startComment(helpers?.toucan)}>
 			{helpers && <ProposalBar {...helpers} />}
 			{helpers && <ThreadsLayer {...helpers} />}
+			{helpers && <DetailsCard {...helpers} />}
 			<Tldraw store={store} onMount={onMount} components={components} assetUrls={assetUrls} colorScheme="system" licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY} />
 		</CanvasFrame>
 	)

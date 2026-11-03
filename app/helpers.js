@@ -208,7 +208,48 @@ export function makeHelpers(editor) {
 		const b = editor.getShapePageBounds(s)
 		return b.x < box.x + box.w && box.x < b.maxX && b.y < box.y + box.h && box.y < b.maxY
 	}).map(keyOf)
+	// ---- what's behind a box, and how to walk on from it (app/Details.tsx) ------------------------------
+	const stepOf = (s) => ({ key: keyOf(s), text: text(s) || keyOf(s) })
+	/** Who a box connects to, ignoring proposals and dotted cross-references: those aren't the way through. */
+	function viaEdges(key) {
+		const me = get(key)
+		const out = { next: [], prev: [] }
+		if (!me) return out
+		for (const b of editor.getBindingsToShape(me, 'arrow')) {
+			const arrow = editor.getShape(b.fromId)
+			if (!arrow || arrow.meta?.proposed || arrow.props.dash === 'dotted') continue
+			const other = editor.getBindingsFromShape(arrow, 'arrow').find((o) => o.toId !== me.id)
+			const shape = other && editor.getShape(other.toId)
+			if (shape) out[b.props.terminal === 'end' ? 'prev' : 'next'].push(stepOf(shape))
+		}
+		return out
+	}
+	/** Its neighbours along the frame it's in, left to right. */
+	function viaLanes(key) {
+		const me = get(key)
+		if (!me) return { next: [], prev: [] }
+		const row = editor.getSortedChildIdsForParent(me.parentId).map((id) => editor.getShape(id)).filter((s) => s && s.type !== 'arrow' && s.type !== 'frame').sort((a, b) => a.x - b.x || a.y - b.y)
+		const i = row.findIndex((s) => s.id === me.id)
+		return { next: row[i + 1] ? [stepOf(row[i + 1])] : [], prev: i > 0 ? [stepOf(row[i - 1])] : [] }
+	}
+	const walkView = {
+		detailOf: (key) => get(key)?.meta?.detail ?? '',
+		seeAlsoOf: (key) => (get(key)?.meta?.see ?? []).filter((s) => get(s.key)).map((s) => ({ ...s, text: text(get(s.key)) || s.key })),
+		neighbours: (key, walk) => (walk === 'lanes' ? viaLanes(key) : viaEdges(key)),
+		isIdle: () => editor.isIn('select.idle') && !editor.getEditingShapeId(),
+		walkTo: (key) => {
+			const s = get(key)
+			if (!s) return
+			editor.select(s.id)
+			// Close enough to read, and no closer than that.
+			const b = editor.getShapePageBounds(s)
+			editor.centerOnPoint({ x: b.x + b.w / 2, y: b.y + b.h / 2 }, { animation: { duration: 300 } })
+			if (editor.getZoomLevel() < 0.6) editor.setCamera({ ...editor.getCamera(), z: 0.8 }, { animation: { duration: 0 } }), editor.centerOnPoint({ x: b.x + b.w / 2, y: b.y + b.h / 2 }, { animation: { duration: 300 } })
+		},
+	}
+
 	const threadView = {
+		...walkView,
 		boundsOf,
 		shapeAt,
 		shapesIn,

@@ -5,6 +5,7 @@
 
 import { wsUrl, canvasName, token, headless } from './net'
 import { getThreads, setThreads } from './threads-store'
+import { setFormatId } from './formats'
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 
@@ -41,6 +42,7 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 			const msg = JSON.parse(ev.data)
 			if (msg.type === 'scripts') return runScripts(msg.scripts)
 			if (msg.type === 'threads') return setThreads(msg.threads)
+			if (msg.type === 'format') return setFormatId(msg.format)
 			// Another tab ran agent code: glow what it added or changed (agent presence, app/pulses.tsx).
 			if (msg.type === 'agent-edit') return scope.toucan.pulse?.(msg.ids)
 			if (msg.type !== 'exec') return

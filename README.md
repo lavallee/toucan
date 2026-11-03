@@ -70,6 +70,8 @@ point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works fr
 - **Threads.** Comment on a shape or drag out a region. Each comment is a thread you go back and forth in and close
   out: give it to its own agent (several can work at once, and you can steer each one), send it into the main chat, or
   leave it for people. They work on both engines and with no tab open, and `toucan threads` does the same from the CLI.
+- **Formats and details.** Boxes stay short, and selecting one opens its detail in a card. A story map, ideas map or system diagram
+  lets you walk the canvas with ← and →, following arrows or frames, and tells agents how to work on it. **Air out** converts a dense diagram.
 - **Notes for the agent.** On tldraw, a sticky note is addressed to the agent: pin one where the problem
   is, and `toucan notes` gives the agent its text and the shapes it sits on and near. A handled note turns
   green with a one-line reply; notes are never deleted.
@@ -157,13 +159,13 @@ away" until you mark them seen (per browser).
 Two ready-made canvases, each built from a public-domain text:
 
 ```sh
-toucan new meditations --from examples/meditations.tg.json --title "Meditations: a map of ideas" \
+toucan new meditations --from examples/meditations.tg.json --format ideas --title "Meditations: a map of ideas" \
   --description "Marcus Aurelius in George Long's translation. Every box is his wording, with book and section."
-toucan new odyssey --from examples/odyssey.tg.json --title "The Odyssey: a story map" \
+toucan new odyssey --from examples/odyssey.tg.json --format story --title "The Odyssey: a story map" \
   --description "Homer in Samuel Butler's translation, which uses Roman names. Every line is Butler's, with its book."
 ```
 
-Open one, click **Comment**, drag around a cluster, and ask something: "what's the argument here?" or "where does he
+Open one, click a box to read it, and walk with ← and →. Then click **Comment**, drag around a cluster, and ask something: "what's the argument here?" or "where does he
 disagree with himself?". Every quotation was checked word for word against its source by `scripts/build-maps.mjs`.
 
 ## Agent plugin

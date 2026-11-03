@@ -13,10 +13,13 @@ for (const line of ['frame core: Core @0,0 400x200', 'box orders in core: Orders
 assert.ok(formatBrief({}, { selected: [] }).includes('The canvas is empty.'))
 assert.ok(formatBrief({}).includes('Selection unknown'), 'no tab: selection is unknown, not empty')
 assert.ok(formatBrief({}, { selected: [] }).includes('Nothing is selected'))
-const sketch = formatBrief({ skipped: [{ type: 'draw' }, { type: 'image' }] })
+const sketch = formatBrief({ skipped: { 'draw shape': 1, 'image shape': 1 } })
 assert.ok(!sketch.includes('The canvas is empty.') && sketch.includes('2 other shapes'), 'shapes TG skips are not an empty canvas')
 
 assert.ok(formatBrief({}, null, ['#3 on orders: "why?"']).includes('Open comment thread #3 on orders: "why?"'), 'open threads are in the brief')
+
+assert.ok(formatBrief({}, null, [], 'This canvas is a story map.').includes('This canvas is a story map.'), 'the format guides the agent')
+assert.ok(formatBrief({ nodes: [{ key: 'a', text: 'A', meta: { detail: 'behind the box' } }] }).includes('[detail: behind the box]'), 'the detail behind a box is in the brief')
 
 const many = { nodes: Array.from({ length: 1000 }, (_, i) => ({ key: `n${i}`, text: 'x'.repeat(500) })) }
 const big = formatBrief(many)
