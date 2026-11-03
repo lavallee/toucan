@@ -43,6 +43,10 @@ export function Index() {
 	const [nameEdited, setNameEdited] = useState(false)
 	const [engine, setEngine] = useState('tldraw')
 	const [from, setFrom] = useState('')
+	const [templates, setTemplates] = useState<{ id: string; title: string; use: string }[]>([])
+	useEffect(() => {
+		api('/api/templates').then((r) => setTemplates(r.templates), () => {})
+	}, [])
 
 	const load = () => api('/api/canvases').then((r) => setCanvases(r.canvases), (e) => setError(String(e.message ?? e)))
 	useEffect(() => {
@@ -53,10 +57,10 @@ export function Index() {
 
 	async function create(e: FormEvent) {
 		e.preventDefault()
-		const n = nameEdited ? name : slug(title)
+		const n = nameEdited ? name : slug(title) || (from.startsWith('template:') ? `${from.slice(9)}-${Date.now().toString(36).slice(-4)}` : '')
 		if (!n) return
 		try {
-			await api('/api/canvases', { method: 'POST', body: JSON.stringify({ name: n, title: title || n, engine, ...(from && { from }) }) })
+			await api('/api/canvases', { method: 'POST', body: JSON.stringify({ name: n, ...(title && { title }), engine, ...(from.startsWith('template:') ? { template: from.slice(9) } : from && { from }) }) })
 			location.href = href(n)
 		} catch (err: any) {
 			setError(err.message)
@@ -109,14 +113,28 @@ export function Index() {
 									Start from
 									<select className={cn(SELECT, 'w-full font-normal')} value={from} onChange={(e) => setFrom(e.target.value)}>
 										<option value="">Blank</option>
-										{canvases?.map((c) => (
-											<option key={c.name} value={c.name}>
-												Copy of {c.title}
-											</option>
-										))}
+										{templates.length > 0 && (
+											<optgroup label="Templates">
+												{templates.map((t) => (
+													<option key={t.id} value={`template:${t.id}`}>
+														{t.title}
+													</option>
+												))}
+											</optgroup>
+										)}
+										{!!canvases?.length && (
+											<optgroup label="Copy of">
+												{canvases.map((c) => (
+													<option key={c.name} value={c.name}>
+														{c.title}
+													</option>
+												))}
+											</optgroup>
+										)}
 									</select>
 								</label>
-								<Button type="submit" className="w-full" disabled={!(nameEdited ? name : slug(title))}>
+								{from.startsWith('template:') && <p className="text-xs text-muted-foreground">{templates.find((t) => `template:${t.id}` === from)?.use}</p>}
+								<Button type="submit" className="w-full" disabled={!(nameEdited ? name : slug(title)) && !from.startsWith('template:')}>
 									Create
 								</Button>
 							</form>

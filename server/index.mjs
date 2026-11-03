@@ -25,6 +25,8 @@ import { createRoutines } from './routines.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
 import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
+import { layOut } from '../lib/layouts.mjs'
+import { templateById, templateList } from '../templates/index.mjs'
 import { FORMATS, fromTldraw, fromExcalidraw, toExcalidrawElements } from '../lib/tg.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -402,22 +404,25 @@ const server = createServer(async (req, res) => {
 			return json(res, 200, { canvases: canvasNames().map((n) => describe(n, idx)) })
 		}
 		if (route === 'canvases' && !canvas && req.method === 'POST') {
-			const { name, title, description, engine = 'tldraw', from, graph, format } = JSON.parse(await body(req))
+			const { name, title, description, engine = 'tldraw', from, graph, format, template } = JSON.parse(await body(req))
+			const starter = template ? templateById(template) : null
+			if (template && !starter) return json(res, 400, { error: `no template ${template}: see toucan templates` })
 			if (format && !Object.hasOwn(CANVAS_FORMATS, format)) return json(res, 400, { error: `format: one of ${Object.keys(CANVAS_FORMATS).join(', ')}` })
 			if (!NAME.test(name ?? '')) return json(res, 400, { error: 'name: letters, digits, - and _, up to 64' })
 			if (!ENGINES.includes(engine)) return json(res, 400, { error: `engine: one of ${ENGINES.join(', ')}` })
 			if (canvasNames().includes(name)) return json(res, 409, { error: `${name} already exists` })
 			if (from && !canvasNames().includes(from)) return json(res, 404, { error: `no canvas ${from} to copy from` })
 			// Seeding goes through the graph, so it works across engines: tldraw → TG → Excalidraw, and back.
-			const seed = graph ?? (from ? graphOf(from) : null)
+			const seed = starter ? await layOut(starter) : graph ?? (from ? graphOf(from) : null)
 			const idx = readIndex()
-			idx[name] = { title: title || name, description: description ?? '', engine, created: new Date().toISOString(), ...(from && { from }), ...((format ?? readIndex()[from]?.format) && { format: format ?? readIndex()[from]?.format }) }
+			idx[name] = { title: title || starter?.title || name, description: description ?? starter?.use ?? '', engine, created: new Date().toISOString(), ...(from && { from }), ...((format ?? starter?.format ?? readIndex()[from]?.format) && { format: format ?? starter?.format ?? readIndex()[from]?.format }) }
 			writeIndex(idx)
 			if (engine === 'excalidraw') writeFileSync(scenePath(name), JSON.stringify({ type: 'excalidraw', version: 2, source: 'toucan', elements: seed ? toExcalidrawElements(seed) : [], appState: {}, files: {} }))
 			else if (seed) writeFileSync(seedPath(name), JSON.stringify(seed))
 			return json(res, 201, describe(name, idx))
 		}
 		if (route === 'formats') return json(res, 200, { formats: formatList() })
+		if (route === 'templates') return json(res, 200, { templates: templateList() })
 		if (route === 'routines') {
 			const name = canvas // /api/routines/<name>
 			if (!name && req.method === 'GET') return json(res, 200, { routines: routines.list().map((r) => (url.searchParams.has('code') ? r : routineRow(r))) })

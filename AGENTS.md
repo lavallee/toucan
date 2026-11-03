@@ -26,6 +26,7 @@ node bin/toucan.mjs --canvas NAME versions [save LABEL | show N [--format F] | r
 node bin/toucan.mjs routine list | show NAME | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME   # the routine bank
 node bin/toucan.mjs --canvas NAME routine run NAME [--args JSON]   # run a banked routine: one undo step, on the history
 node bin/toucan.mjs --canvas NAME files                     # where this canvas keeps what agents write for it
+node bin/toucan.mjs templates                                  # diagrams to start from; `new NAME --template ID` makes one
 node bin/toucan.mjs --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes   # comment threads
 ```
 
@@ -175,17 +176,32 @@ Plain tldraw also works: `editor.updateShapes([...])`, `editor.createShape({...}
 `parentId` (a frame id or `editor.getCurrentPageId()`), or tldraw drops new shapes into whatever frame
 is under them. Text uses rich text: `props.richText = tl.toRichText('…')`.
 
+## Templates and layout: don't place boxes by hand
+
+Most diagrams are a known shape. `toucan templates` lists the roster, each a realistic sample you can edit: flowchart, swimlane, org chart, decision
+tree, mind map, sequence, layered architecture, service map, network, entity relationships, state machine, build pipeline, roadmap, timeline, kanban,
+2x2, customer journey, responsibility chart, comparison table, fishbone, funnel and cycle. `toucan new NAME --template ID` makes one with the right
+format; then change its boxes with `toucan.node`, or `import` more.
+
+`toucan.measure()` measures the diagram as drawn and returns a `score` out of 100 and `findings`, each naming the shapes involved: overlaps, text that
+outgrew its box, arrows through boxes, crossings, labels on boxes, boxes cut off by a frame. `routine run check-diagram` reports the same and points at
+the shapes. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing
+overlapping or cut off; arrows that don't run through boxes; boxes of a kind that match and line up; one direction of flow; short titles, with the rest in
+`meta.detail`; and text you can read when the whole diagram fits on screen.
+
 ## Formats and details: short boxes, with the rest a click away
 
 A box should be short: a name or a title. What's behind it goes in `meta.detail` (`toucan.node(key, {meta: {detail: '…'}})`), which
 opens in a card when someone selects the box. `meta.see` is a list of `{key, label}` cross-references, shown as jumps in that card, which
 keeps long arrows off the canvas. A thread on a box tells its agent the box's detail.
 
-A canvas can have a **format**, set with `toucan meta --canvas-format story|ideas|system|none` or `new --canvas-format`. It moves nothing. It says how to
+A canvas can have a **format**, set with `toucan meta --canvas-format story|ideas|process|hierarchy|timeline|board|system|none` or `new --canvas-format`. It moves nothing. It says how to
 move through the canvas with ← and → in that card, and tells agents how to behave there, through the brief:
 
 - **story**: one path; ← → follow the arrows. Answers go as dashed branches beside the stop.
 - **ideas**: frames are ideas and a gap means something; ← → move along a frame. Don't fill gaps.
+- **process**, **hierarchy**: steps and decisions, or a tree; ← → follow arrows.
+- **timeline**, **board**: a position means something; ← → move along a frame or row.
 - **system**: named parts and real connections; ← → follow arrows, and the card lists the choices where they branch. Zoomed out on tldraw, people see frames and
   how many connections run between them, and a frame opens on click. That's only what they see: `summary`, `graph`, `screenshot` and exports still have every shape.
 
@@ -219,7 +235,7 @@ Scripts, titles and chat threads aren't versioned.
 
 A **routine** is a chore banked once and run on any canvas, from the person's **Routines** menu or the CLI. A
 canvas script is lasting behaviour on one canvas (a button, an overlay, a reaction); a routine runs once, when
-asked, anywhere. toucan ships `tidy-arrows`, `straighten-lines` and `air-out`.
+asked, anywhere. toucan ships a set for tidying (`clean-up`, `lay-out-again`, `align-boxes`, `distribute-evenly`, `match-sizes`, `fix-overlaps`, `fit-frames`, `neat-arrows`, `tidy-arrows`, `straighten-lines`, `colour-by-frame`, `air-out`) and one for checking (`check-diagram`). `routine list` has what each does. Prefer `clean-up` when someone says "tidy this": it keeps their arrangement; `lay-out-again` rearranges everything.
 
 ```js
 // routine: Colour the blocked boxes

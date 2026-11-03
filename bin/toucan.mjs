@@ -6,7 +6,8 @@
 //   toucan [--canvas NAME] <command>
 //     url                         sign-in link for the browser (opens the index of canvases)
 //     canvases                    list canvases: title, shapes, scripts, open tabs
-//     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D] [--canvas-format story|ideas|system]
+//     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE | --template ID] [--title T] [--description D] [--canvas-format F]
+//     templates                   diagrams to start from: flowchart, org chart, sequence, roadmap and more
 //                                 make a canvas; --from copies another canvas (or a graph file) via TG
 //     graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   export (no tab needed)
 //     import FILE|- [--format F] [--move] [--prune] [--propose] [--label T]   keyed upsert of a graph file into the open canvas
@@ -61,7 +62,7 @@ function die(msg) {
 	process.exit(1)
 }
 
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates']
 let client
 if (cmd && !BUILTIN.includes(cmd)) {
 	// An extension command: `toucan foo …` runs `toucan-foo …` from PATH.
@@ -140,11 +141,11 @@ switch (cmd) {
 		break
 	}
 	case 'new': {
-		const title = flag('title'), description = flag('description'), engine = flag('engine', 'tldraw'), from = flag('from'), canvasFormat = flag('canvas-format')
+		const title = flag('title'), description = flag('description'), engine = flag('engine', 'tldraw'), from = flag('from'), canvasFormat = flag('canvas-format'), template = flag('template')
 		const [name] = positional()
 		if (!name) die('usage: new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D]')
 		const seed = from && existsSync(from) && statSync(from).isFile() ? { graph: readGraph(from, flag('format')) } : from ? { from } : {}
-		await call('/api/canvases', { method: 'POST', body: JSON.stringify({ name, title, description, engine, ...seed, ...(canvasFormat && { format: canvasFormat }) }) })
+		await call('/api/canvases', { method: 'POST', body: JSON.stringify({ name, title, description, engine, ...seed, ...(canvasFormat && { format: canvasFormat }), ...(typeof template === 'string' && { template }) }) })
 		print(`made ${name} — open ${client.url(name)}`)
 		break
 	}
@@ -218,6 +219,9 @@ switch (cmd) {
 		else die('usage: versions [save LABEL | show N [--format F] | restore N]')
 		break
 	}
+	case 'templates':
+		print((await call('/api/templates')).templates)
+		break
 	case 'files':
 		print(await call(cpath('/files')))
 		break
