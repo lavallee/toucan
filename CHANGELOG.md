@@ -5,11 +5,16 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-11-03
+
+Formats that air a canvas out, a roster of diagrams to start from, and a way to tell whether a diagram is any good.
+
 ### Added
 
 - 22 templates, from `toucan templates` or **New canvas**: flowchart, swimlane, org chart, decision tree, mind map, sequence, layered architecture, service map, network, entity relationships, state machine, pipeline, roadmap, timeline, kanban, 2x2, customer journey, responsibility chart, comparison, fishbone, funnel and cycle. Each is data for a layout rule in `lib/layouts.mjs`.
 - `toucan draw FILE`: describe a diagram as data, in the same form as a template, and the layout engine places it on the canvas. The chat agent is told to draw this way.
 - A Mermaid import on a blank canvas now looks like a template: small type, boxes measured for their text, arrows in elbows along the sides.
+- `npm run eval:agent`: sends common requests to the chat agent on blank canvases and scores what it draws. It needs a Codex sign-in and spends usage, so it isn't part of `npm test`.
 - A gallery of every template in the docs, built from the eval's pictures.
 - Tidying respects a timeline: a box's position and width are its dates, so clean-up won't shift them sideways, overlaps stack, and Lay it out again declines.
 - Tidying routines: **Clean up**, **Lay it out again**, **Line things up**, **Even out the gaps**, **Match box sizes**, **Fix overlaps**, **Fit frames**, **Neat arrows** and **Colour by frame**. Each keeps boxes, frames and connections, never moves a sticky note, and changes nothing when run again.
@@ -28,6 +33,8 @@ All notable changes to toucan are recorded here. The format follows
 ### Fixed
 
 - The chat's brief no longer calls a canvas empty when it holds only shapes a graph can't represent, such as sketches and images. It was reading their count wrongly.
+- Excalidraw labels are centred in their boxes and readable on filled ones, and an arrow's label sits on its line whichever way it runs.
+- A copied canvas keeps its type size, and a duplicated box keeps its own key on both engines.
 
 ## [0.6.0] — 2026-11-03
 
