@@ -16,6 +16,30 @@ export const FORMATS = {
 		walk: 'lanes',
 		guide: 'This canvas is an ideas map: frames are ideas, position across is sequence, and a gap means that idea is absent there, so never fill gaps just to tidy up. Keep labels short and put passages in `meta.detail`. Show a connection between boxes as a dashed arrow (`proposed: true`), and don\'t move boxes out of their column.',
 	},
+	process: {
+		label: 'Process',
+		description: 'Steps and decisions, in order',
+		walk: 'edges',
+		guide: 'This canvas is a process diagram: steps and decisions that run in one direction. Keep each step to a few words, starting with a verb, and put the rest in `meta.detail`. A decision is a diamond, and each way out of it has a label. Add steps with `import` so they are laid out in the flow, and keep the direction consistent.',
+	},
+	hierarchy: {
+		label: 'Hierarchy',
+		description: 'A tree: reports, choices, causes or ideas',
+		walk: 'edges',
+		guide: 'This canvas is a hierarchy: each box has one parent, and siblings are the same kind of thing at the same level. Keep labels short, put a new child beside its siblings and aligned with them, and don\'t add arrows across branches.',
+	},
+	timeline: {
+		label: 'Timeline',
+		description: 'Things in time order, along a scale',
+		walk: 'lanes',
+		guide: 'This canvas is a timeline: position across means time, so never move something sideways without its date changing. Keep labels short and put the rest in `meta.detail`.',
+	},
+	board: {
+		label: 'Board',
+		description: 'A grid of cells: status, sorting, comparison',
+		walk: 'lanes',
+		guide: 'This canvas is a board: a position means something (a column, a row, a quadrant), so put a new card where it belongs, aligned with its neighbours and the same size, and leave empty cells empty. Keep cards short and put the rest in `meta.detail`.',
+	},
 	system: {
 		label: 'System diagram',
 		description: 'Named parts and what connects them',

@@ -70,6 +70,7 @@ point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works fr
 - **Threads.** Comment on a shape or drag out a region. Each comment is a thread you go back and forth in and close
   out: give it to its own agent (several can work at once, and you can steer each one), send it into the main chat, or
   leave it for people. They work on both engines and with no tab open, and `toucan threads` does the same from the CLI.
+- **Templates.** 22 diagrams to start from: flowchart, swimlane, org chart, sequence, architecture, roadmap, kanban, journey map and more, laid out by rule and scored against what's actually drawn. **Check this diagram** scores any canvas and points at what's wrong, and **Clean up** and **Lay it out again** fix most of it.
 - **Formats and details.** Boxes stay short, and selecting one opens its detail in a card. A story map, ideas map or system diagram
   lets you walk the canvas with ← and →, following arrows or frames, and tells agents how to work on it. **Air out** converts a dense diagram.
 - **Notes for the agent.** On tldraw, a sticky note is addressed to the agent: pin one where the problem
@@ -112,6 +113,7 @@ toucan [--canvas NAME] <command>
   log [--since T]             edits agents made with no tab open (T: ISO time, or an age: 30m, 2h, 7d)
   versions [save LABEL | show N [--format F] | restore N]   the canvas's history
   threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes
+  templates                   diagrams to start from (new NAME --template ID)
   files                       where this canvas keeps what agents write for it
   routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
 ```

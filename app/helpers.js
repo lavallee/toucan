@@ -9,6 +9,8 @@ import ELK from 'elkjs/lib/elk.bundled.js'
 import { Box as tl_Box, createShapeId, createBindingId, toRichText, renderPlaintextFromRichText, fitFrameToContent } from 'tldraw'
 import { fromTldraw, layoutMissing } from '../lib/tg.mjs'
 import { pulse as glow } from './pulses'
+import { measureDiagram, scoreDiagram } from './measure'
+import { makeTidy } from './tidy'
 
 const elk = new ELK()
 
@@ -349,17 +351,17 @@ export function makeHelpers(editor) {
 	}
 
 	/** Create or update an arrow bound to two keyed shapes. */
-	function edge(from, to, { text: label = '', color = 'grey', dash = 'solid', size = 's', kind = 'arc', bend = 0, meta = {}, proposed = false } = {}) {
-		const id = edgeOnly(from, to, { text: label, color, dash, size, kind, bend, meta })
+	function edge(from, to, { text: label = '', color = 'grey', dash = 'solid', size = 's', kind = 'arc', bend = 0, head = 'arrow', anchors, labelAt, meta = {}, proposed = false } = {}) {
+		const id = edgeOnly(from, to, { text: label, color, dash, size, kind, bend, head, anchors, labelAt, meta })
 		if (proposed) propose(`edge:${from}->${to}`)
 		return id
 	}
-	function edgeOnly(from, to, { text: label, color, dash, size, kind, bend, meta }) {
+	function edgeOnly(from, to, { text: label, color, dash, size, kind, bend, head, anchors, labelAt, meta }) {
 		const a = get(from), b = get(to)
 		if (!a || !b) throw new Error(`edge ${from} -> ${to}: missing ${!a ? from : to}`)
 		const key = `edge:${from}->${to}`
 		const id = idFor(key)
-		const props = { color, dash, size, kind, bend, richText: toRichText(label), arrowheadEnd: 'arrow' }
+		const props = { color, dash, size, kind, bend, richText: toRichText(label), arrowheadEnd: head === 'none' ? 'none' : 'arrow', ...(labelAt !== undefined && { labelPosition: labelAt }) }
 		if (editor.getShape(id)) {
 			editor.updateShape({ id, type: 'arrow', props, meta: { ...meta, key, from, to } })
 			return id
@@ -367,7 +369,8 @@ export function makeHelpers(editor) {
 		const ab = editor.getShapePageBounds(a), bb = editor.getShapePageBounds(b)
 		editor.createShape({ id, type: 'arrow', parentId: editor.getCurrentPageId(), x: ab.center.x, y: ab.center.y, props: { ...props, start: { x: 0, y: 0 }, end: { x: bb.center.x - ab.center.x, y: bb.center.y - ab.center.y } }, meta: { ...meta, key, from, to } })
 		const bind = (terminal, target) => ({ id: createBindingId(), type: 'arrow', fromId: id, toId: target.id, props: { terminal, normalizedAnchor: { x: 0.5, y: 0.5 }, isExact: false, isPrecise: false, snap: 'none' } })
-		editor.createBindings([bind('start', a), bind('end', b)])
+		const anchored = (binding, at) => (at ? { ...binding, props: { ...binding.props, normalizedAnchor: at, isPrecise: true, isExact: false } } : binding)
+		editor.createBindings([anchored(bind('start', a), anchors?.from), anchored(bind('end', b), anchors?.to)])
 		return id
 	}
 
@@ -518,7 +521,7 @@ export function makeHelpers(editor) {
 				editor.updateShape({ id: existing.id, type: 'arrow', props, meta: { ...existing.meta, ...e.meta, key, from: e.from, to: e.to } })
 				out.updated++
 			} else {
-				edge(e.from, e.to, { text: e.label ?? '', color: st.color ?? 'grey', dash: st.dash ?? 'solid', size: st.size ?? 's', kind: st.route === 'elbow' ? 'elbow' : 'arc', meta: e.meta ?? {} })
+				edge(e.from, e.to, { text: e.label ?? '', color: st.color ?? 'grey', dash: st.dash ?? 'solid', size: st.size ?? 's', kind: st.route === 'elbow' ? 'elbow' : 'arc', bend: st.bend ?? 0, head: st.head, anchors: st.anchors, labelAt: st.labelAt, meta: e.meta ?? {} })
 				const r = raw[key] ?? raw[e.key]
 				if (r?.type === 'arrow') {
 					const { start, end, richText, ...rest } = r.props
@@ -605,5 +608,9 @@ export function makeHelpers(editor) {
 		}
 	}
 
-	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
+	const api = { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, measure: () => {
+		const m = measureDiagram(editor, api)
+		return { ...m, score: scoreDiagram(m) }
+	}, tidy: makeTidy(editor, keyOf) }
+	return api
 }

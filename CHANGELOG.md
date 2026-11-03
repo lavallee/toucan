@@ -7,6 +7,11 @@ All notable changes to toucan are recorded here. The format follows
 
 ### Added
 
+- 22 templates, from `toucan templates` or **New canvas**: flowchart, swimlane, org chart, decision tree, mind map, sequence, layered architecture, service map, network, entity relationships, state machine, pipeline, roadmap, timeline, kanban, 2x2, customer journey, responsibility chart, comparison, fishbone, funnel and cycle. Each is data for a layout rule in `lib/layouts.mjs`.
+- Tidying routines: **Clean up**, **Lay it out again**, **Line things up**, **Even out the gaps**, **Match box sizes**, **Fix overlaps**, **Fit frames**, **Neat arrows** and **Colour by frame**. Each keeps boxes, frames and connections, never moves a sticky note, and changes nothing when run again.
+- **Check this diagram**, and `toucan.measure()`: a score out of 100 and what's wrong, measured from what's drawn and naming the shapes involved.
+- `npm run test:diagrams`: makes every template, scores it, knocks eight of them about and runs every routine on them. Scores can't fall below `evals/baseline.json`.
+- Graph arrows can say which side they leave and arrive at (`style.anchors`), bend, label position and whether they have a head.
 - Details: a box stays short, and selecting it opens a card with what's behind it (`meta.detail`), its open threads, and jumps to related boxes (`meta.see`). Both engines. A plain canvas with no details behaves as before.
 - Formats: **Story map**, **Ideas map** and **System diagram**, chosen in the app bar or with `toucan meta --canvas-format` and `new --canvas-format`. A format moves nothing. It lets ← and → walk the canvas from the card, along arrows or along a frame, and tells agents how to work there.
 - Zoomed out on a system diagram (tldraw), you see its frames, how many parts each holds, and how many connections run between them, and a frame opens on click. Zoom in or **Show everything** for the rest. Nothing in the document changes, and agents and exports still see every shape. Index thumbnails wait until it's zoomed back in.

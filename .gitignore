@@ -8,3 +8,4 @@ canvases/
 
 __pycache__/
 website/site/*.html
+evals/out/
