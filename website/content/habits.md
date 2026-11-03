@@ -1,4 +1,6 @@
-# Habits: from a repeated request to a button
+# Habits
+
+**From a repeated request to a button.**
 
 *A design note, not a feature. Banking a chore is built (routines); noticing one isn't. This records how
 toucan could notice a chore and offer to bank it, so the idea can be argued with before it is coded.*

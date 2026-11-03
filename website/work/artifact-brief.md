@@ -17,6 +17,11 @@ already have.
 - That it is safe to expose publicly; it is for your own machine or a trusted network.
 - That tldraw is free for production use; it needs a licence key behind HTTPS.
 - Presence, cursors or image sync on Excalidraw canvases.
+- That the Explore page is toucan: it's a static copy, with no editing, comments or agents.
+
+## Examples
+
+`scripts/build-docs.mjs` makes the tour and gallery pages and every picture and map, from a running toucan. Agent scenes are real turns, so don't hand-write what an agent said. Don't edit `content/tour.md` or `content/gallery.md` directly. `site/explorer.html` and `site/assets/explore.{js,css}` are hand-written.
 
 ## Sources
 

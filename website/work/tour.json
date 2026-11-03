@@ -1,0 +1,130 @@
+{
+ "draw": {
+  "score": 96,
+  "findings": [],
+  "spec": {
+   "kind": "flow",
+   "direction": "RIGHT",
+   "title": "Checkout",
+   "nodes": [
+    {
+     "id": "cart",
+     "text": "Review cart",
+     "shape": "oval",
+     "color": "green"
+    },
+    {
+     "id": "address",
+     "text": "Enter address"
+    },
+    {
+     "id": "pay",
+     "text": "Take payment"
+    },
+    {
+     "id": "ok",
+     "text": "Approved?",
+     "shape": "diamond",
+     "color": "orange"
+    },
+    {
+     "id": "confirm",
+     "text": "Confirm order",
+     "color": "blue"
+    },
+    {
+     "id": "retry",
+     "text": "Show the error"
+    },
+    {
+     "id": "done",
+     "text": "Ship it",
+     "shape": "oval",
+     "color": "green"
+    }
+   ],
+   "edges": [
+    {
+     "from": "cart",
+     "to": "address"
+    },
+    {
+     "from": "address",
+     "to": "pay"
+    },
+    {
+     "from": "pay",
+     "to": "ok"
+    },
+    {
+     "from": "ok",
+     "to": "confirm",
+     "label": "yes"
+    },
+    {
+     "from": "ok",
+     "to": "retry",
+     "label": "no"
+    },
+    {
+     "from": "retry",
+     "to": "pay"
+    },
+    {
+     "from": "confirm",
+     "to": "done"
+    }
+   ]
+  }
+ },
+ "mermaid": {
+  "score": 99,
+  "findings": [],
+  "source": "flowchart LR\n  idea[Idea] --> draft[Draft]\n  draft --> review{Reviewed?}\n  review -->|yes| publish[Publish]\n  review -->|no| draft\n",
+  "jsoncanvas": 4,
+  "dot": "digraph toucan {\n  rankdir=LR;\n  node [shape=box, style=\"rounded,filled\", fillcolor=\"#ffffff\", fontname=\"Helvetica\", fontsize=10];\n  \"draft\" [label=\"Draft\", color=\"#1d1d1d\"];\n  \"idea\" [label=\"Idea\", color=\"#1d1d1d\"];\n  \"review\" [label=\"Reviewed?\", color=\"#1d1d1d\", shape=diamond];\n  \"publish\" [label=\"Publish\", color=\"#1d1d1d\"];\n  \"review\" -> \"publish\" [label=\"yes\", color=\"#9fa8b2\"];\n  \"draft\" -> \"review\" [color=\"#9fa8b2\"];\n  \"review\" -> \"draft\" [label=\"no\", color=\"#9fa8b2\"];\n  \"idea\" -> \"draft\" [color=\"#9fa8b2\"];\n}"
+ },
+ "cleanup": {
+  "clean": 99,
+  "before": {
+   "score": 58,
+   "findings": [
+    "overlap",
+    "cut off by its frame",
+    "arrow runs through a box"
+   ]
+  },
+  "after": {
+   "score": 98,
+   "findings": []
+  },
+  "check": "Score 98 of 100, with nothing wrong."
+ },
+ "details": {
+  "key": "assembly"
+ },
+ "system": {
+  "score": 92,
+  "findings": []
+ },
+ "chat": {
+  "request": "A sequence diagram of a user resetting their password by email.",
+  "score": 98,
+  "findings": []
+ },
+ "notes": [
+  {
+   "text": "missing: what if an item went out of stock?",
+   "reply": "Added stock check before payment. Out-of-stock items lead to showing unavailable items and updating the cart.",
+   "resolved": "2026-11-03T18:47:16.023Z"
+  }
+ ],
+ "proposal": {
+  "request": "What is missing from this flow? Answer on the canvas as a proposal.",
+  "open": 12
+ },
+ "thread": {
+  "comment": "Should we retry the card automatically before showing an error?",
+  "messages": 2
+ }
+}

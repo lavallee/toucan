@@ -5,6 +5,16 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The docs show how toucan works: **See it work**, screenshots of real runs and real agent turns, and **Explore**, real canvases you can click through with no server. `scripts/build-docs.mjs` makes them.
+
+### Fixed
+
+- A flowchart with a loop back no longer reads backward: the way in stays first.
+- What an import adds lands below what it connects to, not off to the side, and the chat agent is told to connect its proposals.
+- Air out uses a short opening sentence as the box's name, rather than cutting the text mid-sentence.
+
 ## [0.7.0] — 2026-11-03
 
 Formats that air a canvas out, a roster of diagrams to start from, and a way to tell whether a diagram is any good.

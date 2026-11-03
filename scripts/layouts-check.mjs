@@ -2,6 +2,7 @@
 // looks is the eval's job (scripts/eval-diagrams.mjs); this catches what's plainly broken, with no browser.
 //   node scripts/layouts-check.mjs
 import assert from 'node:assert/strict'
+import ELK from 'elkjs/lib/elk.bundled.js'
 import { layOut, textHeight } from '../lib/layouts.mjs'
 import { TEMPLATES } from '../templates/index.mjs'
 
@@ -68,4 +69,17 @@ console.log(`ok  layouts: ${TEMPLATES.length} templates`)
 	assert.deepEqual(tg.nodes.map((n) => n.key).sort(), ['box', 'zzz'], 'a duplicate took the original key')
 	assert.equal(tg.nodes[0].style.size, 's', 'a copy lost its type size')
 	console.log('ok  layouts: keys, wide shapes, sizes')
+}
+
+// What an import adds lands under what it connects to, and off to the side when it connects to nothing.
+{
+	const { layoutMissing } = await import('../lib/tg.mjs')
+	const elk = new ELK()
+	const existing = { groups: [], nodes: [{ key: 'a', box: { x: 0, y: 0, w: 200, h: 60 } }, { key: 'far', box: { x: 2000, y: 0, w: 200, h: 60 } }], edges: [] }
+	const near = await layoutMissing({ groups: [], nodes: [{ key: 'b', text: 'b' }], edges: [{ from: 'a', to: 'b' }] }, { existing, elk })
+	const b = near.nodes[0].box
+	assert.ok(Math.abs(b.x) <= 20 && b.y >= 160, `connected box landed at ${JSON.stringify(b)}`)
+	const apart = await layoutMissing({ groups: [], nodes: [{ key: 'c', text: 'c' }], edges: [] }, { existing, elk })
+	assert.ok(apart.nodes[0].box.x > 2200, 'unconnected box should go beside everything')
+	console.log('ok  layouts: where an import lands')
 }

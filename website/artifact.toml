@@ -10,7 +10,7 @@ updated = "2026-11-03"
 
 [content]
 pages = "content"
-order = ["index.md", "quickstart.md", "gallery.md", "agents.md", "how-it-works.md", "extending.md", "habits.md"]
+order = ["index.md", "tour.md", "explore.md", "gallery.md", "quickstart.md", "agents.md", "how-it-works.md", "extending.md", "habits.md"]
 
 [deploy]
 target = "github-pages"

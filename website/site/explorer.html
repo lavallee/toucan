@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explore — toucan</title>
+<meta name="description" content="Click through real toucan canvases in your browser: a story map, a map of ideas and a system diagram.">
+<link rel="stylesheet" href="assets/explore.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="index.html">toucan</a>
+  <nav class="maps" aria-label="Maps"></nav>
+  <p class="blurb" id="blurb"></p>
+  <a class="back" href="explore.html">About these</a>
+</header>
+<main class="stage" id="stage" tabindex="0" aria-label="Canvas. Drag to move, scroll to zoom, select a box to read it.">
+  <div class="world" id="world"></div>
+  <div class="mark" id="mark" hidden></div>
+</main>
+<aside class="card" id="card" aria-live="polite" hidden>
+  <button class="close" id="close" type="button" aria-label="Close">×</button>
+  <h2 id="card-title"></h2>
+  <p class="detail" id="card-detail"></p>
+  <ul class="see" id="card-see" aria-label="See also"></ul>
+  <div class="walk" id="card-walk"></div>
+</aside>
+<div class="controls">
+  <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+  <button type="button" id="zoom-fit">Fit</button>
+  <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+</div>
+<p class="hint" id="hint">Select a box to read it. <kbd>←</kbd> <kbd>→</kbd> walk along it. A static copy of a real canvas: in toucan you could also edit it, and so could an agent.</p>
+<noscript><p class="hint">This page needs JavaScript. The <a href="gallery.html">gallery</a> and <a href="tour.html">tour</a> don't.</p></noscript>
+<script src="assets/explore/odyssey.js"></script>
+<script src="assets/explore/meditations.js"></script>
+<script src="assets/explore/shop.js"></script>
+<script src="assets/explore.js"></script>
+</body>
+</html>
