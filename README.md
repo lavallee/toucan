@@ -159,9 +159,9 @@ away" until you mark them seen (per browser).
 Two ready-made canvases, each built from a public-domain text:
 
 ```sh
-toucan new meditations --from examples/meditations.tg.json --format ideas --title "Meditations: a map of ideas" \
-  --description "Marcus Aurelius in George Long's translation. Every box is his wording, with book and section."
-toucan new odyssey --from examples/odyssey.tg.json --format story --title "The Odyssey: a story map" \
+toucan new meditations --from examples/meditations.tg.json --canvas-format ideas --title "Meditations: a map of ideas" \
+  --description "Marcus Aurelius in George Long's translation. Every passage is his wording, with book and section."
+toucan new odyssey --from examples/odyssey.tg.json --canvas-format story --title "The Odyssey: a story map" \
   --description "Homer in Samuel Butler's translation, which uses Roman names. Every line is Butler's, with its book."
 ```
 

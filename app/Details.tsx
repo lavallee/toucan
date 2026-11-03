@@ -23,14 +23,16 @@ export function DetailsCard({ toucan, subscribe }: { toucan: any; subscribe: (on
 
 	useEffect(() => {
 		let frame = 0
+		let last: string | null = null
 		const read = () => {
 			cancelAnimationFrame(frame)
 			frame = requestAnimationFrame(() => {
-				const here = toucan.selection().here
-				const only = here.length === 1 && toucan.isIdle() ? here[0].key : null
-				setKey(only)
-				setDismissed((d) => (d === only ? d : null))
-				redraw((n) => n + 1)
+				const selected = toucan.selectedKey()
+				// A card closed by hand stays closed until the selection really changes, which a drag doesn't do.
+				if (selected !== last) setDismissed(null)
+				last = selected
+				setKey(selected && toucan.isIdle() ? selected : null)
+				if (selected) redraw((n) => n + 1)
 			})
 		}
 		read()
@@ -48,9 +50,13 @@ export function DetailsCard({ toucan, subscribe }: { toucan: any; subscribe: (on
 	const walkTo = (to: string) => toucan.walkTo(to)
 	const see: (Step & { label?: string })[] = key ? toucan.seeAlsoOf(key) : []
 
+	const onThis = key ? threads.filter((t) => t.status === 'open' && t.anchor.shapes?.includes(key)) : []
+	const nothingToShow = !detail && !format && !see.length
+	const showing = !!key && key !== dismissed && !nothingToShow && active === null && !draft && !placing
+
 	// ← and → walk the canvas while a card is open, instead of nudging the shape.
 	useEffect(() => {
-		if (!key || !getFormat()) return
+		if (!showing || !getFormat()) return
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
 			if ((e.target as HTMLElement).closest?.('input, textarea, [contenteditable]') || !toucan.isIdle()) return
@@ -63,20 +69,18 @@ export function DetailsCard({ toucan, subscribe }: { toucan: any; subscribe: (on
 		return () => window.removeEventListener('keydown', onKey, true)
 	})
 
-	const onThis = key ? threads.filter((t) => t.status === 'open' && t.anchor.shapes?.includes(key)) : []
-	const nothingToShow = !detail && !format && !see.length
-	if (!key || key === dismissed || nothingToShow || active !== null || draft || placing) return <div ref={host} className="pointer-events-none absolute inset-0" aria-hidden />
-	const box = toucan.boundsOf([key])
+	if (!showing) return <div ref={host} className="pointer-events-none absolute inset-0" aria-hidden />
+	const box = toucan.boundsOf([key!])
 	const at = box ? toucan.toViewport({ x: box.x + box.w, y: box.y }) : { x: 40, y: 40 }
 	const width = host.current?.clientWidth ?? 800, height = host.current?.clientHeight ?? 600
-	const title = toucan.text(toucan.get(key)) || key
+	const title = toucan.text(toucan.get(key!)) || key!
 	return (
 		<div ref={host} className="toucan-ui pointer-events-none absolute inset-0 z-[430] overflow-hidden !bg-transparent">
 			<section
 				aria-label="Details"
 				onKeyDown={(e) => e.stopPropagation()}
 				className="pointer-events-auto absolute flex max-h-[60%] w-80 max-w-[calc(100%-1rem)] flex-col overflow-hidden rounded-xl border bg-background text-sm shadow-lg max-md:inset-x-2 max-md:bottom-2 max-md:w-auto"
-				style={{ left: Math.max(8, Math.min(at.x + 16, width - CARD_W - 8)), top: Math.max(8, Math.min(at.y, height - 240)) }}
+				style={width < 768 ? undefined : { left: Math.max(8, Math.min(at.x + 16, width - CARD_W - 8)), top: Math.max(8, Math.min(at.y, height - 240)) }}
 			>
 				<header className="flex items-start gap-1 py-2 pr-1.5 pl-3">
 					<h2 className="min-w-0 flex-1 font-medium break-words whitespace-pre-line">{title}</h2>

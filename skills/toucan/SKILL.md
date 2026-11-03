@@ -55,7 +55,7 @@ they have selected before guessing.
 **Threads.** People leave comments on shapes and regions as threads: `toucan --canvas NAME threads` lists the open
 ones with what each is attached to, and `threads reply N "…"` answers. Leave closing them to people unless asked.
 
-**Formats.** Keep boxes short and put the rest in `meta.detail`, which opens on click. `toucan --canvas NAME meta --format story|ideas|system` sets how a canvas is walked and what's expected of you there; follow the guide in the brief, or see AGENTS.md.
+**Formats.** Keep boxes short and put the rest in `meta.detail`, which opens on click. `toucan --canvas NAME meta --canvas-format story|ideas|system` sets how a canvas is walked and what's expected of you there; follow the guide in the brief, or see AGENTS.md.
 
 **Files.** Research, notes and helper scripts for a canvas go in its folder: `toucan --canvas NAME files` gives the
 path. It is archived with the canvas.

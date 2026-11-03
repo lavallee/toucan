@@ -1,7 +1,7 @@
 {
   "meditations": {
     "title": "Meditations: a map of ideas",
-    "description": "Marcus Aurelius's private notes, in George Long's public-domain translation: twelve books across, five recurring ideas down. Every box is his wording, with its book and section.",
+    "description": "Marcus Aurelius's private notes, in George Long's public-domain translation: twelve books across, five recurring ideas down. Click a box to read the passage, in his wording, with its book and section.",
     "source": "https://www.gutenberg.org/ebooks/15877",
     "themes": [
       {
@@ -271,7 +271,7 @@
   },
   "odyssey": {
     "title": "The Odyssey: a story map",
-    "description": "Homer's story in Samuel Butler's public-domain translation, which uses Roman names (Ulysses, Minerva). The poem tells it out of order; the arrows show how the pieces join. Every line is Butler's, with its book.",
+    "description": "Homer's story in Samuel Butler's public-domain translation, which uses Roman names (Ulysses, Minerva). One path in the order the poem tells it: click a stop to read Butler's line, and walk with the arrow keys.",
     "source": "https://www.gutenberg.org/ebooks/1727",
     "chapters": [
       {
