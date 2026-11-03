@@ -518,7 +518,15 @@ export function makeHelpers(editor) {
 			if (existing) {
 				const props = { ...styleProps(st, 'arrow'), ...(e.label !== undefined && { richText: toRichText(e.label ?? '') }) }
 				if (st.route) props.kind = st.route === 'elbow' ? 'elbow' : 'arc'
+				if (st.bend !== undefined) props.bend = st.bend
+				if (st.head) props.arrowheadEnd = st.head === 'none' ? 'none' : 'arrow'
+				if (st.labelAt !== undefined) props.labelPosition = st.labelAt
 				editor.updateShape({ id: existing.id, type: 'arrow', props, meta: { ...existing.meta, ...e.meta, key, from: e.from, to: e.to } })
+				if (st.anchors) {
+					const ends = editor.getBindingsFromShape(existing, 'arrow')
+					const at = { start: st.anchors.from, end: st.anchors.to }
+					editor.updateBindings(ends.filter((b) => at[b.props.terminal]).map((b) => ({ id: b.id, type: 'arrow', props: { ...b.props, normalizedAnchor: at[b.props.terminal], isPrecise: true, isExact: false } })))
+				}
 				out.updated++
 			} else {
 				edge(e.from, e.to, { text: e.label ?? '', color: st.color ?? 'grey', dash: st.dash ?? 'solid', size: st.size ?? 's', kind: st.route === 'elbow' ? 'elbow' : 'arc', bend: st.bend ?? 0, head: st.head, anchors: st.anchors, labelAt: st.labelAt, meta: e.meta ?? {} })

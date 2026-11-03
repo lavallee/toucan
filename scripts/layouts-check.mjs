@@ -28,3 +28,44 @@ for (const t of TEMPLATES) {
 	for (let i = 0; i < solid.length; i++) for (let j = i + 1; j < solid.length; j++) assert.ok(!overlaps(solid[i].box, solid[j].box), `${t.id}: ${solid[i].key} overlaps ${solid[j].key}`)
 }
 console.log(`ok  layouts: ${TEMPLATES.length} templates`)
+
+// ---- what the review found ---------------------------------------------------------------------------------------------------
+{
+	const { layOut: draw, placeBeside } = await import('../lib/layouts.mjs')
+	const { fromTldraw } = await import('../lib/tg.mjs')
+	const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+
+	// A second drawing of the same kind can't take the first one's keys.
+	const funnel = await draw({ kind: 'funnel', stages: [{ text: 'C' }, { text: 'D' }] })
+	const first = funnel.nodes.map((n) => n.key)
+	const { prefix } = placeBeside(funnel, { keys: first, boxes: [{ x: 0, y: 0, w: 500, h: 100 }] })
+	assert.ok(prefix && funnel.nodes.every((n) => !first.includes(n.key) && n.box.x >= 500), 'second funnel overwrote the first')
+	for (const e of funnel.edges) assert.ok(funnel.nodes.some((n) => n.key === e.from) && funnel.nodes.some((n) => n.key === e.to), 'renamed drawing lost its arrows')
+
+	// Repeated and non-Latin labels are separate boxes.
+	const same = await draw({ kind: 'tree', root: { text: 'q', children: [{ text: 'a', children: [{ text: 'Postgres' }] }, { text: 'b', children: [{ text: 'Postgres' }] }] } })
+	assert.equal(new Set(same.nodes.map((n) => n.key)).size, same.nodes.length, 'tree: repeated label collapsed into one box')
+	const cjk = await draw({ kind: 'tree', root: { text: '日本語', children: [{ text: '東京' }, { text: '大阪' }] } })
+	assert.equal(new Set(cjk.nodes.map((n) => n.key)).size, 3, 'tree: non-Latin labels collapsed')
+	assert.equal(cjk.edges.length, 2, 'tree: non-Latin labels lost their arrows')
+	const cjkMap = await draw({ kind: 'mindmap', root: { text: '日本', children: [{ text: '東京', children: [{ text: '渋谷' }, { text: '新宿' }] }] } })
+	assert.equal(new Set(cjkMap.nodes.map((n) => n.key)).size, 4, 'mindmap: non-Latin labels collapsed')
+
+	// A wide shape doesn't reach into its neighbour.
+	const wide = await draw({ kind: 'tree', root: { text: 'r', children: [{ text: 'one', shape: 'diamond', children: [{ text: 'x' }] }, { text: 'two', shape: 'diamond', children: [{ text: 'y' }] }] } })
+	for (const a of wide.nodes) for (const b of wide.nodes) if (a !== b) assert.ok(!overlap(a.box, b.box), `tree: ${a.key} overlaps ${b.key}`)
+	const tiers = await draw({ kind: 'stack', tiers: [{ id: 't', label: 'T', items: [{ id: 'a', text: 'a', shape: 'diamond' }, { id: 'b', text: 'b', shape: 'diamond' }] }] })
+	const [da, db] = tiers.nodes
+	assert.ok(!overlap(da.box, db.box), 'stack: wide shapes overlap')
+
+	// Laying out what's already there doesn't resize it, however many times.
+	const again = await draw({ kind: 'flow', keepSizes: true, nodes: [{ id: 'a', text: 'a', shape: 'diamond', w: 200, h: 120 }, { id: 'b', text: 'b', w: 200, h: 300 }, { id: 'c', text: 'c', w: 200, h: 64 }], edges: [{ from: 'a', to: 'b' }, { from: 'b', to: 'c' }] })
+	assert.deepEqual(again.nodes.map((n) => [n.key, n.box.w, n.box.h]).sort(), [['a', 200, 120], ['b', 200, 300], ['c', 200, 64]])
+
+	// A duplicate keeps its own key; a copied canvas keeps its type size.
+	const shape = (id, key) => ({ typeName: 'shape', id, type: 'geo', parentId: 'page:1', x: 0, y: 0, index: 'a1', meta: { key }, props: { w: 10, h: 10, geo: 'rectangle', color: 'black', fill: 'none', dash: 'solid', size: 's', richText: { type: 'doc', content: [] } } })
+	const tg = fromTldraw([{ typeName: 'page', id: 'page:1', index: 'a1', name: 'p' }, shape('shape:zzz', 'box'), shape('shape:box', 'box')])
+	assert.deepEqual(tg.nodes.map((n) => n.key).sort(), ['box', 'zzz'], 'a duplicate took the original key')
+	assert.equal(tg.nodes[0].style.size, 's', 'a copy lost its type size')
+	console.log('ok  layouts: keys, wide shapes, sizes')
+}

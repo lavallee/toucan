@@ -14,7 +14,11 @@ const elk = new ELK()
 export function makeExcalidrawHelpers(api, ex) {
 	const all = () => api.getSceneElementsIncludingDeleted()
 	const live = () => api.getSceneElements()
-	const keyOf = (e) => e.customData?.key ?? e.id
+	// A duplicated element keeps its original's customData.key, and the key belongs to the first.
+	const keyOf = (e) => {
+		const key = e.customData?.key
+		return key && shapes().find((o) => o.customData?.key === key)?.id === e.id ? key : e.id
+	}
 	const shapes = () => live().filter((e) => !(e.type === 'text' && e.containerId))
 	const get = (key) => shapes().find((e) => keyOf(e) === key)
 	const labelOf = (e, els = live()) => (e.boundElements ?? []).map((b) => els.find((t) => t.id === b.id)).find((t) => t?.type === 'text')

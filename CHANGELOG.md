@@ -11,6 +11,7 @@ All notable changes to toucan are recorded here. The format follows
 - `toucan draw FILE`: describe a diagram as data, in the same form as a template, and the layout engine places it on the canvas. The chat agent is told to draw this way.
 - A Mermaid import on a blank canvas now looks like a template: small type, boxes measured for their text, arrows in elbows along the sides.
 - A gallery of every template in the docs, built from the eval's pictures.
+- Tidying respects a timeline: a box's position and width are its dates, so clean-up won't shift them sideways, overlaps stack, and Lay it out again declines.
 - Tidying routines: **Clean up**, **Lay it out again**, **Line things up**, **Even out the gaps**, **Match box sizes**, **Fix overlaps**, **Fit frames**, **Neat arrows** and **Colour by frame**. Each keeps boxes, frames and connections, never moves a sticky note, and changes nothing when run again.
 - **Check this diagram**, and `toucan.measure()`: a score out of 100 and what's wrong, measured from what's drawn and naming the shapes involved.
 - `npm run test:diagrams`: makes every template, scores it, knocks eight of them about and runs every routine on them. Scores can't fall below `evals/baseline.json`.
