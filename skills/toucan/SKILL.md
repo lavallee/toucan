@@ -55,6 +55,9 @@ they have selected before guessing.
 **Threads.** People leave comments on shapes and regions as threads: `toucan --canvas NAME threads` lists the open
 ones with what each is attached to, and `threads reply N "…"` answers. Leave closing them to people unless asked.
 
+**Files.** Research, notes and helper scripts for a canvas go in its folder: `toucan --canvas NAME files` gives the
+path. It is archived with the canvas.
+
 **Routines.** Before doing a chore by hand, check `toucan routine list` and `toucan --canvas NAME routine run
 NAME`. When the person says "bank that", write it as a routine and `toucan routine save NAME FILE --title T
 --description D --engines E`; it joins their Routines menu on every canvas.

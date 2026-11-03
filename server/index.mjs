@@ -202,6 +202,12 @@ const seedPath = (n) => join(CANVASES, `${n}.seed.json`) // a TG a tldraw canvas
 const ENGINES = ['tldraw', 'excalidraw']
 const engineOf = (n) => readIndex()[n]?.engine ?? (existsSync(scenePath(n)) ? 'excalidraw' : 'tldraw')
 const ARCHIVE = join(CANVASES, '.archive')
+// What agents write for a canvas (research, helper scripts) goes here, not in the checkout they run from.
+const filesDir = (n) => join(CANVASES, `${n}.files`)
+const listFiles = (n) => {
+	const walk = (dir, prefix = '') => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name), `${prefix}${e.name}/`) : [`${prefix}${e.name}`]))
+	return existsSync(filesDir(n)) ? walk(filesDir(n)).sort() : []
+}
 
 // canvases/_index.json (a name no canvas can take) holds what the files can't: a title and a description per canvas.
 const INDEX = join(CANVASES, '_index.json')
@@ -465,7 +471,7 @@ const server = createServer(async (req, res) => {
 			if ((tabs.get(canvas) ?? []).length || rooms.has(canvas) || scenes.has(canvas)) return json(res, 409, { error: `${canvas} is open in a tab — close it first` })
 			const dest = join(ARCHIVE, `${canvas}-${new Date().toISOString().replace(/[:.]/g, '-')}`)
 			mkdirSync(dest, { recursive: true })
-			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
+			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas), filesDir(canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
 			chat.forgetThreads(canvas)
 			const idx = readIndex()
 			if (idx[canvas]) writeFileSync(join(dest, 'index-entry.json'), JSON.stringify(idx[canvas], null, 2) + '\n')
@@ -572,6 +578,8 @@ const server = createServer(async (req, res) => {
 			if (action === 'restore' && req.method === 'POST') return json(res, 200, restoreVersion(canvas, version))
 			return json(res, 405, { error: 'method' })
 		}
+		if (sub === 'files' && req.method === 'GET' && !canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` }) // it hands out a place to write
+		if (sub === 'files' && req.method === 'GET') return json(res, 200, { dir: filesDir(canvas), files: listFiles(canvas) })
 		if (sub === 'log' && req.method === 'GET') return json(res, 200, { entries: trail.read(CANVASES, canvas, url.searchParams.get('since')) })
 		if (sub === 'scripts' && req.method === 'GET') return json(res, 200, { scripts: listScripts(canvas) })
 		if (sub === 'scripts' && NAME.test(subName ?? '')) {

@@ -25,6 +25,7 @@
 //     versions [save LABEL | show N [--format F] | restore N]   the canvas's history: step back, name a point, restore one
 //     threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes
 //                                 comment threads on shapes and regions (--as NAME: speak as a person; default: as the agent)
+//     files                       where this canvas keeps what agents write for it, and what's there
 //     routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
 //                                 chores banked once and run on any canvas (no --canvas needed to list, show, save or rm)
 //
@@ -60,7 +61,7 @@ function die(msg) {
 	process.exit(1)
 }
 
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files']
 let client
 if (cmd && !BUILTIN.includes(cmd)) {
 	// An extension command: `toucan foo …` runs `toucan-foo …` from PATH.
@@ -217,6 +218,9 @@ switch (cmd) {
 		else die('usage: versions [save LABEL | show N [--format F] | restore N]')
 		break
 	}
+	case 'files':
+		print(await call(cpath('/files')))
+		break
 	case 'threads': {
 		const all = !!flag('all'), on = flag('on'), region = flag('region'), reply = flag('reply'), as = flag('as'), ask = flag('ask')
 		const author = typeof as === 'string' ? { kind: 'person', name: as } : { kind: 'agent' }
@@ -251,6 +255,10 @@ switch (cmd) {
 		break
 	}
 	default:
-		console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 27).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
+		{
+			// The comment block at the top of this file, however long it grows.
+			const lines = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1)
+			console.log(lines.slice(0, lines.findIndex((l) => !l.startsWith('//'))).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
+		}
 		if (cmd) die(`unknown command ${cmd} (no toucan-${cmd} on PATH)`)
 }

@@ -25,6 +25,7 @@ toucan --canvas NAME log [--since 2h]           # edits agents made while nobody
 toucan --canvas NAME versions [save LABEL | show N [--format F] | restore N]   # the canvas's history
 toucan routine list | show NAME | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME   # the routine bank
 toucan --canvas NAME routine run NAME [--args JSON]   # run a banked routine: one undo step, on the history
+toucan --canvas NAME files                     # where this canvas keeps what agents write for it
 toucan --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes   # comment threads
 ```
 
@@ -158,6 +159,12 @@ Fill: none semi solid pattern. Dash: draw solid dashed dotted. Size: s m l xl.
 Plain tldraw also works: `editor.updateShapes([...])`, `editor.createShape({...})` — but always pass
 `parentId` (a frame id or `editor.getCurrentPageId()`), or tldraw drops new shapes into whatever frame
 is under them. Text uses rich text: `props.richText = tl.toRichText('…')`.
+
+## Files: what you write for a canvas
+
+Research, notes and helper scripts for a canvas go in `<data>/<name>.files/` (`toucan --canvas NAME files` gives the
+path and what's there). Chat and thread agents can write there and not elsewhere in the data directory. Name the file in your reply so people can find it. The folder is
+archived with the canvas.
 
 ## Versions: the evolution of a canvas
 

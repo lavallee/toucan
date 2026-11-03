@@ -5,6 +5,19 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-11-03
+
+A place for what agents write, and two books to try threads on.
+
+### Added
+
+- Each canvas has a folder for what agents write for it, `<data>/<name>.files/`, archived with the canvas. The chat and thread agents are told to use it, and can write there but not elsewhere in the data directory. `toucan files` shows the path and what's there.
+- Two demo canvases in `examples/`: *Meditations* as a map of ideas (George Long's translation) and *The Odyssey* as a story map (Samuel Butler's). `scripts/build-maps.mjs` builds them from `examples/maps.json` and refuses to write unless every quotation is found word for word where it's cited.
+
+### Fixed
+
+- `toucan help` shows every command, instead of stopping partway through the list.
+
 ## [0.5.0] — 2026-11-03
 
 Comments that are conversations: attach them to a shape or a region, work them with agents and people, and close them out.

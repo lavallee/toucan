@@ -13,7 +13,8 @@ assert.match(readFileSync('skills/toucan/SKILL.md', 'utf8'), /^---\nname: toucan
 console.log(`ok  version ${version} in package.json, both plugin manifests and CHANGELOG`)
 
 // Hostnames, services and projects from the deployment toucan grew up in. Keep it current.
-const INTERNAL = /\b(lisbon|dash-main|lyra\.internal|harbor|george|delphi|weaver|estate|tailnet)\b|\b100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+\b/i
+// (George Long, the translator of the Meditations demo, is a different George.)
+const INTERNAL = /\b(lisbon|dash-main|lyra\.internal|harbor|george(?! long\b)|delphi|weaver|estate|tailnet)\b|\b100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+\b/i
 const walk = (p) => (statSync(p).isDirectory() ? readdirSync(p).flatMap((f) => walk(join(p, f))) : [p])
 const files = process.argv.length > 2 ? process.argv.slice(2).flatMap(walk) : execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8' }).split('\n').filter(Boolean)
 const hits = []
