@@ -27,6 +27,8 @@ node bin/toucan.mjs routine list | show NAME | save NAME FILE [--title T] [--des
 node bin/toucan.mjs --canvas NAME routine run NAME [--args JSON]   # run a banked routine: one undo step, on the history
 node bin/toucan.mjs --canvas NAME files                     # where this canvas keeps what agents write for it
 node bin/toucan.mjs templates                                  # diagrams to start from; `new NAME --template ID` makes one
+node bin/toucan.mjs templates show ID                          # a template's description, to copy the form of
+node bin/toucan.mjs --canvas NAME draw FILE|- [--move] [--label T]   # lay out a diagram described as data onto a canvas
 node bin/toucan.mjs --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes   # comment threads
 ```
 
@@ -182,6 +184,10 @@ Most diagrams are a known shape. `toucan templates` lists the roster, each a rea
 tree, mind map, sequence, layered architecture, service map, network, entity relationships, state machine, build pipeline, roadmap, timeline, kanban,
 2x2, customer journey, responsibility chart, comparison table, fishbone, funnel and cycle. `toucan new NAME --template ID` makes one with the right
 format; then change its boxes with `toucan.node`, or `import` more.
+
+To draw on a canvas you're already on, describe the diagram as data and let the engine place it: `toucan templates show flowchart` shows the form,
+and `toucan --canvas NAME draw plan.json` lays it out beside what's there. Each `kind` (flow, tree, mindmap, lanes, grid, board, quadrant, timeline, gantt,
+sequence, fishbone, funnel, stack, cycle) has its own fields, and a box's `detail` is what opens on click. Drawing again with the same ids updates those boxes.
 
 `toucan.measure()` measures the diagram as drawn and returns a `score` out of 100 and `findings`, each naming the shapes involved: overlaps, text that
 outgrew its box, arrows through boxes, crossings, labels on boxes, boxes cut off by a frame. `routine run check-diagram` reports the same and points at

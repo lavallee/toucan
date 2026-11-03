@@ -55,7 +55,7 @@ they have selected before guessing.
 **Threads.** People leave comments on shapes and regions as threads: `toucan --canvas NAME threads` lists the open
 ones with what each is attached to, and `threads reply N "…"` answers. Leave closing them to people unless asked.
 
-**Templates and quality.** For a common kind of diagram, start from `toucan templates` and `toucan new NAME --template ID` rather than placing boxes by hand. After a layout change, `toucan --canvas NAME routine run check-diagram` scores it and names what's wrong; `clean-up` and `lay-out-again` fix most of it.
+**Templates and quality.** Don't place boxes by hand: describe the diagram as data and pipe it to `toucan --canvas NAME draw -`. `toucan templates` lists the kinds and `toucan templates show ID` shows the form. After a layout change, `toucan --canvas NAME routine run check-diagram` scores it and names what's wrong; `clean-up` and `lay-out-again` fix most of it.
 
 **Formats.** Keep boxes short and put the rest in `meta.detail`, which opens on click. `toucan --canvas NAME meta --canvas-format story|ideas|system` sets how a canvas is walked and what's expected of you there; follow the guide in the brief, or see AGENTS.md.
 

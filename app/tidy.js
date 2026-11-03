@@ -173,6 +173,13 @@ export function makeTidy(editor, keyOf) {
 	/** Arrows leave and arrive at the middle of a side, and run straight unless they were elbows. Arrows a person curved stay curved. */
 	function neatArrows() {
 		let changed = 0
+		// A diagram drawn in elbows stays in elbows: an arrow added later comes in straight.
+		const all = pageShapes().filter((s) => s.type === 'arrow')
+		const elbows = all.filter((a) => a.props.kind === 'elbow'), straight = all.filter((a) => a.props.kind !== 'elbow' && !a.props.bend)
+		if (elbows.length > straight.length && straight.length) {
+			editor.updateShapes(straight.map((a) => ({ id: a.id, type: 'arrow', props: { kind: 'elbow' } })))
+			changed += straight.length
+		}
 		for (const a of pageShapes().filter((s) => s.type === 'arrow')) {
 			const ends = editor.getBindingsFromShape(a, 'arrow')
 			const from = ends.find((b) => b.props.terminal === 'start'), to = ends.find((b) => b.props.terminal === 'end')

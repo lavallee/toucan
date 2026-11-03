@@ -422,6 +422,10 @@ const server = createServer(async (req, res) => {
 			return json(res, 201, describe(name, idx))
 		}
 		if (route === 'formats') return json(res, 200, { formats: formatList() })
+		if (route === 'templates' && canvas) {
+			const spec = templateById(canvas)
+			return spec ? json(res, 200, spec) : json(res, 404, { error: `no template ${canvas}` })
+		}
 		if (route === 'templates') return json(res, 200, { templates: templateList() })
 		if (route === 'routines') {
 			const name = canvas // /api/routines/<name>
