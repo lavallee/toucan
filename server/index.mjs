@@ -556,11 +556,12 @@ const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, b
 
 /** Selection and notes need a person's tab; with none, or a slow one, the brief goes without them. */
 async function chatBrief(canvas) {
-	const tg = graphOf(canvas)
-	if (!(tabs.get(canvas) ?? []).some((w) => !w.headless)) return formatBrief(tg)
-	const live = exec(canvas, 'const s = toucan.summary({ limit: 0 }); return { selected: s.selected, openNotes: s.openNotes }', 1000)
-	const seen = await Promise.race([live, new Promise((r) => setTimeout(r, 800))]).catch(() => null)
-	return formatBrief(tg, seen ?? {})
+	if (!(tabs.get(canvas) ?? []).some((w) => !w.headless)) return formatBrief(graphOf(canvas))
+	const asked = exec(canvas, `const s = toucan.summary({ limit: 0 }), sel = toucan.selection?.()
+return { page: toucan.engine === 'tldraw' ? editor.getCurrentPageId() : undefined, selected: s.selected ?? [], openNotes: s.openNotes, others: (sel?.others ?? []).map((o) => ({ user: o.user, shapes: o.shapes.map((x) => x.key) })) }`, 1000)
+	const live = await Promise.race([asked, new Promise((r) => setTimeout(r, 800))]).catch(() => null)
+	// The brief describes the page the person is on, not just the first one.
+	return formatBrief(graphOf(canvas, live?.page ? { page: live.page } : undefined), live)
 }
 
 /** A message that needs no agent: run it, and return what to say. Null: it's for the agent. */
@@ -575,10 +576,8 @@ async function chatDirect(canvas, text) {
 			const result = await exec(canvas, routines.program(routine), 120000, `routine ${what.routine}`)
 			return `**${routine.title}:** ${result?.summary ?? 'done'}`
 		}
-		const tg = FORMATS.mermaid.import(what.mermaid)
-		const r = await exec(canvas, `return await toucan.applyGraph(${JSON.stringify(tg)}, {})`, 120000, 'Mermaid from chat')
-		const skipped = tg.warnings?.length ? ` ${tg.warnings.length} line${tg.warnings.length === 1 ? " wasn't" : "s weren't"} understood.` : ''
-		return `Added ${r?.created ?? 0} and updated ${r?.updated ?? 0} on the canvas.${skipped}`
+		const r = await exec(canvas, `return await toucan.applyGraph(${JSON.stringify(what.graph)}, {})`, 120000, 'Mermaid from chat')
+		return `Added ${r?.created ?? 0} and updated ${r?.updated ?? 0} on the canvas.`
 	} catch (e) {
 		return `Couldn't do that: ${e.message ?? e}`
 	}

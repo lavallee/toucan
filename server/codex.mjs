@@ -19,8 +19,8 @@ const MODES = {
 
 const instructions = (canvas, engine = 'tldraw', notes = null) => `You are the agent in toucan's chat panel. The user is looking at the ${engine} canvas "${canvas}" in their browser and can also edit it by hand. They are watching the canvas and waiting, so speed is the point.
 Change the canvas with \`node bin/toucan.mjs --canvas ${canvas} <cmd>\`. AGENTS.md is already in your context: don't read it again.
-Each message comes with a <canvas_brief> of what is on the canvas and selected. Don't re-read what it already tells you.
-Get something on the canvas first, then improve it. For a clear request, your first or second tool call should be the visible edit: pipe a small Mermaid flowchart to \`import - --format mermaid --label "what this is"\`, or run \`exec -e '...' --label "what this is"\`. Pick sensible defaults rather than asking. Don't research, read source files or write helper files unless the request can't be done without them. Keep the user's hand edits, and make small, reversible changes.
+Each message comes with a <canvas_brief> of what is on the canvas and selected. Don't re-read what it already tells you. If they say "this" or "these" and the brief shows nothing selected, run \`selection\`; if it's still unclear, ask them rather than guess.
+Get something on the canvas first, then improve it. For a clear request, your first or second tool call should be the visible edit: pipe a small Mermaid flowchart to \`import - --format mermaid --label "what this is"\`, or run \`exec -e '...' --label "what this is"\`. Otherwise pick sensible defaults rather than asking. Don't research, read source files or write helper files unless the request can't be done without them. Keep the user's hand edits, and make small, reversible changes.
 \`toucan.node\` changes only what you pass and places a new box somewhere free; \`import\` also lays new boxes out beside what they connect to, so prefer it for anything connected. \`import\` only adds and updates: when a request replaces something ("between", "instead of", "move"), also remove what it replaces, with \`toucan.remove('edge:a->b')\` for an arrow. Draw a flow in one direction, without arrows looping back to the start.
 Once your edit is on the canvas, take one \`screenshot\` and fix anything overlapping, cut off or mislabelled, unless you only changed text or colour. Then reply in a line or two with what you changed.
 Before redoing a chore, check \`routine list\` and \`routine run NAME\`. When the user asks to bank what you did, write a routine that works from the canvas alone, try it with \`exec\`, and \`routine save NAME FILE --title T --description D --engines E\`. For lasting new behaviour on one canvas, use \`script put\`.
@@ -29,7 +29,7 @@ When the user gives broad feedback or asks what you'd change, answer on the canv
 Name a point with \`versions save LABEL\` before a sweeping change. Only \`versions restore\` when asked.
 A message may arrive while you are working: it adjusts what you're doing, so take it into account and carry on.${engine === 'tldraw' ? '' : `
 This canvas runs ${engine}: in exec code \`editor\` is the ${engine} API and \`tl\` its module. Prefer \`import\` for structure.`}${notes ? `
-This deployment adds its own agent notes in ${notes}: read them only if the request touches them.` : ''}`
+This deployment adds its own agent notes in ${notes}: read them once at the start of this conversation, and follow them.` : ''}`
 
 export class CodexChat {
 	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null }) {
@@ -89,6 +89,13 @@ export class CodexChat {
 		if (this.proc) return this.ready
 		this.proc = spawn('codex', ['app-server'], { cwd: this.root, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env } })
 		this.proc.stderr.on('data', (d) => process.stderr.write(`[codex] ${d}`))
+		// No codex here: the canvas still works, and the panel says why the chat doesn't.
+		this.proc.on('error', (e) => {
+			console.error(`[codex] couldn't start: ${e.message}`)
+			this.proc = null
+			for (const [, c] of this.calls) c.reject(new Error('Codex is not available: install the Codex CLI to use the chat.'))
+			this.calls.clear()
+		})
 		this.proc.on('exit', (code) => {
 			console.error(`[codex] app-server exited (${code})`)
 			this.proc = null
@@ -216,19 +223,20 @@ export class CodexChat {
 	}
 
 	/** Messages for a canvas are handed over one at a time, so a quick follow-up finds the turn it should join. */
-	enqueue(canvas, text, mode) {
+	async enqueue(canvas, text, mode) {
+		this.emit(canvas, { type: 'user', text })
+		// A direct run can take a while; it doesn't hold up messages for the agent behind it.
+		const reply = await this.direct(canvas, text)
+		if (reply) {
+			this.emit(canvas, { type: 'item', phase: 'completed', item: { id: `direct-${++this.seq}`, type: 'agentMessage', text: reply } })
+			return this.emit(canvas, { type: 'direct-done' }, false)
+		}
 		const next = (this.sending.get(canvas) ?? Promise.resolve()).catch(() => {}).then(() => this.send(canvas, text, mode))
 		this.sending.set(canvas, next)
 		return next
 	}
 
 	async send(canvas, text, mode) {
-		this.emit(canvas, { type: 'user', text })
-		const reply = await this.direct(canvas, text)
-		if (reply) {
-			this.emit(canvas, { type: 'item', phase: 'completed', item: { id: `direct-${++this.seq}`, type: 'agentMessage', text: reply } })
-			return this.emit(canvas, { type: 'direct-done' }, false)
-		}
 		const threadId = await this.thread(canvas)
 		const message = { type: 'text', text, text_elements: [] }
 		// Mid-turn, a message adjusts the work in progress rather than waiting for it to finish.
@@ -258,6 +266,7 @@ export class CodexChat {
 	async interrupt(canvas) {
 		const threadId = this.threads.get(canvas), turnId = this.turns.get(canvas)
 		if (threadId && turnId) await this.call('turn/interrupt', { threadId, turnId }).catch(() => {})
+		else this.emit(canvas, { type: 'direct-done' }, false) // nothing to stop: don't leave the panel waiting
 	}
 
 	async reset(canvas) {

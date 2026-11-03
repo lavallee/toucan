@@ -189,18 +189,19 @@ export function makeHelpers(editor) {
 
 	const GAP = 40
 	/** A free spot for a new box given no position: under what's in its frame, or right of everything on the page. */
-	function freeSpot(frameId, w, h) {
+	function freeSpot(frameId) {
 		if (!frameId) {
 			const page = editor.getCurrentPageBounds()
 			return page ? { x: page.maxX + GAP, y: page.minY } : { x: 0, y: 0 }
 		}
-		const frame = editor.getShape(frameId)
 		const kids = editor.getSortedChildIdsForParent(frameId).map((id) => editor.getShape(id)).filter((s) => s && s.type !== 'arrow')
 		const bottom = kids.reduce((m, s) => Math.max(m, s.y + editor.getShapeGeometry(s).bounds.h), 0)
-		const spot = { x: GAP, y: kids.length ? bottom + GAP : GAP }
-		// The frame grows to hold it, since a frame clips what spills out.
-		if (frame && (spot.y + h + GAP > frame.props.h || spot.x + w + GAP > frame.props.w)) editor.updateShape({ id: frameId, type: 'frame', props: { h: Math.max(frame.props.h, spot.y + h + GAP), w: Math.max(frame.props.w, spot.x + w + GAP) } })
-		return spot
+		return { x: GAP, y: kids.length ? bottom + GAP : GAP }
+	}
+	/** A frame clips what spills out, so it grows to hold a box placed for it. */
+	function growToHold(frameId, x, y, w, h) {
+		const frame = editor.getShape(frameId)
+		if (frame && (y + h + GAP > frame.props.h || x + w + GAP > frame.props.w)) editor.updateShape({ id: frameId, type: 'frame', props: { h: Math.max(frame.props.h, y + h + GAP), w: Math.max(frame.props.w, x + w + GAP) } })
 	}
 
 	/**
@@ -220,8 +221,10 @@ export function makeHelpers(editor) {
 			// Always explicit: without it tldraw drops new shapes into whatever frame is under them.
 			const parentId = parent ? idFor(parent) : editor.getCurrentPageId()
 			const props = { geo: 'rectangle', w: 180, h: 64, color: 'black', fill: 'semi', dash: 'solid', size: 's', richText: toRichText(key), ...passed }
-			const spot = x === undefined || y === undefined ? freeSpot(parent ? parentId : null, props.w, props.h) : null
-			editor.createShape({ id, type: 'geo', x: x ?? spot.x, y: y ?? spot.y, parentId, props, meta: { ...meta, key } })
+			const spot = x === undefined || y === undefined ? freeSpot(parent ? parentId : null) : null
+			const at = { x: x ?? spot.x, y: y ?? spot.y }
+			if (spot && parent) growToHold(parentId, at.x, at.y, props.w, props.h)
+			editor.createShape({ id, type: 'geo', ...at, parentId, props, meta: { ...meta, key } })
 		}
 		if (proposed) propose(key)
 		return id
