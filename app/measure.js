@@ -181,6 +181,8 @@ export function measureDiagram(e, t) {
 	const fitZoom = page ? Math.min(1, (view.w * padded) / page.w, (view.h * padded) / page.h) : 1
 	const FONT = { s: 18, m: 22, l: 26, xl: 32 }
 	const minFont = Math.min(...solid.map((s) => FONT[s.props.size] ?? 18), 32)
+	// With the whole diagram in view on a screen, is it still legible?
+	if (solid.length && fitZoom * minFont < 8) found('text too small to read with the whole diagram in view')
 	return {
 		findings,
 		boxes: solid.length, arrows: arrows.length, frames: frames.length,

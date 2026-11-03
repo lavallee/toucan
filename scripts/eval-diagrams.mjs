@@ -216,6 +216,22 @@ try {
 		results.push({ id: t.id, title: t.title, score, ...m, png })
 		console.log(`${String(score).padStart(3)}  ${t.id.padEnd(16)} over ${m.overlaps} grew ${m.outgrew} frame ${m.frameOverflow} thru ${m.throughBoxes} cross ${m.crossings} labelOn ${m.labelOnBox} marker ${m.labelOnMarker} uneven ${m.unevenRows} squeezed ${m.labelSqueezed} close ${m.tooClose} short ${m.shortArrows} aligned ${m.aligned} flow ${m.flow} fit ${m.fitZoom} text ${m.textAtFit}`)
 	}
+	// A Mermaid import on a blank canvas should look like a template, however it got there.
+	if (!only) {
+		const mmd = join(tmpdir(), `toucan-eval-${process.pid}.mmd`)
+		writeFileSync(mmd, 'flowchart TD\n a[Review the cart] --> b[Enter the delivery address]\n b --> c{Payment approved?}\n c -->|yes| d[Confirm the order and send a receipt]\n c -->|no| e[Show the error and keep the cart]\n e --> b\n')
+		await toucan('new', 'import-mermaid')
+		await page.goto(`http://127.0.0.1:${port}/?canvas=import-mermaid`)
+		await page.waitForSelector('.tl-canvas')
+		await page.waitForFunction(() => window.toucan)
+		await toucan('--canvas', 'import-mermaid', 'import', mmd)
+		await page.waitForTimeout(500)
+		const m = await page.evaluate(() => window.toucan.measure())
+		rmSync(mmd)
+		assert.equal(m.outgrew, 0, `imported text outgrew its box: ${JSON.stringify(m.findings)}`)
+		assert.ok(m.score >= 85, `a Mermaid import scored ${m.score}: ${JSON.stringify(m.findings)}`)
+		console.log(`\nMermaid import on a blank canvas: ${m.score}`)
+	}
 	if (!args.includes('--no-routines')) await evalRoutines()
 	if (!args.includes('--no-excalidraw')) await evalExcalidraw()
 } finally {
