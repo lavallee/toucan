@@ -175,6 +175,22 @@ Plain tldraw also works: `editor.updateShapes([...])`, `editor.createShape({...}
 `parentId` (a frame id or `editor.getCurrentPageId()`), or tldraw drops new shapes into whatever frame
 is under them. Text uses rich text: `props.richText = tl.toRichText('…')`.
 
+## Formats and details: short boxes, with the rest a click away
+
+A box should be short: a name or a title. What's behind it goes in `meta.detail` (`toucan.node(key, {meta: {detail: '…'}})`), which
+opens in a card when someone selects the box. `meta.see` is a list of `{key, label}` cross-references, shown as jumps in that card, which
+keeps long arrows off the canvas. A thread on a box tells its agent the box's detail.
+
+A canvas can have a **format**, set with `toucan meta --format story|ideas|system|none` or `new --format`. It moves nothing. It says how to
+move through the canvas with ← and → in that card, and tells agents how to behave there, through the brief:
+
+- **story**: one path; ← → follow the arrows. Answers go as dashed branches beside the stop.
+- **ideas**: frames are ideas and a gap means something; ← → move along a frame. Don't fill gaps.
+- **system**: named parts and real connections; ← → follow arrows, and the card lists the choices where they branch.
+
+Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. The **Air out** routine (`routine run air-out`, tldraw)
+converts a dense diagram: long text moves to `meta.detail`, names get larger, and things spread a little. Run it only when asked.
+
 ## Files: what you write for a canvas
 
 Research, notes and helper scripts for a canvas go in `<data>/<name>.files/` (`toucan --canvas NAME files` gives the

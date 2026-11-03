@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { HistoryIcon, MessageSquareIcon } from 'lucide-react'
+import { HistoryIcon, LayoutTemplateIcon, MessageSquareIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Chat } from './Chat'
@@ -10,6 +10,8 @@ import { CommentButton, ThreadsButton, ThreadsPanel } from './Threads'
 import { update as updateThreads, useThreads } from './threads-store'
 import { AppearanceMenu } from './Appearance'
 import { api, canvasName, headless } from './net'
+import { chooseFormat, formatList, loadFormats, useFormat } from './formats'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { AwayNotice } from './AwayNotice'
 
 document.title = `${canvasName} · toucan`
@@ -19,6 +21,7 @@ const BANK_PROMPT = 'Bank what you just did as a routine I can run on any canvas
 /** The page around any engine's canvas: toucan's app bar, the canvas, its history, and the chat panel. */
 export function CanvasFrame({ live, engine, preview, onComment, children }: { live: boolean; engine: string; preview: VersionPreview; onComment: () => void; children: ReactNode }) {
 	const { panel: threadsOpen } = useThreads()
+	const format = useFormat()
 	const [chatOpen, setChatOpen] = useState(() => !headless && localStorage.getItem('toucan.chat') !== 'closed')
 	const [historyOpen, setHistoryOpen] = useState(false)
 	const [title, setTitle] = useState(canvasName)
@@ -33,6 +36,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 	}, [chatOpen])
 	useEffect(() => {
 		api(`/api/canvases/${encodeURIComponent(canvasName)}/info`).then((c) => {
+			loadFormats(c.format).catch(() => {})
 			if (!c.title) return
 			setTitle(c.title)
 			document.title = `${c.title} · toucan`
@@ -54,6 +58,27 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 				{engine !== 'tldraw' && <span className="shrink-0 rounded bg-muted px-1 font-mono text-[10px] text-muted-foreground max-sm:hidden">{engine}</span>}
 				{!headless && <AwayNotice />}
 				<span className="flex-1" />
+				<Popover>
+					<PopoverTrigger asChild>
+						<Button variant="ghost" size="sm" aria-label={`Format: ${format?.label ?? 'none'}`} title="Format: how this canvas behaves">
+							<LayoutTemplateIcon />
+							<span className="max-lg:hidden">{format?.label ?? 'Format'}</span>
+						</Button>
+					</PopoverTrigger>
+					<PopoverContent className="w-72 p-1">
+						<ul role="radiogroup" aria-label="Format">
+							{[{ id: null as string | null, label: 'None', description: 'A free canvas' }, ...formatList()].map((f) => (
+								<li key={f.id ?? 'none'}>
+									<button type="button" role="radio" aria-checked={(format?.id ?? null) === f.id} onClick={() => chooseFormat(f.id)} className={cn('w-full rounded-md px-2 py-1.5 text-left outline-none hover:bg-muted focus-visible:bg-muted', (format?.id ?? null) === f.id && 'bg-muted')}>
+										<span className="block text-sm font-medium">{f.label}</span>
+										<span className="block text-xs text-muted-foreground">{f.description}</span>
+									</button>
+								</li>
+							))}
+						</ul>
+						<p className="border-t px-2 pt-1.5 pb-1 text-xs text-muted-foreground">Choosing a format moves nothing. To give an existing diagram room, run Air out from Routines.</p>
+					</PopoverContent>
+				</Popover>
 				<CommentButton onComment={onComment} />
 				<ThreadsButton />
 				<Button variant="ghost" size="sm" onClick={() => (setHistoryOpen((o) => !o), updateThreads({ panel: false }))} aria-expanded={historyOpen} aria-label="History" title="History" className={cn(historyOpen && 'bg-muted')}>

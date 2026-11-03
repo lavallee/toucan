@@ -39,6 +39,7 @@ try {
 
 	// What it's attached to.
 	assert.equal(threads.anchorLine(one, tg), 'on orders ("Orders")')
+	assert.match(threads.anchorLine({ anchor: { shapes: ['q'] } }, { nodes: [{ key: 'q', text: 'Q', meta: { detail: 'the passage' } }] }), /its detail reads: the passage/, 'an agent is told the detail behind a box')
 	assert.match(threads.anchorLine({ anchor: { shapes: ['img'], box: { x: 5, y: 6, w: 1, h: 1 } } }, tg), /it was at 5,6/)
 	assert.equal(threads.anchorLine({ anchor: { shapes: ['gone', 'edge:orders->db'] } }, tg), 'on gone (not listed: a drawing or image, or since removed), the arrow orders -> db')
 	const region = threads.create(dir, 'c', { anchor: { region: { x: 380, y: 0, w: 200, h: 100 } }, author: marc, text: 'too crowded' })

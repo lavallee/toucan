@@ -1,514 +1,653 @@
 {
- "groups": [
-  {
-   "key": "ithaca",
-   "label": "Ithaca without him",
-   "box": {
-    "x": 0,
-    "y": 0,
-    "w": 680,
-    "h": 368
-   }
-  },
-  {
-   "key": "away",
-   "label": "Ulysses gets away",
-   "box": {
-    "x": 0,
-    "y": 438,
-    "w": 1360,
-    "h": 341
-   }
-  },
-  {
-   "key": "wanderings",
-   "label": "The wanderings, as Ulysses tells them (they happened before Calypso)",
-   "box": {
-    "x": 0,
-    "y": 849,
-    "w": 1700,
-    "h": 680
-   }
-  },
-  {
-   "key": "home",
-   "label": "Home",
-   "box": {
-    "x": 0,
-    "y": 1599,
-    "w": 1700,
-    "h": 626
-   }
-  },
-  {
-   "key": "search",
-   "label": "Telemachus goes looking",
-   "box": {
-    "x": 1820,
-    "y": 0,
-    "w": 340,
-    "h": 599
-   }
-  }
- ],
+ "groups": [],
  "nodes": [
   {
-   "key": "muse",
-   "text": "The poem opens\n\"Tell me, O Muse, of that ingenious hero who travelled far and wide after he had sacked the famous town of Troy.\"\nBook I",
-   "group": "ithaca",
+   "key": "chapter-ithaca",
+   "text": "Ithaca without him",
    "box": {
-    "x": 30,
-    "y": 56,
-    "w": 280,
-    "h": 268
+    "x": 0,
+    "y": -260,
+    "w": 480,
+    "h": 120
+   },
+   "style": {
+    "color": "blue",
+    "fill": "solid",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "l"
+   }
+  },
+  {
+   "key": "chapter-search",
+   "text": "Telemachus goes looking",
+   "box": {
+    "x": 600,
+    "y": -260,
+    "w": 480,
+    "h": 120
+   },
+   "style": {
+    "color": "green",
+    "fill": "solid",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "l"
+   }
+  },
+  {
+   "key": "chapter-away",
+   "text": "Ulysses gets away",
+   "box": {
+    "x": 1200,
+    "y": -260,
+    "w": 480,
+    "h": 120
+   },
+   "style": {
+    "color": "orange",
+    "fill": "solid",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "l"
+   }
+  },
+  {
+   "key": "chapter-wanderings",
+   "text": "The wanderings, as Ulysses tells them (they happened before Calypso)",
+   "box": {
+    "x": 1800,
+    "y": -260,
+    "w": 480,
+    "h": 120
+   },
+   "style": {
+    "color": "violet",
+    "fill": "solid",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "l"
+   }
+  },
+  {
+   "key": "chapter-home",
+   "text": "Home",
+   "box": {
+    "x": 2400,
+    "y": -260,
+    "w": 480,
+    "h": 120
+   },
+   "style": {
+    "color": "red",
+    "fill": "solid",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "l"
+   }
+  },
+  {
+   "key": "muse",
+   "text": "The poem opens\nBook I",
+   "box": {
+    "x": 0,
+    "y": 0,
+    "w": 400,
+    "h": 150
    },
    "style": {
     "color": "blue",
     "fill": "semi",
     "dash": "solid",
-    "geo": "rectangle"
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"Tell me, O Muse, of that ingenious hero who travelled far and wide after he had sacked the famous town of Troy.\"\n\nBook I, tr. Samuel Butler"
    }
   },
   {
    "key": "assembly",
-   "text": "Telemachus speaks up\n\"Men of Ithaca,” he said, “hear my words.\"\nBook II",
-   "group": "ithaca",
+   "text": "Telemachus speaks up\nBook II",
    "box": {
-    "x": 370,
-    "y": 56,
-    "w": 280,
-    "h": 214
+    "x": 600,
+    "y": 0,
+    "w": 400,
+    "h": 150
    },
    "style": {
     "color": "blue",
     "fill": "semi",
     "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "calypso",
-   "text": "Calypso's island\n\"Calypso trembled with rage when she heard this\"\nBook V",
-   "group": "away",
-   "box": {
-    "x": 30,
-    "y": 494,
-    "w": 280,
-    "h": 187
+    "geo": "rectangle",
+    "size": "xl"
    },
-   "style": {
-    "color": "orange",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "raft",
-   "text": "The raft\n\"The sea took the raft and tossed it about as Autumn winds whirl thistledown\"\nBook V",
-   "group": "away",
-   "box": {
-    "x": 370,
-    "y": 494,
-    "w": 280,
-    "h": 241
-   },
-   "style": {
-    "color": "orange",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "nausicaa",
-   "text": "Scheria: Nausicaa\n\"began to play at ball, while Nausicaa sang for them\"\nBook VI",
-   "group": "away",
-   "box": {
-    "x": 710,
-    "y": 494,
-    "w": 280,
-    "h": 187
-   },
-   "style": {
-    "color": "orange",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "demodocus",
-   "text": "The bard at the feast\n\"we will have Demodocus to sing to us\"\nBook VIII",
-   "group": "away",
-   "box": {
-    "x": 1050,
-    "y": 494,
-    "w": 280,
-    "h": 187
-   },
-   "style": {
-    "color": "orange",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "cicons",
-   "text": "The Cicons\n\"the wind took me first to Ismarus, which is the city of the Cicons\"\nBook IX",
-   "group": "wanderings",
-   "box": {
-    "x": 30,
-    "y": 905,
-    "w": 280,
-    "h": 214
-   },
-   "style": {
-    "color": "violet",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "lotus",
-   "text": "The Lotus-eaters\n\"the land of the Lotus-eaters, who live on a food that comes from a kind of flower.\"\nBook IX",
-   "group": "wanderings",
-   "box": {
-    "x": 370,
-    "y": 905,
-    "w": 280,
-    "h": 241
-   },
-   "style": {
-    "color": "violet",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "cyclops",
-   "text": "The Cyclops\n\"Noman is killing me by fraud; no man is killing me by force.\"\nBook IX",
-   "group": "wanderings",
-   "box": {
-    "x": 710,
-    "y": 905,
-    "w": 280,
-    "h": 214
-   },
-   "style": {
-    "color": "violet",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "aeolus",
-   "text": "The bag of winds\n\"gold and silver in the sack that Aeolus had given me\"\nBook X",
-   "group": "wanderings",
-   "box": {
-    "x": 1050,
-    "y": 905,
-    "w": 280,
-    "h": 187
-   },
-   "style": {
-    "color": "violet",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "laestrygonians",
-   "text": "The Laestrygonians\n\"thousands of sturdy Laestrygonians sprang up from every quarter—ogres, not men.\"\nBook X",
-   "group": "wanderings",
-   "box": {
-    "x": 1390,
-    "y": 905,
-    "w": 280,
-    "h": 241
-   },
-   "style": {
-    "color": "violet",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "circe",
-   "text": "Circe\n\"you have just been turning all my men into pigs\"\nBook X",
-   "group": "wanderings",
-   "box": {
-    "x": 1390,
-    "y": 1190,
-    "w": 280,
-    "h": 187
-   },
-   "style": {
-    "color": "violet",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "dead",
-   "text": "The land of the dead\n\"I would rather be a paid servant in a poor man’s house and be above ground than king of kings among the dead.\"\nBook XI",
-   "group": "wanderings",
-   "box": {
-    "x": 1050,
-    "y": 1190,
-    "w": 280,
-    "h": 295
-   },
-   "style": {
-    "color": "violet",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "sirens",
-   "text": "The Sirens\n\"First you will come to the Sirens who enchant all who come near them.\"\nBook XII",
-   "group": "wanderings",
-   "box": {
-    "x": 710,
-    "y": 1190,
-    "w": 280,
-    "h": 214
-   },
-   "style": {
-    "color": "violet",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "scylla",
-   "text": "Scylla and Charybdis\n\"For Scylla is not mortal; moreover she is savage, extreme, rude, cruel and invincible.\"\nBook XII",
-   "group": "wanderings",
-   "box": {
-    "x": 370,
-    "y": 1190,
-    "w": 280,
-    "h": 268
-   },
-   "style": {
-    "color": "violet",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "cattle",
-   "text": "The cattle of the sun\n\"we reached the noble island of the sun-god, where were the goodly cattle\"\nBook XII",
-   "group": "wanderings",
-   "box": {
-    "x": 30,
-    "y": 1190,
-    "w": 280,
-    "h": 241
-   },
-   "style": {
-    "color": "violet",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "landed",
-   "text": "Back in Ithaca\n\"I heard of Ithaca,” said he, “when I was in Crete beyond the seas\"\nBook XIII",
-   "group": "home",
-   "box": {
-    "x": 30,
-    "y": 1655,
-    "w": 280,
-    "h": 214
-   },
-   "style": {
-    "color": "red",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "eumaeus",
-   "text": "The swineherd's hut\n\"The swineherd was at that moment cutting out a pair of sandals\"\nBook XIV",
-   "group": "home",
-   "box": {
-    "x": 370,
-    "y": 1655,
-    "w": 280,
-    "h": 214
-   },
-   "style": {
-    "color": "red",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "father",
-   "text": "Father and son\n\"I am your father, on whose account you grieve and suffer so much at the hands of lawless men.\"\nBook XVI",
-   "group": "home",
-   "box": {
-    "x": 710,
-    "y": 1655,
-    "w": 280,
-    "h": 241
-   },
-   "style": {
-    "color": "red",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "argos",
-   "text": "The old dog\n\"This was Argos, whom Ulysses had bred before setting out for Troy\"\nBook XVII",
-   "group": "home",
-   "box": {
-    "x": 1050,
-    "y": 1655,
-    "w": 280,
-    "h": 214
-   },
-   "style": {
-    "color": "red",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "scar",
-   "text": "The scar\n\"As soon as Euryclea had got the scarred limb in her hands and had well hold of it, she recognised it\"\nBook XIX",
-   "group": "home",
-   "box": {
-    "x": 1390,
-    "y": 1655,
-    "w": 280,
-    "h": 268
-   },
-   "style": {
-    "color": "red",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "bow",
-   "text": "The bow\n\"we shall find it no light matter to string such a bow as this is\"\nBook XXI",
-   "group": "home",
-   "box": {
-    "x": 1390,
-    "y": 1967,
-    "w": 280,
-    "h": 214
-   },
-   "style": {
-    "color": "red",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "suitors",
-   "text": "The suitors\n\"But Antinous who was the head and front of the offending lies low already.\"\nBook XXII",
-   "group": "home",
-   "box": {
-    "x": 1050,
-    "y": 1967,
-    "w": 280,
-    "h": 214
-   },
-   "style": {
-    "color": "red",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "bed",
-   "text": "The bed\n\"Who has been taking my bed from the place in which I left it?\"\nBook XXIII",
-   "group": "home",
-   "box": {
-    "x": 710,
-    "y": 1967,
-    "w": 280,
-    "h": 214
-   },
-   "style": {
-    "color": "red",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
-   }
-  },
-  {
-   "key": "peace",
-   "text": "Peace\n\"made a covenant of peace between the two contending parties\"\nBook XXIV",
-   "group": "home",
-   "box": {
-    "x": 370,
-    "y": 1967,
-    "w": 280,
-    "h": 214
-   },
-   "style": {
-    "color": "red",
-    "fill": "semi",
-    "dash": "solid",
-    "geo": "rectangle"
+   "meta": {
+    "detail": "\"Men of Ithaca,” he said, “hear my words.\"\n\nBook II, tr. Samuel Butler"
    }
   },
   {
    "key": "pylos",
-   "text": "Pylos: Nestor\n\"But how, Mentor,” replied Telemachus, “dare I go up to Nestor, and how am I to address him?\"\nBook III",
-   "group": "search",
+   "text": "Pylos: Nestor\nBook III",
    "box": {
-    "x": 1850,
-    "y": 56,
-    "w": 280,
-    "h": 241
+    "x": 1200,
+    "y": 0,
+    "w": 400,
+    "h": 150
    },
    "style": {
     "color": "green",
     "fill": "semi",
     "dash": "solid",
-    "geo": "rectangle"
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"But how, Mentor,” replied Telemachus, “dare I go up to Nestor, and how am I to address him?\"\n\nBook III, tr. Samuel Butler"
    }
   },
   {
    "key": "sparta",
-   "text": "Sparta: Menelaus\n\"Thus spoke Menelaus, and the heart of Telemachus yearned\"\nBook IV",
-   "group": "search",
+   "text": "Sparta: Menelaus\nBook IV",
    "box": {
-    "x": 1850,
-    "y": 341,
-    "w": 280,
-    "h": 214
+    "x": 1800,
+    "y": 0,
+    "w": 400,
+    "h": 150
    },
    "style": {
     "color": "green",
     "fill": "semi",
     "dash": "solid",
-    "geo": "rectangle"
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"Thus spoke Menelaus, and the heart of Telemachus yearned\"\n\nBook IV, tr. Samuel Butler",
+    "see": [
+     {
+      "key": "father",
+      "label": "he comes home, and finds him"
+     }
+    ]
+   }
+  },
+  {
+   "key": "calypso",
+   "text": "Calypso's island\nBook V",
+   "box": {
+    "x": 2400,
+    "y": 0,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"Calypso trembled with rage when she heard this\"\n\nBook V, tr. Samuel Butler",
+    "see": [
+     {
+      "key": "cattle",
+      "label": "in time, this comes first"
+     }
+    ]
+   }
+  },
+  {
+   "key": "raft",
+   "text": "The raft\nBook V",
+   "box": {
+    "x": 2400,
+    "y": 440,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"The sea took the raft and tossed it about as Autumn winds whirl thistledown\"\n\nBook V, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "nausicaa",
+   "text": "Scheria: Nausicaa\nBook VI",
+   "box": {
+    "x": 1800,
+    "y": 440,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"began to play at ball, while Nausicaa sang for them\"\n\nBook VI, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "demodocus",
+   "text": "The bard at the feast\nBook VIII",
+   "box": {
+    "x": 1200,
+    "y": 440,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"we will have Demodocus to sing to us\"\n\nBook VIII, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "cicons",
+   "text": "The Cicons\nBook IX",
+   "box": {
+    "x": 600,
+    "y": 440,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"the wind took me first to Ismarus, which is the city of the Cicons\"\n\nBook IX, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "lotus",
+   "text": "The Lotus-eaters\nBook IX",
+   "box": {
+    "x": 0,
+    "y": 440,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"the land of the Lotus-eaters, who live on a food that comes from a kind of flower.\"\n\nBook IX, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "cyclops",
+   "text": "The Cyclops\nBook IX",
+   "box": {
+    "x": 0,
+    "y": 880,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"Noman is killing me by fraud; no man is killing me by force.\"\n\nBook IX, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "aeolus",
+   "text": "The bag of winds\nBook X",
+   "box": {
+    "x": 600,
+    "y": 880,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"gold and silver in the sack that Aeolus had given me\"\n\nBook X, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "laestrygonians",
+   "text": "The Laestrygonians\nBook X",
+   "box": {
+    "x": 1200,
+    "y": 880,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"thousands of sturdy Laestrygonians sprang up from every quarter—ogres, not men.\"\n\nBook X, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "circe",
+   "text": "Circe\nBook X",
+   "box": {
+    "x": 1800,
+    "y": 880,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"you have just been turning all my men into pigs\"\n\nBook X, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "dead",
+   "text": "The land of the dead\nBook XI",
+   "box": {
+    "x": 2400,
+    "y": 880,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"I would rather be a paid servant in a poor man’s house and be above ground than king of kings among the dead.\"\n\nBook XI, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "sirens",
+   "text": "The Sirens\nBook XII",
+   "box": {
+    "x": 2400,
+    "y": 1320,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"First you will come to the Sirens who enchant all who come near them.\"\n\nBook XII, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "scylla",
+   "text": "Scylla and Charybdis\nBook XII",
+   "box": {
+    "x": 1800,
+    "y": 1320,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"For Scylla is not mortal; moreover she is savage, extreme, rude, cruel and invincible.\"\n\nBook XII, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "cattle",
+   "text": "The cattle of the sun\nBook XII",
+   "box": {
+    "x": 1200,
+    "y": 1320,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"we reached the noble island of the sun-god, where were the goodly cattle\"\n\nBook XII, tr. Samuel Butler",
+    "see": [
+     {
+      "key": "calypso",
+      "label": "in time, this comes first"
+     }
+    ]
+   }
+  },
+  {
+   "key": "landed",
+   "text": "Back in Ithaca\nBook XIII",
+   "box": {
+    "x": 600,
+    "y": 1320,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "red",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"I heard of Ithaca,” said he, “when I was in Crete beyond the seas\"\n\nBook XIII, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "eumaeus",
+   "text": "The swineherd's hut\nBook XIV",
+   "box": {
+    "x": 0,
+    "y": 1320,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "red",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"The swineherd was at that moment cutting out a pair of sandals\"\n\nBook XIV, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "father",
+   "text": "Father and son\nBook XVI",
+   "box": {
+    "x": 0,
+    "y": 1760,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "red",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"I am your father, on whose account you grieve and suffer so much at the hands of lawless men.\"\n\nBook XVI, tr. Samuel Butler",
+    "see": [
+     {
+      "key": "sparta",
+      "label": "he comes home, and finds him"
+     }
+    ]
+   }
+  },
+  {
+   "key": "argos",
+   "text": "The old dog\nBook XVII",
+   "box": {
+    "x": 600,
+    "y": 1760,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "red",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"This was Argos, whom Ulysses had bred before setting out for Troy\"\n\nBook XVII, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "scar",
+   "text": "The scar\nBook XIX",
+   "box": {
+    "x": 1200,
+    "y": 1760,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "red",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"As soon as Euryclea had got the scarred limb in her hands and had well hold of it, she recognised it\"\n\nBook XIX, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "bow",
+   "text": "The bow\nBook XXI",
+   "box": {
+    "x": 1800,
+    "y": 1760,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "red",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"we shall find it no light matter to string such a bow as this is\"\n\nBook XXI, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "suitors",
+   "text": "The suitors\nBook XXII",
+   "box": {
+    "x": 2400,
+    "y": 1760,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "red",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"But Antinous who was the head and front of the offending lies low already.\"\n\nBook XXII, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "bed",
+   "text": "The bed\nBook XXIII",
+   "box": {
+    "x": 2400,
+    "y": 2200,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "red",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"Who has been taking my bed from the place in which I left it?\"\n\nBook XXIII, tr. Samuel Butler"
+   }
+  },
+  {
+   "key": "peace",
+   "text": "Peace\nBook XXIV",
+   "box": {
+    "x": 1800,
+    "y": 2200,
+    "w": 400,
+    "h": 150
+   },
+   "style": {
+    "color": "red",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle",
+    "size": "xl"
+   },
+   "meta": {
+    "detail": "\"made a covenant of peace between the two contending parties\"\n\nBook XXIV, tr. Samuel Butler"
    }
   }
  ],
@@ -518,197 +657,9 @@
    "from": "muse",
    "to": "assembly",
    "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:calypso->raft",
-   "from": "calypso",
-   "to": "raft",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:raft->nausicaa",
-   "from": "raft",
-   "to": "nausicaa",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:nausicaa->demodocus",
-   "from": "nausicaa",
-   "to": "demodocus",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:cicons->lotus",
-   "from": "cicons",
-   "to": "lotus",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:lotus->cyclops",
-   "from": "lotus",
-   "to": "cyclops",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:cyclops->aeolus",
-   "from": "cyclops",
-   "to": "aeolus",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:aeolus->laestrygonians",
-   "from": "aeolus",
-   "to": "laestrygonians",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:laestrygonians->circe",
-   "from": "laestrygonians",
-   "to": "circe",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:circe->dead",
-   "from": "circe",
-   "to": "dead",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:dead->sirens",
-   "from": "dead",
-   "to": "sirens",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:sirens->scylla",
-   "from": "sirens",
-   "to": "scylla",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:scylla->cattle",
-   "from": "scylla",
-   "to": "cattle",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:landed->eumaeus",
-   "from": "landed",
-   "to": "eumaeus",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:eumaeus->father",
-   "from": "eumaeus",
-   "to": "father",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:father->argos",
-   "from": "father",
-   "to": "argos",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:argos->scar",
-   "from": "argos",
-   "to": "scar",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:scar->bow",
-   "from": "scar",
-   "to": "bow",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:bow->suitors",
-   "from": "bow",
-   "to": "suitors",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:suitors->bed",
-   "from": "suitors",
-   "to": "bed",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:bed->peace",
-   "from": "bed",
-   "to": "peace",
-   "style": {
-    "color": "black",
-    "dash": "solid"
-   }
-  },
-  {
-   "key": "edge:pylos->sparta",
-   "from": "pylos",
-   "to": "sparta",
-   "style": {
-    "color": "black",
-    "dash": "solid"
+    "color": "blue",
+    "dash": "solid",
+    "size": "m"
    }
   },
   {
@@ -716,17 +667,59 @@
    "from": "assembly",
    "to": "pylos",
    "style": {
-    "color": "grey",
-    "dash": "dotted"
+    "color": "green",
+    "dash": "solid",
+    "size": "m"
    }
   },
   {
-   "key": "edge:sparta->father",
-   "from": "sparta",
-   "to": "father",
+   "key": "edge:pylos->sparta",
+   "from": "pylos",
+   "to": "sparta",
    "style": {
-    "color": "grey",
-    "dash": "dotted"
+    "color": "green",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:sparta->calypso",
+   "from": "sparta",
+   "to": "calypso",
+   "style": {
+    "color": "orange",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:calypso->raft",
+   "from": "calypso",
+   "to": "raft",
+   "style": {
+    "color": "orange",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:raft->nausicaa",
+   "from": "raft",
+   "to": "nausicaa",
+   "style": {
+    "color": "orange",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:nausicaa->demodocus",
+   "from": "nausicaa",
+   "to": "demodocus",
+   "style": {
+    "color": "orange",
+    "dash": "solid",
+    "size": "m"
    }
   },
   {
@@ -734,17 +727,189 @@
    "from": "demodocus",
    "to": "cicons",
    "style": {
-    "color": "grey",
-    "dash": "dotted"
+    "color": "violet",
+    "dash": "solid",
+    "size": "m"
    }
   },
   {
-   "key": "edge:cattle->calypso",
-   "from": "cattle",
-   "to": "calypso",
+   "key": "edge:cicons->lotus",
+   "from": "cicons",
+   "to": "lotus",
    "style": {
-    "color": "grey",
-    "dash": "dotted"
+    "color": "violet",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:lotus->cyclops",
+   "from": "lotus",
+   "to": "cyclops",
+   "style": {
+    "color": "violet",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:cyclops->aeolus",
+   "from": "cyclops",
+   "to": "aeolus",
+   "style": {
+    "color": "violet",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:aeolus->laestrygonians",
+   "from": "aeolus",
+   "to": "laestrygonians",
+   "style": {
+    "color": "violet",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:laestrygonians->circe",
+   "from": "laestrygonians",
+   "to": "circe",
+   "style": {
+    "color": "violet",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:circe->dead",
+   "from": "circe",
+   "to": "dead",
+   "style": {
+    "color": "violet",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:dead->sirens",
+   "from": "dead",
+   "to": "sirens",
+   "style": {
+    "color": "violet",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:sirens->scylla",
+   "from": "sirens",
+   "to": "scylla",
+   "style": {
+    "color": "violet",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:scylla->cattle",
+   "from": "scylla",
+   "to": "cattle",
+   "style": {
+    "color": "violet",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:cattle->landed",
+   "from": "cattle",
+   "to": "landed",
+   "style": {
+    "color": "red",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:landed->eumaeus",
+   "from": "landed",
+   "to": "eumaeus",
+   "style": {
+    "color": "red",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:eumaeus->father",
+   "from": "eumaeus",
+   "to": "father",
+   "style": {
+    "color": "red",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:father->argos",
+   "from": "father",
+   "to": "argos",
+   "style": {
+    "color": "red",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:argos->scar",
+   "from": "argos",
+   "to": "scar",
+   "style": {
+    "color": "red",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:scar->bow",
+   "from": "scar",
+   "to": "bow",
+   "style": {
+    "color": "red",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:bow->suitors",
+   "from": "bow",
+   "to": "suitors",
+   "style": {
+    "color": "red",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:suitors->bed",
+   "from": "suitors",
+   "to": "bed",
+   "style": {
+    "color": "red",
+    "dash": "solid",
+    "size": "m"
+   }
+  },
+  {
+   "key": "edge:bed->peace",
+   "from": "bed",
+   "to": "peace",
+   "style": {
+    "color": "red",
+    "dash": "solid",
+    "size": "m"
    }
   }
  ]

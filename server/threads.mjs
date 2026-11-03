@@ -102,13 +102,13 @@ const clip = (s, n = 80) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0,
 
 /** What a thread is attached to, read from the canvas's graph: its shapes as they are now, or what's in its region. */
 export function describeAnchor(thread, tg) {
-	const rows = [...(tg.nodes ?? []).map((n) => ({ key: n.key, text: n.text, box: n.box })), ...(tg.groups ?? []).map((g) => ({ key: g.key, text: g.label, box: g.box, frame: true }))]
+	const rows = [...(tg.nodes ?? []).map((n) => ({ key: n.key, text: n.text, box: n.box, detail: n.meta?.detail })), ...(tg.groups ?? []).map((g) => ({ key: g.key, text: g.label, box: g.box, frame: true }))]
 	const a = thread.anchor
 	if (a.shapes) {
 		const found = a.shapes.map((key) => {
 			const row = rows.find((r) => r.key === key)
 			const edge = (tg.edges ?? []).find((e) => e.key === key)
-			return row ? { key, text: clip(row.text), box: row.box } : edge ? { key, arrow: `${edge.from} -> ${edge.to}` } : { key, unlisted: true, ...(a.box && { box: a.box }) }
+			return row ? { key, text: clip(row.text), box: row.box, ...(row.detail && { detail: clip(row.detail, 400) }) } : edge ? { key, arrow: `${edge.from} -> ${edge.to}` } : { key, unlisted: true, ...(a.box && { box: a.box }) }
 		})
 		return { on: found }
 	}
@@ -118,7 +118,7 @@ export function describeAnchor(thread, tg) {
 /** The same, in a line, for the model and the list. */
 export function anchorLine(thread, tg) {
 	const d = describeAnchor(thread, tg)
-	if (d.on) return `on ${d.on.map((s) => (s.unlisted ? `${s.key} (not listed: a drawing or image, or since removed${s.box ? `; it was at ${Math.round(s.box.x)},${Math.round(s.box.y)}` : ''})` : s.arrow ? `the arrow ${s.arrow}` : `${s.key} ("${s.text}")`)).join(', ')}`
+	if (d.on) return `on ${d.on.map((s) => (s.unlisted ? `${s.key} (not listed: a drawing or image, or since removed${s.box ? `; it was at ${Math.round(s.box.x)},${Math.round(s.box.y)}` : ''})` : s.arrow ? `the arrow ${s.arrow}` : `${s.key} ("${s.text}"${s.detail ? `; its detail reads: ${s.detail}` : ''})`)).join(', ')}`
 	const r = d.region
 	return `on the region ${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.w)}x${Math.round(r.h)}${d.inside.length ? `, around ${d.inside.slice(0, 12).map((s) => `${s.key} ("${s.text}")`).join(', ')}` : ', with nothing in it yet'}`
 }

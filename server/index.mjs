@@ -24,6 +24,7 @@ import * as versions from './versions.mjs'
 import { createRoutines } from './routines.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
+import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
 import { FORMATS, fromTldraw, fromExcalidraw, toExcalidrawElements } from '../lib/tg.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -250,6 +251,7 @@ function describe(n, idx) {
 		seeded: existsSync(seedPath(n)),
 		scripts: listScripts(n).map((s) => s.name),
 		openThreads: threads.list(CANVASES, n).filter((t) => t.status === 'open').length,
+		format: idx[n]?.format ?? null,
 		open: (tabs.get(n) ?? []).filter((w) => !w.headless).length,
 		headless: headless.has(n),
 		thumb: existsSync(thumbPath(n)) ? Math.round(mtime(thumbPath(n))) : null,
@@ -400,7 +402,8 @@ const server = createServer(async (req, res) => {
 			return json(res, 200, { canvases: canvasNames().map((n) => describe(n, idx)) })
 		}
 		if (route === 'canvases' && !canvas && req.method === 'POST') {
-			const { name, title, description, engine = 'tldraw', from, graph } = JSON.parse(await body(req))
+			const { name, title, description, engine = 'tldraw', from, graph, format } = JSON.parse(await body(req))
+			if (format && !CANVAS_FORMATS[format]) return json(res, 400, { error: `format: one of ${Object.keys(CANVAS_FORMATS).join(', ')}` })
 			if (!NAME.test(name ?? '')) return json(res, 400, { error: 'name: letters, digits, - and _, up to 64' })
 			if (!ENGINES.includes(engine)) return json(res, 400, { error: `engine: one of ${ENGINES.join(', ')}` })
 			if (canvasNames().includes(name)) return json(res, 409, { error: `${name} already exists` })
@@ -408,12 +411,13 @@ const server = createServer(async (req, res) => {
 			// Seeding goes through the graph, so it works across engines: tldraw → TG → Excalidraw, and back.
 			const seed = graph ?? (from ? graphOf(from) : null)
 			const idx = readIndex()
-			idx[name] = { title: title || name, description: description ?? '', engine, created: new Date().toISOString(), ...(from && { from }) }
+			idx[name] = { title: title || name, description: description ?? '', engine, created: new Date().toISOString(), ...(from && { from }), ...(format && { format }) }
 			writeIndex(idx)
 			if (engine === 'excalidraw') writeFileSync(scenePath(name), JSON.stringify({ type: 'excalidraw', version: 2, source: 'toucan', elements: seed ? toExcalidrawElements(seed) : [], appState: {}, files: {} }))
 			else if (seed) writeFileSync(seedPath(name), JSON.stringify(seed))
 			return json(res, 201, describe(name, idx))
 		}
+		if (route === 'formats') return json(res, 200, { formats: formatList() })
 		if (route === 'routines') {
 			const name = canvas // /api/routines/<name>
 			if (!name && req.method === 'GET') return json(res, 200, { routines: routines.list().map((r) => (url.searchParams.has('code') ? r : routineRow(r))) })
@@ -451,6 +455,12 @@ const server = createServer(async (req, res) => {
 			const idx = readIndex()
 			const cur = idx[canvas] ?? { created: null }
 			for (const k of ['title', 'description']) if (typeof patch[k] === 'string') cur[k] = patch[k]
+			if (typeof patch.format === 'string') {
+				if (patch.format && !CANVAS_FORMATS[patch.format]) return json(res, 400, { error: `format: one of ${Object.keys(CANVAS_FORMATS).join(', ')}` })
+				if (patch.format) cur.format = patch.format
+				else delete cur.format
+				broadcast(canvas, { type: 'format', format: cur.format ?? null })
+			}
 			idx[canvas] = cur
 			writeIndex(idx)
 			return json(res, 200, describe(canvas, idx))
@@ -692,17 +702,19 @@ function routeThread(canvas, thread, ask, mode, handover = false) {
 	}
 }
 
+const guideFor = (canvas) => CANVAS_FORMATS[readIndex()[canvas]?.format]?.guide ?? null
+
 /** Selection and notes need a person's tab; with none, or a slow one, the brief goes without them. */
 async function chatBrief(canvas) {
 	if (!(tabs.get(canvas) ?? []).some((w) => !w.headless)) {
-		return formatBrief(graphOf(canvas), null, openThreadLines(canvas))
+		return formatBrief(graphOf(canvas), null, openThreadLines(canvas), guideFor(canvas))
 	}
 	const asked = exec(canvas, `const s = toucan.summary({ limit: 0 }), sel = toucan.selection?.()
 return { page: toucan.engine === 'tldraw' ? editor.getCurrentPageId() : undefined, selected: s.selected ?? [], openNotes: s.openNotes, others: (sel?.others ?? []).map((o) => ({ user: o.user, shapes: o.shapes.map((x) => x.key) })) }`, 1000)
 	const live = await Promise.race([asked, new Promise((r) => setTimeout(r, 800))]).catch(() => null)
 	// The brief describes the page the person is on, not just the first one.
 	const tg = graphOf(canvas, live?.page ? { page: live.page } : undefined)
-	return formatBrief(tg, live, openThreadLines(canvas))
+	return formatBrief(tg, live, openThreadLines(canvas), guideFor(canvas))
 }
 
 /** A message that needs no agent: run it, and return what to say. Null: it's for the agent. */

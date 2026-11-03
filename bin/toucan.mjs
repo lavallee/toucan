@@ -6,12 +6,12 @@
 //   toucan [--canvas NAME] <command>
 //     url                         sign-in link for the browser (opens the index of canvases)
 //     canvases                    list canvases: title, shapes, scripts, open tabs
-//     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D]
+//     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D] [--format story|ideas|system]
 //                                 make a canvas; --from copies another canvas (or a graph file) via TG
 //     graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   export (no tab needed)
 //     import FILE|- [--format F] [--move] [--prune] [--propose] [--label T]   keyed upsert of a graph file into the open canvas
 //                                 (--propose: what it adds arrives dashed, as a proposal)
-//     meta [--title T] [--description D]        retitle/describe --canvas
+//     meta [--title T] [--description D] [--format story|ideas|system|none]   retitle, describe or format --canvas
 //     archive                     move --canvas aside to canvases/.archive/ (no tabs may have it open)
 //     summary [--within KEY]      compact JSON of shapes on the page
 //     exec -e CODE | FILE | - [--label TEXT]   run JS in the live editor; `return` a JSON value (--label names it in the history)
@@ -140,17 +140,17 @@ switch (cmd) {
 		break
 	}
 	case 'new': {
-		const title = flag('title'), description = flag('description'), engine = flag('engine', 'tldraw'), from = flag('from')
+		const title = flag('title'), description = flag('description'), engine = flag('engine', 'tldraw'), from = flag('from'), format = flag('format')
 		const [name] = positional()
 		if (!name) die('usage: new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D]')
 		const seed = from && existsSync(from) && statSync(from).isFile() ? { graph: readGraph(from, flag('format')) } : from ? { from } : {}
-		await call('/api/canvases', { method: 'POST', body: JSON.stringify({ name, title, description, engine, ...seed }) })
+		await call('/api/canvases', { method: 'POST', body: JSON.stringify({ name, title, description, engine, ...seed, ...(format && { format }) }) })
 		print(`made ${name} — open ${client.url(name)}`)
 		break
 	}
 	case 'meta': {
-		const title = flag('title'), description = flag('description')
-		print(await call(cpath(`/meta`), { method: 'PATCH', body: JSON.stringify({ title, description }) }))
+		const title = flag('title'), description = flag('description'), format = flag('format')
+		print(await call(cpath(`/meta`), { method: 'PATCH', body: JSON.stringify({ title, description, ...(format && { format: format === 'none' ? '' : format }) }) }))
 		break
 	}
 	case 'graph': {

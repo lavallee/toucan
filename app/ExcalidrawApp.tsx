@@ -9,6 +9,7 @@ import { CanvasFrame } from './CanvasFrame'
 import { ExcalidrawPulses } from './pulses'
 import { ProposalBar } from './ProposalBar'
 import { ThreadsLayer } from './Threads'
+import { DetailsCard } from './Details'
 import { startComment } from './threads-store'
 import { getAppearance, useAppearance } from './theme'
 
@@ -145,6 +146,7 @@ export function ExcalidrawApp() {
 				<ExcalidrawPulses api={api} />
 				{helpers && <ProposalBar {...helpers} />}
 				{helpers && <ThreadsLayer {...helpers} />}
+				{helpers && <DetailsCard {...helpers} />}
 			</div>
 		</CanvasFrame>
 	)

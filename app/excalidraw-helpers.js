@@ -262,7 +262,46 @@ export function makeExcalidrawHelpers(api, ex) {
 		if (out) api.scrollToContent(undefined, { fitToContent: true, animate: true })
 	}
 
+	// ---- what's behind a box, and how to walk on from it (app/Details.tsx) ------------------------------
+	const stepOf = (e) => ({ key: keyOf(e), text: text(e) || keyOf(e) })
+	function viaEdges(key) {
+		const me = get(key)
+		const out = { next: [], prev: [] }
+		if (!me) return out
+		const byId = new Map(live().map((e) => [e.id, e]))
+		for (const a of shapes()) {
+			if (a.type !== 'arrow' || a.customData?.proposed || a.strokeStyle === 'dotted') continue
+			const from = a.startBinding && byId.get(a.startBinding.elementId), to = a.endBinding && byId.get(a.endBinding.elementId)
+			if (from?.id === me.id && to) out.next.push(stepOf(to))
+			if (to?.id === me.id && from) out.prev.push(stepOf(from))
+		}
+		return out
+	}
+	function viaLanes(key) {
+		const me = get(key)
+		if (!me) return { next: [], prev: [] }
+		const row = shapes().filter((e) => e.type !== 'arrow' && e.type !== 'frame' && e.frameId === me.frameId).sort((a, b) => a.x - b.x || a.y - b.y)
+		const i = row.findIndex((e) => e.id === me.id)
+		return { next: row[i + 1] ? [stepOf(row[i + 1])] : [], prev: i > 0 ? [stepOf(row[i - 1])] : [] }
+	}
+	const walkView = {
+		detailOf: (key) => get(key)?.customData?.meta?.detail ?? '',
+		seeAlsoOf: (key) => (get(key)?.customData?.meta?.see ?? []).filter((s) => get(s.key)).map((s) => ({ ...s, text: text(get(s.key)) || s.key })),
+		neighbours: (key, walk) => (walk === 'lanes' ? viaLanes(key) : viaEdges(key)),
+		isIdle: () => {
+			const s = api.getAppState()
+			return !s.newElement && !s.resizingElement && !s.selectedElementsAreBeingDragged && !s.editingTextElement
+		},
+		walkTo: (key) => {
+			const e = get(key)
+			if (!e) return
+			api.updateScene({ appState: { selectedElementIds: { [e.id]: true } }, captureUpdate: ex.CaptureUpdateAction.NEVER })
+			api.scrollToContent(e, { fitToContent: false, animate: true })
+		},
+	}
+
 	const threadView = {
+		...walkView,
 		boundsOf,
 		/** The topmost shape at a point; a frame only counts when nothing's on top of it. */
 		shapeAt: (p) => {
