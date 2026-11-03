@@ -1,0 +1,929 @@
+{
+ "groups": [
+  {
+   "key": "duty",
+   "label": "Do the work in front of you",
+   "box": {
+    "x": 0,
+    "y": 190,
+    "w": 4080,
+    "h": 571
+   }
+  },
+  {
+   "key": "others",
+   "label": "Other people",
+   "box": {
+    "x": 0,
+    "y": 831,
+    "w": 4080,
+    "h": 544
+   }
+  },
+  {
+   "key": "judgment",
+   "label": "It's your judgment that hurts",
+   "box": {
+    "x": 0,
+    "y": 1445,
+    "w": 4080,
+    "h": 490
+   }
+  },
+  {
+   "key": "present",
+   "label": "Only the present is yours",
+   "box": {
+    "x": 0,
+    "y": 2005,
+    "w": 4080,
+    "h": 382
+   }
+  },
+  {
+   "key": "death",
+   "label": "You will die, and be forgotten",
+   "box": {
+    "x": 0,
+    "y": 2457,
+    "w": 4080,
+    "h": 360
+   }
+  }
+ ],
+ "nodes": [
+  {
+   "key": "book-i",
+   "text": "Book I\n\"Among the Quadi at the Granua.\"",
+   "box": {
+    "x": 30,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-ii",
+   "text": "Book II\n\"This in Carnuntum.\"",
+   "box": {
+    "x": 370,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-iii",
+   "text": "Book III",
+   "box": {
+    "x": 710,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-iv",
+   "text": "Book IV",
+   "box": {
+    "x": 1050,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-v",
+   "text": "Book V",
+   "box": {
+    "x": 1390,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-vi",
+   "text": "Book VI",
+   "box": {
+    "x": 1730,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-vii",
+   "text": "Book VII",
+   "box": {
+    "x": 2070,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-viii",
+   "text": "Book VIII",
+   "box": {
+    "x": 2410,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-ix",
+   "text": "Book IX",
+   "box": {
+    "x": 2750,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-x",
+   "text": "Book X",
+   "box": {
+    "x": 3090,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-xi",
+   "text": "Book XI",
+   "box": {
+    "x": 3430,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "book-xii",
+   "text": "Book XII",
+   "box": {
+    "x": 3770,
+    "y": 0,
+    "w": 280,
+    "h": 110
+   },
+   "style": {
+    "color": "black",
+    "fill": "none",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-iii-12",
+   "text": "If thou workest at that which is before thee, following right reason seriously, vigorously, calmly\nIII.12",
+   "group": "duty",
+   "box": {
+    "x": 710,
+    "y": 246,
+    "w": 280,
+    "h": 241
+   },
+   "style": {
+    "color": "blue",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-iv-31",
+   "text": "Love the art, poor as it may be, which thou hast learned, and be content with it\nIV.31",
+   "group": "duty",
+   "box": {
+    "x": 1050,
+    "y": 246,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "blue",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-iv-49",
+   "text": "Be like the promontory against which the waves continually break, but it stands firm\nIV.49",
+   "group": "duty",
+   "box": {
+    "x": 1050,
+    "y": 484,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "blue",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-v-1",
+   "text": "In the morning when thou risest unwillingly, let this thought be present,--I am rising to the work of a human being.\nV.1",
+   "group": "duty",
+   "box": {
+    "x": 1390,
+    "y": 246,
+    "w": 280,
+    "h": 268
+   },
+   "style": {
+    "color": "blue",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-v-20",
+   "text": "the mind converts and changes every hindrance to its activity into an aid\nV.20",
+   "group": "duty",
+   "box": {
+    "x": 1390,
+    "y": 538,
+    "w": 280,
+    "h": 187
+   },
+   "style": {
+    "color": "blue",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-vi-30",
+   "text": "Take care that thou art not made into a Caesar, that thou art not dyed with this dye\nVI.30",
+   "group": "duty",
+   "box": {
+    "x": 1730,
+    "y": 246,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "blue",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-vi-54",
+   "text": "That which is not good for the swarm, neither is it good for the bee.\nVI.54",
+   "group": "duty",
+   "box": {
+    "x": 1730,
+    "y": 484,
+    "w": 280,
+    "h": 187
+   },
+   "style": {
+    "color": "blue",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-ix-29",
+   "text": "nor yet expect Plato's Republic: but be content if the smallest thing goes on well\nIX.29",
+   "group": "duty",
+   "box": {
+    "x": 2750,
+    "y": 246,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "blue",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-x-16",
+   "text": "No longer talk at all about the kind of man that a good man ought to be, but be such.\nX.16",
+   "group": "duty",
+   "box": {
+    "x": 3090,
+    "y": 246,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "blue",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-xii-17",
+   "text": "If it is not right, do not do it: if it is not true, do not say it.\nXII.17",
+   "group": "duty",
+   "box": {
+    "x": 3770,
+    "y": 246,
+    "w": 280,
+    "h": 187
+   },
+   "style": {
+    "color": "blue",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-i-1",
+   "text": "From my grandfather Verus [I learned] good morals and the government of my temper.\nI.1",
+   "group": "others",
+   "box": {
+    "x": 30,
+    "y": 887,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-i-7",
+   "text": "From Rusticus I received the impression that my character required improvement and discipline\nI.7",
+   "group": "others",
+   "box": {
+    "x": 30,
+    "y": 1125,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-ii-1",
+   "text": "Begin the morning by saying to thyself, I shall meet with the busybody, the ungrateful, arrogant, deceitful, envious, unsocial.\nII.1",
+   "group": "others",
+   "box": {
+    "x": 370,
+    "y": 887,
+    "w": 280,
+    "h": 268
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-vi-6",
+   "text": "The best way of avenging thyself is not to become like [the wrong-doer].\nVI.6",
+   "group": "others",
+   "box": {
+    "x": 1730,
+    "y": 887,
+    "w": 280,
+    "h": 187
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-vii-22",
+   "text": "It is peculiar to man to love even those who do wrong.\nVII.22",
+   "group": "others",
+   "box": {
+    "x": 2070,
+    "y": 887,
+    "w": 280,
+    "h": 160
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-vii-73",
+   "text": "When thou hast done a good act and another has received it, why dost thou still look for a third thing\nVII.73",
+   "group": "others",
+   "box": {
+    "x": 2070,
+    "y": 1071,
+    "w": 280,
+    "h": 241
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-viii-59",
+   "text": "Men exist for the sake of one another.\nVIII.59",
+   "group": "others",
+   "box": {
+    "x": 2410,
+    "y": 887,
+    "w": 280,
+    "h": 133
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-xii-4",
+   "text": "every man loves himself more than all the rest of men, but yet sets less value on his own opinion of himself than on the opinion of others.\nXII.4",
+   "group": "others",
+   "box": {
+    "x": 3770,
+    "y": 887,
+    "w": 280,
+    "h": 295
+   },
+   "style": {
+    "color": "orange",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-ii-15",
+   "text": "Remember that all is opinion.\nII.15",
+   "group": "judgment",
+   "box": {
+    "x": 370,
+    "y": 1501,
+    "w": 280,
+    "h": 133
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-iv-3",
+   "text": "The universe is transformation: life is opinion.\nIV.3",
+   "group": "judgment",
+   "box": {
+    "x": 1050,
+    "y": 1501,
+    "w": 280,
+    "h": 160
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-iv-7",
+   "text": "Take away thy opinion, and then there is taken away the complaint, \"I have been harmed.\"\nIV.7",
+   "group": "judgment",
+   "box": {
+    "x": 1050,
+    "y": 1685,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-v-16",
+   "text": "Such as are thy habitual thoughts, such also will be the character of thy mind; for the soul is dyed by the thoughts.\nV.16",
+   "group": "judgment",
+   "box": {
+    "x": 1390,
+    "y": 1501,
+    "w": 280,
+    "h": 268
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-viii-47",
+   "text": "If thou art pained by any external thing, it is not this thing that disturbs thee, but thy own judgment about it.\nVIII.47",
+   "group": "judgment",
+   "box": {
+    "x": 2410,
+    "y": 1501,
+    "w": 280,
+    "h": 241
+   },
+   "style": {
+    "color": "violet",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-ii-14",
+   "text": "the present is the only thing of which a man can be deprived\nII.14",
+   "group": "present",
+   "box": {
+    "x": 370,
+    "y": 2061,
+    "w": 280,
+    "h": 187
+   },
+   "style": {
+    "color": "green",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-iii-10",
+   "text": "every man lives only this present time, which is an indivisible point\nIII.10",
+   "group": "present",
+   "box": {
+    "x": 710,
+    "y": 2061,
+    "w": 280,
+    "h": 187
+   },
+   "style": {
+    "color": "green",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-vii-8",
+   "text": "Let not future things disturb thee\nVII.8",
+   "group": "present",
+   "box": {
+    "x": 2070,
+    "y": 2061,
+    "w": 280,
+    "h": 133
+   },
+   "style": {
+    "color": "green",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-vii-29",
+   "text": "Confine thyself to the present.\nVII.29",
+   "group": "present",
+   "box": {
+    "x": 2070,
+    "y": 2218,
+    "w": 280,
+    "h": 133
+   },
+   "style": {
+    "color": "green",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-viii-36",
+   "text": "Do not disturb thyself by thinking of the whole of thy life.\nVIII.36",
+   "group": "present",
+   "box": {
+    "x": 2410,
+    "y": 2061,
+    "w": 280,
+    "h": 187
+   },
+   "style": {
+    "color": "green",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-ii-11",
+   "text": "Since it is possible that thou mayest depart from life this very moment, regulate every act and thought accordingly.\nII.11",
+   "group": "death",
+   "box": {
+    "x": 370,
+    "y": 2513,
+    "w": 280,
+    "h": 268
+   },
+   "style": {
+    "color": "grey",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-iv-17",
+   "text": "Do not act as if thou wert going to live ten thousand years.\nIV.17",
+   "group": "death",
+   "box": {
+    "x": 1050,
+    "y": 2513,
+    "w": 280,
+    "h": 187
+   },
+   "style": {
+    "color": "grey",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-v-33",
+   "text": "Soon, very soon, thou wilt be ashes, or a skeleton, and either a name or not even a name\nV.33",
+   "group": "death",
+   "box": {
+    "x": 1390,
+    "y": 2513,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "grey",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-vi-24",
+   "text": "Alexander the Macedonian and his groom by death were brought to the same state\nVI.24",
+   "group": "death",
+   "box": {
+    "x": 1730,
+    "y": 2513,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "grey",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-vii-19",
+   "text": "How many a Chrysippus, how many a Socrates, how many an Epictetus has time already swallowed up!\nVII.19",
+   "group": "death",
+   "box": {
+    "x": 2070,
+    "y": 2513,
+    "w": 280,
+    "h": 241
+   },
+   "style": {
+    "color": "grey",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-ix-3",
+   "text": "Do not despise death, but be well content with it\nIX.3",
+   "group": "death",
+   "box": {
+    "x": 2750,
+    "y": 2513,
+    "w": 280,
+    "h": 160
+   },
+   "style": {
+    "color": "grey",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-xi-3",
+   "text": "What a soul that is which is ready, if at any moment it must be separated from the body\nXI.3",
+   "group": "death",
+   "box": {
+    "x": 3430,
+    "y": 2513,
+    "w": 280,
+    "h": 214
+   },
+   "style": {
+    "color": "grey",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  },
+  {
+   "key": "m-xii-36",
+   "text": "Man, thou hast been a citizen in this great state [the world]\nXII.36",
+   "group": "death",
+   "box": {
+    "x": 3770,
+    "y": 2513,
+    "w": 280,
+    "h": 187
+   },
+   "style": {
+    "color": "grey",
+    "fill": "semi",
+    "dash": "solid",
+    "geo": "rectangle"
+   }
+  }
+ ],
+ "edges": [
+  {
+   "key": "edge:m-ii-1->m-v-1",
+   "from": "m-ii-1",
+   "to": "m-v-1",
+   "label": "two ways to start a morning",
+   "style": {
+    "color": "grey",
+    "dash": "solid"
+   }
+  },
+  {
+   "key": "edge:m-ii-1->m-vii-22",
+   "from": "m-ii-1",
+   "to": "m-vii-22",
+   "label": "expect the worst, and love them anyway",
+   "style": {
+    "color": "grey",
+    "dash": "solid"
+   }
+  },
+  {
+   "key": "edge:m-ii-11->m-iv-17",
+   "from": "m-ii-11",
+   "to": "m-iv-17",
+   "style": {
+    "color": "grey",
+    "dash": "solid"
+   }
+  },
+  {
+   "key": "edge:m-iv-7->m-viii-47",
+   "from": "m-iv-7",
+   "to": "m-viii-47",
+   "label": "the same claim, restated",
+   "style": {
+    "color": "grey",
+    "dash": "solid"
+   }
+  },
+  {
+   "key": "edge:m-iii-10->m-viii-36",
+   "from": "m-iii-10",
+   "to": "m-viii-36",
+   "label": "shrink the problem to now",
+   "style": {
+    "color": "grey",
+    "dash": "solid"
+   }
+  },
+  {
+   "key": "edge:m-ix-29->m-x-16",
+   "from": "m-ix-29",
+   "to": "m-x-16",
+   "style": {
+    "color": "grey",
+    "dash": "solid"
+   }
+  },
+  {
+   "key": "edge:m-iv-49->m-v-20",
+   "from": "m-iv-49",
+   "to": "m-v-20",
+   "style": {
+    "color": "grey",
+    "dash": "solid"
+   }
+  }
+ ]
+}

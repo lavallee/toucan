@@ -110,6 +110,7 @@ toucan [--canvas NAME] <command>
   log [--since T]             edits agents made with no tab open (T: ISO time, or an age: 30m, 2h, 7d)
   versions [save LABEL | show N [--format F] | restore N]   the canvas's history
   threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes
+  files                       where this canvas keeps what agents write for it
   routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
 ```
 
@@ -150,6 +151,20 @@ away" until you mark them seen (per browser).
 
 - **Deployment notes for agents.** An `AGENTS.md` in the data directory is passed to the chat agent as
   extra instructions, so your house canvases and extensions are documented without forking.
+
+## Try it on a book
+
+Two ready-made canvases, each built from a public-domain text:
+
+```sh
+toucan new meditations --from examples/meditations.tg.json --title "Meditations: a map of ideas" \
+  --description "Marcus Aurelius in George Long's translation. Every box is his wording, with book and section."
+toucan new odyssey --from examples/odyssey.tg.json --title "The Odyssey: a story map" \
+  --description "Homer in Samuel Butler's translation, which uses Roman names. Every line is Butler's, with its book."
+```
+
+Open one, click **Comment**, drag around a cluster, and ask something: "what's the argument here?" or "where does he
+disagree with himself?". Every quotation was checked word for word against its source by `scripts/build-maps.mjs`.
 
 ## Agent plugin
 

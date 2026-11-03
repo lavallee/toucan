@@ -17,10 +17,10 @@ const MODES = {
 	thorough: { model: process.env.TOUCAN_CHAT_THOROUGH_MODEL, effort: process.env.TOUCAN_CHAT_THOROUGH_EFFORT ?? 'medium' },
 }
 
-const instructions = (canvas, engine = 'tldraw', notes = null) => `You are the agent in toucan's chat panel. The user is looking at the ${engine} canvas "${canvas}" in their browser and can also edit it by hand. They are watching the canvas and waiting, so speed is the point.
+const instructions = (canvas, engine = 'tldraw', notes = null, data = '') => `You are the agent in toucan's chat panel. The user is looking at the ${engine} canvas "${canvas}" in their browser and can also edit it by hand. They are watching the canvas and waiting, so speed is the point.
 Change the canvas with \`node bin/toucan.mjs --canvas ${canvas} <cmd>\`. AGENTS.md is already in your context: don't read it again.
 Each message comes with a <canvas_brief> of what is on the canvas and selected. Don't re-read what it already tells you. If they say "this" or "these" and the brief shows nothing selected, run \`selection\`; if it's still unclear, ask them rather than guess.
-Get something on the canvas first, then improve it. For a clear request, your first or second tool call should be the visible edit: pipe a small Mermaid flowchart to \`import - --format mermaid --label "what this is"\`, or run \`exec -e '...' --label "what this is"\`. Otherwise pick sensible defaults rather than asking. Don't research, read source files or write helper files unless the request can't be done without them. Keep the user's hand edits, and make small, reversible changes.
+Get something on the canvas first, then improve it. For a clear request, your first or second tool call should be the visible edit: pipe a small Mermaid flowchart to \`import - --format mermaid --label "what this is"\`, or run \`exec -e '...' --label "what this is"\`. Otherwise pick sensible defaults rather than asking. Don't research, read source files or write helper files unless the request can't be done without them. When you do write a file, research or a helper script, put it only in \`${data}/${canvas}.files/\`, and name the file in your reply. Keep the user's hand edits, and make small, reversible changes.
 \`toucan.node\` changes only what you pass and places a new box somewhere free; \`import\` also lays new boxes out beside what they connect to, so prefer it for anything connected. \`import\` only adds and updates: when a request replaces something ("between", "instead of", "move"), also remove what it replaces, with \`toucan.remove('edge:a->b')\` for an arrow. Draw a flow in one direction, without arrows looping back to the start.
 Once your edit is on the canvas, take one \`screenshot\` and fix anything overlapping, cut off or mislabelled, unless you only changed text or colour. Then reply in a line or two with what you changed.
 Before redoing a chore, check \`routine list\` and \`routine run NAME\`. When the user asks to bank what you did, write a routine that works from the canvas alone, try it with \`exec\`, and \`routine save NAME FILE --title T --description D --engines E\`. For lasting new behaviour on one canvas, use \`script put\`.
@@ -33,9 +33,10 @@ This canvas runs ${engine}: in exec code \`editor\` is the ${engine} API and \`t
 This deployment adds its own agent notes in ${notes}: read them once at the start of this conversation, and follow them.` : ''}`
 
 // An agent working on one comment thread. Its last message in a turn becomes its reply there.
-const threadInstructions = (canvas, id, engine = 'tldraw') => `You are an agent working on comment thread #${id}, which someone attached to part of the ${engine} canvas "${canvas}". Others may be working on the canvas and in other threads at the same time, so keep to what this thread is about.
+const threadInstructions = (canvas, id, engine = 'tldraw', data = '') => `You are an agent working on comment thread #${id}, which someone attached to part of the ${engine} canvas "${canvas}". Others may be working on the canvas and in other threads at the same time, so keep to what this thread is about.
 Change the canvas with \`node bin/toucan.mjs --canvas ${canvas} <cmd>\`, giving each change a \`--label "#${id}: what this is"\`. AGENTS.md is already in your context: don't read it again. \`toucan.node\` changes only what you pass; \`import - --format mermaid\` lays out new connected boxes and only adds, so also remove what a request replaces. Trust the <canvas_brief> rather than re-reading the canvas, and get the visible edit done first.
 Your final message is posted as your reply in the thread, so write it for the people reading there: a line or two on what you did or found, and a clear question if you need a decision. If the request is for research or an opinion rather than an edit, answer in that reply. A message may arrive while you work: take it into account and carry on.
+Put any file you write, research or a helper script, only in \`${data}/${canvas}.files/\`, and name it in your reply.
 Leave closing the thread to people, unless they ask you to close it (\`threads close ${id}\`).`
 
 export class CodexChat {
@@ -47,6 +48,7 @@ export class CodexChat {
 		this.sending = new Map() // canvas -> the message being handed over, so they go in order
 		// Deployment-specific instructions for the chat agent (extensions, house canvases): <data>/AGENTS.md.
 		this.notes = join(data, 'AGENTS.md')
+		this.data = data
 		this.root = root
 		this.port = port
 		this.proc = null
@@ -121,7 +123,7 @@ export class CodexChat {
 		})
 		readline.createInterface({ input: this.proc.stdout }).on('line', (line) => this.onLine(line))
 		this.ready = (async () => {
-			await this.call('initialize', { clientInfo: { name: 'toucan', title: 'toucan', version: '0.5.0' }, capabilities: null })
+			await this.call('initialize', { clientInfo: { name: 'toucan', title: 'toucan', version: '0.6.0' }, capabilities: null })
 			this.notify('initialized', {})
 			// Without it, turns use the machine's own Codex config, which may name a different model.
 			const models = await this.call('model/list', {}).catch(() => null)
@@ -222,7 +224,7 @@ export class CodexChat {
 		await this.start()
 		if (this.threads.has(canvas)) return this.threads.get(canvas)
 		const [name, comment] = canvas.split('#')
-		const developerInstructions = comment ? threadInstructions(name, comment, this.engineOf(name)) : instructions(name, this.engineOf(name), existsSync(this.notes) ? this.notes : null)
+		const developerInstructions = comment ? threadInstructions(name, comment, this.engineOf(name), this.data) : instructions(name, this.engineOf(name), existsSync(this.notes) ? this.notes : null, this.data)
 		const opts = { cwd: this.root, approvalPolicy: 'on-request', developerInstructions, serviceName: 'toucan' }
 		let res
 		if (this.saved[canvas]) {
@@ -254,7 +256,8 @@ export class CodexChat {
 	/** An archived canvas's thread conversations shouldn't be picked up by a later canvas of that name. */
 	forgetThreads(canvas) {
 		for (const key of Object.keys(this.saved)) if (key.startsWith(`${canvas}#`)) delete this.saved[key]
-		for (const key of this.threads.keys()) if (key.startsWith(`${canvas}#`)) this.threads.delete(key)
+		for (const key of [...this.turns.keys()]) if (key.startsWith(`${canvas}#`)) this.interrupt(key).catch(() => {}) // don't let it write on after the move
+		for (const key of this.threads.keys()) if (key.startsWith(`${canvas}#`)) setTimeout(() => this.threads.delete(key), 1000)
 	}
 
 	queue(key, text, mode) {
@@ -275,6 +278,9 @@ export class CodexChat {
 	}
 
 	async send(canvas, text, mode) {
+		// Agents may write to their canvas's folder and no other part of the data directory: not AGENTS.md, routines or other canvases.
+		const folder = join(this.data, `${canvas.split('#')[0]}.files`)
+		mkdirSync(folder, { recursive: true })
 		const threadId = await this.thread(canvas)
 		const message = { type: 'text', text, text_elements: [] }
 		// Mid-turn, a message adjusts the work in progress rather than waiting for it to finish.
@@ -296,7 +302,7 @@ export class CodexChat {
 			cwd: this.root,
 			summary: 'auto', // reasoning summaries feed the chat panel's "Thinking" line
 			// The CLI talks to this server over loopback, so the sandbox needs network.
-			sandboxPolicy: { type: 'workspaceWrite', writableRoots: [this.root], networkAccess: true, excludeTmpdirEnvVar: false, excludeSlashTmp: false },
+			sandboxPolicy: { type: 'workspaceWrite', writableRoots: [this.root, folder], networkAccess: true, excludeTmpdirEnvVar: false, excludeSlashTmp: false },
 		})
 		if (started?.turn?.id && started.turn.status === 'inProgress') this.turns.set(canvas, started.turn.id)
 	}

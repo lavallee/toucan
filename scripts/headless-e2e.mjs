@@ -9,7 +9,7 @@
 
 import assert from 'node:assert/strict'
 import { execFile, spawn } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { homedir, platform, tmpdir } from 'node:os'
 import { join, resolve, dirname } from 'node:path'
@@ -125,6 +125,11 @@ try {
 		await new Promise((r) => setTimeout(r, 1500)) // the page reconnects, or takes the merge
 		assert.equal((await toucan('--canvas', hist, 'exec', '-e', shapeCount)).out, atCheckpoint, 'restore put the canvas back')
 		assert.ok((await json('--canvas', hist, 'log')).some((e) => e.source === 'restore'), 'a restore nobody watched goes on the trail')
+		const files = await json('--canvas', hist, 'files')
+		assert.ok(files.dir.endsWith(`${hist}.files`) && files.files.length === 0, 'a canvas has a place for files, empty until used')
+		mkdirSync(join(files.dir, 'notes'), { recursive: true })
+		writeFileSync(join(files.dir, 'notes', 'a.md'), 'hi')
+		assert.deepEqual((await json('--canvas', hist, 'files')).files, ['notes/a.md'])
 		// Threads need no tab at all, and an agent answers through the CLI.
 		const made = await json('--canvas', hist, 'threads', 'new', 'Is', 'this', 'right?', '--on', 'a', '--as', 'Marc')
 		assert.deepEqual(made.anchor.shapes, ['a'])

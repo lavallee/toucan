@@ -1,0 +1,454 @@
+{
+  "meditations": {
+    "title": "Meditations: a map of ideas",
+    "description": "Marcus Aurelius's private notes, in George Long's public-domain translation: twelve books across, five recurring ideas down. Every box is his wording, with its book and section.",
+    "source": "https://www.gutenberg.org/ebooks/15877",
+    "themes": [
+      {
+        "key": "duty",
+        "label": "Do the work in front of you",
+        "color": "blue",
+        "passages": [
+          [
+            "III.12",
+            "If thou workest at that which is before thee, following right reason seriously, vigorously, calmly"
+          ],
+          [
+            "IV.31",
+            "Love the art, poor as it may be, which thou hast learned, and be content with it"
+          ],
+          [
+            "IV.49",
+            "Be like the promontory against which the waves continually break, but it stands firm"
+          ],
+          [
+            "V.1",
+            "In the morning when thou risest unwillingly, let this thought be present,--I am rising to the work of a human being."
+          ],
+          [
+            "V.20",
+            "the mind converts and changes every hindrance to its activity into an aid"
+          ],
+          [
+            "VI.30",
+            "Take care that thou art not made into a Caesar, that thou art not dyed with this dye"
+          ],
+          [
+            "VI.54",
+            "That which is not good for the swarm, neither is it good for the bee."
+          ],
+          [
+            "IX.29",
+            "nor yet expect Plato's Republic: but be content if the smallest thing goes on well"
+          ],
+          [
+            "X.16",
+            "No longer talk at all about the kind of man that a good man ought to be, but be such."
+          ],
+          [
+            "XII.17",
+            "If it is not right, do not do it: if it is not true, do not say it."
+          ]
+        ]
+      },
+      {
+        "key": "others",
+        "label": "Other people",
+        "color": "orange",
+        "passages": [
+          [
+            "I.1",
+            "From my grandfather Verus [I learned] good morals and the government of my temper."
+          ],
+          [
+            "I.7",
+            "From Rusticus I received the impression that my character required improvement and discipline"
+          ],
+          [
+            "II.1",
+            "Begin the morning by saying to thyself, I shall meet with the busybody, the ungrateful, arrogant, deceitful, envious, unsocial."
+          ],
+          [
+            "VI.6",
+            "The best way of avenging thyself is not to become like [the wrong-doer]."
+          ],
+          [
+            "VII.22",
+            "It is peculiar to man to love even those who do wrong."
+          ],
+          [
+            "VII.73",
+            "When thou hast done a good act and another has received it, why dost thou still look for a third thing"
+          ],
+          [
+            "VIII.59",
+            "Men exist for the sake of one another."
+          ],
+          [
+            "XII.4",
+            "every man loves himself more than all the rest of men, but yet sets less value on his own opinion of himself than on the opinion of others."
+          ]
+        ]
+      },
+      {
+        "key": "judgment",
+        "label": "It's your judgment that hurts",
+        "color": "violet",
+        "passages": [
+          [
+            "II.15",
+            "Remember that all is opinion."
+          ],
+          [
+            "IV.3",
+            "The universe is transformation: life is opinion."
+          ],
+          [
+            "IV.7",
+            "Take away thy opinion, and then there is taken away the complaint, \"I have been harmed.\""
+          ],
+          [
+            "V.16",
+            "Such as are thy habitual thoughts, such also will be the character of thy mind; for the soul is dyed by the thoughts."
+          ],
+          [
+            "VIII.47",
+            "If thou art pained by any external thing, it is not this thing that disturbs thee, but thy own judgment about it."
+          ]
+        ]
+      },
+      {
+        "key": "present",
+        "label": "Only the present is yours",
+        "color": "green",
+        "passages": [
+          [
+            "II.14",
+            "the present is the only thing of which a man can be deprived"
+          ],
+          [
+            "III.10",
+            "every man lives only this present time, which is an indivisible point"
+          ],
+          [
+            "VII.8",
+            "Let not future things disturb thee"
+          ],
+          [
+            "VII.29",
+            "Confine thyself to the present."
+          ],
+          [
+            "VIII.36",
+            "Do not disturb thyself by thinking of the whole of thy life."
+          ]
+        ]
+      },
+      {
+        "key": "death",
+        "label": "You will die, and be forgotten",
+        "color": "grey",
+        "passages": [
+          [
+            "II.11",
+            "Since it is possible that thou mayest depart from life this very moment, regulate every act and thought accordingly."
+          ],
+          [
+            "IV.17",
+            "Do not act as if thou wert going to live ten thousand years."
+          ],
+          [
+            "V.33",
+            "Soon, very soon, thou wilt be ashes, or a skeleton, and either a name or not even a name"
+          ],
+          [
+            "VI.24",
+            "Alexander the Macedonian and his groom by death were brought to the same state"
+          ],
+          [
+            "VII.19",
+            "How many a Chrysippus, how many a Socrates, how many an Epictetus has time already swallowed up!"
+          ],
+          [
+            "IX.3",
+            "Do not despise death, but be well content with it"
+          ],
+          [
+            "XI.3",
+            "What a soul that is which is ready, if at any moment it must be separated from the body"
+          ],
+          [
+            "XII.36",
+            "Man, thou hast been a citizen in this great state [the world]"
+          ]
+        ]
+      }
+    ],
+    "placeNotes": {
+      "I": [
+        "I.17",
+        "Among the Quadi at the Granua."
+      ],
+      "II": [
+        "II.17",
+        "This in Carnuntum."
+      ]
+    },
+    "links": [
+      [
+        "II.1",
+        "V.1",
+        "two ways to start a morning"
+      ],
+      [
+        "II.1",
+        "VII.22",
+        "expect the worst, and love them anyway"
+      ],
+      [
+        "II.11",
+        "IV.17"
+      ],
+      [
+        "IV.7",
+        "VIII.47",
+        "the same claim, restated"
+      ],
+      [
+        "III.10",
+        "VIII.36",
+        "shrink the problem to now"
+      ],
+      [
+        "IX.29",
+        "X.16"
+      ],
+      [
+        "IV.49",
+        "V.20"
+      ]
+    ]
+  },
+  "odyssey": {
+    "title": "The Odyssey: a story map",
+    "description": "Homer's story in Samuel Butler's public-domain translation, which uses Roman names (Ulysses, Minerva). The poem tells it out of order; the arrows show how the pieces join. Every line is Butler's, with its book.",
+    "source": "https://www.gutenberg.org/ebooks/1727",
+    "chapters": [
+      {
+        "key": "ithaca",
+        "label": "Ithaca without him",
+        "color": "blue",
+        "stops": [
+          [
+            "muse",
+            "The poem opens",
+            "I",
+            "Tell me, O Muse, of that ingenious hero who travelled far and wide after he had sacked the famous town of Troy."
+          ],
+          [
+            "assembly",
+            "Telemachus speaks up",
+            "II",
+            "Men of Ithaca,” he said, “hear my words."
+          ]
+        ]
+      },
+      {
+        "key": "search",
+        "label": "Telemachus goes looking",
+        "color": "green",
+        "stops": [
+          [
+            "pylos",
+            "Pylos: Nestor",
+            "III",
+            "But how, Mentor,” replied Telemachus, “dare I go up to Nestor, and how am I to address him?"
+          ],
+          [
+            "sparta",
+            "Sparta: Menelaus",
+            "IV",
+            "Thus spoke Menelaus, and the heart of Telemachus yearned"
+          ]
+        ]
+      },
+      {
+        "key": "away",
+        "label": "Ulysses gets away",
+        "color": "orange",
+        "stops": [
+          [
+            "calypso",
+            "Calypso's island",
+            "V",
+            "Calypso trembled with rage when she heard this"
+          ],
+          [
+            "raft",
+            "The raft",
+            "V",
+            "The sea took the raft and tossed it about as Autumn winds whirl thistledown"
+          ],
+          [
+            "nausicaa",
+            "Scheria: Nausicaa",
+            "VI",
+            "began to play at ball, while Nausicaa sang for them"
+          ],
+          [
+            "demodocus",
+            "The bard at the feast",
+            "VIII",
+            "we will have Demodocus to sing to us"
+          ]
+        ]
+      },
+      {
+        "key": "wanderings",
+        "label": "The wanderings, as Ulysses tells them (they happened before Calypso)",
+        "color": "violet",
+        "stops": [
+          [
+            "cicons",
+            "The Cicons",
+            "IX",
+            "the wind took me first to Ismarus, which is the city of the Cicons"
+          ],
+          [
+            "lotus",
+            "The Lotus-eaters",
+            "IX",
+            "the land of the Lotus-eaters, who live on a food that comes from a kind of flower."
+          ],
+          [
+            "cyclops",
+            "The Cyclops",
+            "IX",
+            "Noman is killing me by fraud; no man is killing me by force."
+          ],
+          [
+            "aeolus",
+            "The bag of winds",
+            "X",
+            "gold and silver in the sack that Aeolus had given me"
+          ],
+          [
+            "laestrygonians",
+            "The Laestrygonians",
+            "X",
+            "thousands of sturdy Laestrygonians sprang up from every quarter—ogres, not men."
+          ],
+          [
+            "circe",
+            "Circe",
+            "X",
+            "you have just been turning all my men into pigs"
+          ],
+          [
+            "dead",
+            "The land of the dead",
+            "XI",
+            "I would rather be a paid servant in a poor man’s house and be above ground than king of kings among the dead."
+          ],
+          [
+            "sirens",
+            "The Sirens",
+            "XII",
+            "First you will come to the Sirens who enchant all who come near them."
+          ],
+          [
+            "scylla",
+            "Scylla and Charybdis",
+            "XII",
+            "For Scylla is not mortal; moreover she is savage, extreme, rude, cruel and invincible."
+          ],
+          [
+            "cattle",
+            "The cattle of the sun",
+            "XII",
+            "we reached the noble island of the sun-god, where were the goodly cattle"
+          ]
+        ]
+      },
+      {
+        "key": "home",
+        "label": "Home",
+        "color": "red",
+        "stops": [
+          [
+            "landed",
+            "Back in Ithaca",
+            "XIII",
+            "I heard of Ithaca,” said he, “when I was in Crete beyond the seas"
+          ],
+          [
+            "eumaeus",
+            "The swineherd's hut",
+            "XIV",
+            "The swineherd was at that moment cutting out a pair of sandals"
+          ],
+          [
+            "father",
+            "Father and son",
+            "XVI",
+            "I am your father, on whose account you grieve and suffer so much at the hands of lawless men."
+          ],
+          [
+            "argos",
+            "The old dog",
+            "XVII",
+            "This was Argos, whom Ulysses had bred before setting out for Troy"
+          ],
+          [
+            "scar",
+            "The scar",
+            "XIX",
+            "As soon as Euryclea had got the scarred limb in her hands and had well hold of it, she recognised it"
+          ],
+          [
+            "bow",
+            "The bow",
+            "XXI",
+            "we shall find it no light matter to string such a bow as this is"
+          ],
+          [
+            "suitors",
+            "The suitors",
+            "XXII",
+            "But Antinous who was the head and front of the offending lies low already."
+          ],
+          [
+            "bed",
+            "The bed",
+            "XXIII",
+            "Who has been taking my bed from the place in which I left it?"
+          ],
+          [
+            "peace",
+            "Peace",
+            "XXIV",
+            "made a covenant of peace between the two contending parties"
+          ]
+        ]
+      }
+    ],
+    "links": [
+      [
+        "assembly",
+        "pylos"
+      ],
+      [
+        "sparta",
+        "father"
+      ],
+      [
+        "demodocus",
+        "cicons"
+      ],
+      [
+        "cattle",
+        "calypso"
+      ]
+    ]
+  }
+}
