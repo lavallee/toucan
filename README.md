@@ -114,7 +114,7 @@ toucan [--canvas NAME] <command>
   versions [save LABEL | show N [--format F] | restore N]   the canvas's history
   threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes
   templates [show ID]         diagrams to start from (new NAME --template ID)
-  draw FILE|- [--move]        lay out a diagram described as data onto the canvas
+  draw FILE|- [--update]      lay out a diagram described as data onto the canvas
   files                       where this canvas keeps what agents write for it
   routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
 ```

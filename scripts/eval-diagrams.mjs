@@ -232,6 +232,23 @@ try {
 		assert.ok(m.score >= 85, `a Mermaid import scored ${m.score}: ${JSON.stringify(m.findings)}`)
 		console.log(`\nMermaid import on a blank canvas: ${m.score}`)
 	}
+	// Tidying can't change a timeline's dates: a bar moved sideways stays where it was put.
+	if (!only) {
+		await toucan('new', 'dated', '--template', 'roadmap')
+		await page.goto(`http://127.0.0.1:${port}/?canvas=dated`)
+		await page.waitForFunction(() => window.editor?.getCurrentPageShapes().length > 0, null, { timeout: 15000 })
+		await page.waitForTimeout(800)
+		const bar = await page.evaluate(() => {
+			const s = window.editor.getCurrentPageShapes().find((x) => x.meta?.key?.startsWith('bar-'))
+			window.editor.updateShape({ id: s.id, type: s.type, x: s.x + 30 })
+			return { id: s.id, x: window.editor.getShapePageBounds(s.id).x, w: s.props.w }
+		})
+		await toucan('--canvas', 'dated', 'routine', 'run', 'clean-up')
+		await page.waitForTimeout(300)
+		const after = await page.evaluate((id) => ({ x: window.editor.getShapePageBounds(id).x, w: window.editor.getShape(id).props.w }), bar.id)
+		assert.deepEqual([Math.abs(after.x - bar.x) < 1, after.w], [true, bar.w], `clean-up changed a date on a timeline: ${JSON.stringify({ bar, after })}`)
+		console.log('ok  clean-up leaves a timeline\'s dates alone')
+	}
 	if (!args.includes('--no-routines')) await evalRoutines()
 	if (!args.includes('--no-excalidraw')) await evalExcalidraw()
 } finally {

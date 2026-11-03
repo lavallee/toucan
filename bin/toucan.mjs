@@ -8,7 +8,7 @@
 //     canvases                    list canvases: title, shapes, scripts, open tabs
 //     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE | --template ID] [--title T] [--description D] [--canvas-format F]
 //     templates [show ID]         diagrams to start from: flowchart, org chart, sequence, roadmap and more (show: its description, as an example)
-//     draw FILE|- [--move] [--label T]   lay out a diagram described as data (same form as a template) onto --canvas
+//     draw FILE|- [--update] [--move] [--label T]   lay out a diagram described as data (same form as a template) onto --canvas
 //                                 make a canvas; --from copies another canvas (or a graph file) via TG
 //     graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   export (no tab needed)
 //     import FILE|- [--format F] [--move] [--prune] [--propose] [--label T]   keyed upsert of a graph file into the open canvas
@@ -228,17 +228,17 @@ switch (cmd) {
 		break
 	}
 	case 'draw': {
-		const label = flag('label'), move = !!flag('move')
+		const label = flag('label'), move = !!flag('move'), update = move || !!flag('update')
 		const [, file] = argv
-		if (!file) die('usage: draw FILE|- [--move] [--label T]')
+		if (!file) die('usage: draw FILE|- [--update] [--move] [--label T]')
 		const { layOut, placeBeside } = await import('../lib/layouts.mjs')
 		const spec = JSON.parse(readFileSync(file === '-' ? 0 : file, 'utf8'))
 		const tg = await layOut(spec).catch((e) => die(e.message))
-		// Beside whatever's already on the canvas, unless this is an update of what's there.
-		const bounds = await exec('const g = toucan.graph(); return { keys: [...g.nodes, ...g.groups].map((n) => n.key), boxes: [...g.nodes, ...g.groups].map((n) => n.box).filter(Boolean) }')
-		placeBeside(tg, bounds)
+		// A new drawing goes beside what's there, and never over it. --update means this is a new version of what's there.
+		const placed = update ? { prefix: null } : placeBeside(tg, await exec('const g = toucan.graph(); return { keys: [...g.nodes, ...g.groups].map((n) => n.key), boxes: [...g.nodes, ...g.groups].map((n) => n.box).filter(Boolean) }'))
 		const named = typeof label === 'string' ? label : `draw ${spec.title ?? spec.kind}`
-		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move })})`, 120000, named))
+		const out = await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move })})`, 120000, named)
+		print(placed.prefix ? { ...out, keysPrefixed: placed.prefix } : out)
 		break
 	}
 	case 'files':

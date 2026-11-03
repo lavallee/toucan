@@ -3,6 +3,7 @@
 
 import { renderPlaintextFromRichText } from 'tldraw'
 import { LAYOUTS, sidesFor } from '../lib/layouts.mjs'
+import { getFormat } from './formats'
 
 export function makeTidy(editor, keyOf) {
 	const GRID = 10
@@ -39,6 +40,9 @@ export function makeTidy(editor, keyOf) {
 	const moved = (s, x, y) => Math.abs(s.x - x) > 0.5 || Math.abs(s.y - y) > 0.5
 
 	/** Boxes nearly in line are put in line: rows by their centres, then columns. */
+	// On a timeline a box's position and width are its dates, so tidying sideways would change what the diagram says.
+	const timed = () => getFormat()?.id === 'timeline'
+
 	function align({ tolerance = 40 } = {}) {
 		const at = new Map()
 		const pos = (s) => at.get(s.id) ?? { x: s.x, y: s.y }
@@ -56,7 +60,7 @@ export function makeTidy(editor, keyOf) {
 					const line = snap(median(row.map((s) => pos(s).y + local(s).h / 2)))
 					for (const s of row) set(s, { ...pos(s), y: line - local(s).h / 2 })
 				}
-				for (const col of clusters(group, (s) => pos(s).x + local(s).w / 2, tolerance)) {
+				for (const col of timed() ? [] : clusters(group, (s) => pos(s).x + local(s).w / 2, tolerance)) {
 					if (col.length < 2) continue
 					const line = snap(median(col.map((s) => pos(s).x + local(s).w / 2)))
 					for (const s of col) set(s, { ...pos(s), x: line - local(s).w / 2 })
@@ -85,7 +89,7 @@ export function makeTidy(editor, keyOf) {
 			}
 		}
 		for (const group of groups()) {
-			for (const row of clusters(group, (s) => s.y + local(s).h / 2, tolerance)) even(row, (s) => s.x, (s) => local(s).w, (x) => ({ x }))
+			for (const row of timed() ? [] : clusters(group, (s) => s.y + local(s).h / 2, tolerance)) even(row, (s) => s.x, (s) => local(s).w, (x) => ({ x }))
 			for (const col of clusters(group, (s) => s.x + local(s).w / 2, tolerance)) even(col, (s) => s.y, (s) => local(s).h, (y) => ({ y }))
 		}
 		return apply([...updates.values()])
@@ -93,6 +97,7 @@ export function makeTidy(editor, keyOf) {
 
 	/** Rectangles in a row become one height, and those in a column one width. Only ever larger, so no text is squeezed. */
 	function matchSizes({ tolerance = 40 } = {}) {
+		if (timed()) return 0
 		const size = new Map()
 		const cur = (s) => size.get(s.id) ?? { w: s.props.w, h: local(s).h }
 		// Rows and columns are judged by centres, which don't move here, so one pass is enough; a tallest stays tallest.
@@ -136,11 +141,12 @@ export function makeTidy(editor, keyOf) {
 						any = true
 						const [front, back] = a.x + a.w / 2 <= b.x + b.w / 2 ? [a, b] : [b, a]
 						const [top, low] = a.y + a.h / 2 <= b.y + b.h / 2 ? [a, b] : [b, a]
-						if (dx <= dy) (back.x += dx / 2 + 1, front.x -= dx / 2 + 1)
+						// On a timeline two things at once stack up, as the layout draws them: sideways would change their dates.
+						if (dx <= dy && !timed()) (back.x += dx / 2 + 1, front.x -= dx / 2 + 1)
 						else (low.y += dy / 2 + 1, top.y -= dy / 2 + 1)
 					}
 				}
-				for (const p of items) (p.x = moved(p.s, p.x, p.y) ? snap(p.x) : p.x), (p.y = moved(p.s, p.x, p.y) ? snap(p.y) : p.y)
+				for (const p of items) (p.x = moved(p.s, p.x, p.y) && !timed() ? snap(p.x) : p.x), (p.y = moved(p.s, p.x, p.y) ? snap(p.y) : p.y)
 				if (!any) break
 			}
 			changed += apply(items.flatMap((p) => (moved(p.s, p.x, p.y) ? [{ id: p.s.id, type: p.s.type, x: p.x, y: p.y }] : [])))
@@ -265,8 +271,10 @@ export function makeTidy(editor, keyOf) {
 
 	/** Lays everything out afresh with the same engine as the templates, frames included, following the arrows. */
 	async function layOut(toucan, { direction } = {}) {
+		if (timed()) throw new Error('On a timeline, position is the date, so this would change what the diagram says. Set a different format first if that is what you want.')
 		const dir = direction ?? mainDirection()
-		const frameOf = (s) => editor.getShapeAncestors(s).find((a) => a.type === 'frame')
+		// Ancestors run from the page down: the nearest frame is the last one.
+		const frameOf = (s) => editor.getShapeAncestors(s).findLast((a) => a.type === 'frame')
 		const boxes = pageShapes().filter((s) => s.type === 'geo' && !isMarker({ w: s.props.w, h: s.props.h + (s.props.growY ?? 0) }))
 		const known = new Set(boxes.map((s) => s.id))
 		const frames = pageShapes().filter((s) => s.type === 'frame' && boxes.some((b) => frameOf(b)?.id === s.id))
@@ -278,6 +286,7 @@ export function makeTidy(editor, keyOf) {
 		const placed = await LAYOUTS.flow({
 			direction: dir,
 			route: 'straight',
+			keepSizes: true,
 			gap: 50,
 			layerGap: 90,
 			groups: frames.map((f) => ({ id: f.id, label: f.props.name })),
@@ -287,7 +296,11 @@ export function makeTidy(editor, keyOf) {
 		const origin = editor.getCurrentPageBounds() ?? { x: 0, y: 0 }
 		const frameBox = new Map(placed.groups.map((g) => [g.key, g.box]))
 		editor.updateShapes([
-			...placed.groups.map((g) => ({ id: g.key, type: 'frame', x: origin.x + g.box.x, y: origin.y + g.box.y, props: { w: g.box.w, h: g.box.h } })),
+			...placed.groups.map((g) => {
+				// A frame can sit inside another, and its box is in page coordinates.
+				const { x, y } = editor.getPointInParentSpace(g.key, { x: origin.x + g.box.x, y: origin.y + g.box.y })
+				return { id: g.key, type: 'frame', x, y, props: { w: g.box.w, h: g.box.h } }
+			}),
 			...placed.nodes.map((n) => {
 				const f = n.group && frameBox.get(n.group)
 				const s = editor.getShape(n.key)
@@ -295,6 +308,9 @@ export function makeTidy(editor, keyOf) {
 			}),
 		])
 		neatArrows()
+		// What wasn't laid out, like a person's sticky note or an inner frame's outer frame, is still inside: frames grow to hold it.
+		const holdsMore = pageShapes().some((s) => s.type !== 'arrow' && s.type !== 'geo' && editor.getShape(s.parentId)?.type === 'frame')
+		if (holdsMore) fitFrames()
 		return placed.nodes.length
 	}
 	const toucanText = (s) => (s.props.richText ? renderPlaintextFromRichText(editor, s.props.richText) : '')
