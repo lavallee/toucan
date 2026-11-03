@@ -6,7 +6,7 @@
 // instead of duplicating them, and hand-made moves survive unless asked otherwise.
 
 import ELK from 'elkjs/lib/elk.bundled.js'
-import { createShapeId, createBindingId, toRichText, renderPlaintextFromRichText, fitFrameToContent } from 'tldraw'
+import { Box as tl_Box, createShapeId, createBindingId, toRichText, renderPlaintextFromRichText, fitFrameToContent } from 'tldraw'
 import { fromTldraw, layoutMissing } from '../lib/tg.mjs'
 import { pulse as glow } from './pulses'
 
@@ -187,6 +187,51 @@ export function makeHelpers(editor) {
 		if (startedEmpty || added.some((s) => !view.contains(editor.getShapePageBounds(s)))) editor.zoomToFit({ animation: { duration: 250 } })
 	}
 
+	// ---- the canvas as comment threads see it (app/Threads.tsx): page coordinates, and what's where ------
+	const unionOf = (boxes) => {
+		const found = boxes.filter(Boolean)
+		if (!found.length) return null
+		const x = Math.min(...found.map((b) => b.x)), y = Math.min(...found.map((b) => b.y))
+		return { x, y, w: Math.max(...found.map((b) => b.x + b.w)) - x, h: Math.max(...found.map((b) => b.y + b.h)) - y }
+	}
+	const boundsOf = (keys) => unionOf(keys.map((k) => get(k)).filter(Boolean).map((s) => {
+		const { x, y, w, h } = editor.getShapePageBounds(s)
+		return { x, y, w, h }
+	}))
+	/** The key of the shape at a page point: the smallest one it's inside, so a box beats the frame around it. */
+	const shapeAt = (point) => {
+		const s = editor.getShapeAtPoint(point, { hitInside: true, hitFrameInside: true, hitLabels: true, margin: 4 })
+		return s ? keyOf(s) : null
+	}
+	const shapesIn = (box) => editor.getCurrentPageShapes().filter((s) => {
+		if (s.type === 'frame' || s.type === 'arrow') return false
+		const b = editor.getShapePageBounds(s)
+		return b.x < box.x + box.w && box.x < b.maxX && b.y < box.y + box.h && box.y < b.maxY
+	}).map(keyOf)
+	const threadView = {
+		boundsOf,
+		shapeAt,
+		shapesIn,
+		pageId: () => editor.getCurrentPageId(),
+		pageOf: (key) => {
+			const s = get(key)
+			return s ? editor.getAncestorPageId(s) : undefined
+		},
+		goToPage: (page) => {
+			if (editor.getPage(page) && editor.getCurrentPageId() !== page) editor.setCurrentPage(page)
+		},
+		toViewport: (p) => editor.pageToViewport(p),
+		fromClient: (p) => editor.screenToPage(p),
+		onCamera: (f) => editor.store.listen(f, { scope: 'session' }),
+		showBox: (box) => {
+			const view = editor.getViewportPageBounds()
+			const inView = box.x >= view.minX && box.y >= view.minY && box.x + box.w <= view.maxX && box.y + box.h <= view.maxY
+			if (inView) return
+			if (box.w || box.h) editor.zoomToBounds(new tl_Box(box.x, box.y, box.w, box.h), { inset: 160, animation: { duration: 250 } })
+			else editor.centerOnPoint(box, { animation: { duration: 250 } })
+		},
+	}
+
 	const GAP = 40
 	/** A free spot for a new box given no position: under what's in its frame, or right of everything on the page. */
 	function freeSpot(frameId) {
@@ -230,16 +275,20 @@ export function makeHelpers(editor) {
 		return id
 	}
 
-	/** Create or update a frame (a titled container). */
-	function frame(key, { x = 0, y = 0, w = 800, h = 600, name = key, color = 'black', meta = {}, move = false } = {}) {
+	/** Create or update a frame (a titled container). An existing frame changes only in what you pass. */
+	function frame(key, { x, y, w, h, name, color, meta = {}, move = false } = {}) {
 		const id = idFor(key)
 		const existing = editor.getShape(id)
+		const passed = Object.fromEntries(Object.entries({ name, color }).filter(([, v]) => v !== undefined))
 		if (existing) {
-			const update = { id, type: 'frame', props: { name, color }, meta: { ...existing.meta, ...meta, key } }
-			if (move) Object.assign(update, { x, y, props: { name, color, w, h } })
+			const update = { id, type: 'frame', props: passed, meta: { ...existing.meta, ...meta, key } }
+			if (move) {
+				Object.assign(update, x !== undefined && { x }, y !== undefined && { y })
+				Object.assign(passed, w !== undefined && { w }, h !== undefined && { h })
+			}
 			editor.updateShape(update)
 		} else {
-			editor.createShape({ id, type: 'frame', x, y, parentId: editor.getCurrentPageId(), props: { w, h, name, color }, meta: { ...meta, key } })
+			editor.createShape({ id, type: 'frame', x: x ?? 0, y: y ?? 0, parentId: editor.getCurrentPageId(), props: { w: w ?? 800, h: h ?? 600, name: key, color: 'black', ...passed }, meta: { ...meta, key } })
 		}
 		return id
 	}
@@ -501,5 +550,5 @@ export function makeHelpers(editor) {
 		}
 	}
 
-	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal }
+	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
 }

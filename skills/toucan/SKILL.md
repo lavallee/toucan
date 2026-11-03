@@ -52,6 +52,9 @@ they have selected before guessing.
 `toucan --canvas NAME notes`, act on each one using what it sits on and near, then
 `toucan --canvas NAME notes resolve KEY --reply "what you did"`. Never delete a note.
 
+**Threads.** People leave comments on shapes and regions as threads: `toucan --canvas NAME threads` lists the open
+ones with what each is attached to, and `threads reply N "…"` answers. Leave closing them to people unless asked.
+
 **Routines.** Before doing a chore by hand, check `toucan routine list` and `toucan --canvas NAME routine run
 NAME`. When the person says "bank that", write it as a routine and `toucan routine save NAME FILE --title T
 --description D --engines E`; it joins their Routines menu on every canvas.

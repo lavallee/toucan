@@ -27,12 +27,20 @@ Before redoing a chore, check \`routine list\` and \`routine run NAME\`. When th
 Sticky notes on tldraw are addressed to you: when asked to handle them, run \`notes\`, act on each using where it sits, then \`notes resolve KEY --reply "…"\`; never delete one.
 When the user gives broad feedback or asks what you'd change, answer on the canvas as a proposal (\`import - --format mermaid --propose\`, or \`proposed: true\` in the helpers) and leave accepting it to them.
 Name a point with \`versions save LABEL\` before a sweeping change. Only \`versions restore\` when asked.
+People also leave comment threads on shapes and regions; the brief lists the open ones. When a message is about one ("#3"), do the work and answer there with \`threads reply 3 "…"\`, as well as briefly here. \`threads show 3\` has its history. Leave closing it to them unless they ask.
 A message may arrive while you are working: it adjusts what you're doing, so take it into account and carry on.${engine === 'tldraw' ? '' : `
 This canvas runs ${engine}: in exec code \`editor\` is the ${engine} API and \`tl\` its module. Prefer \`import\` for structure.`}${notes ? `
 This deployment adds its own agent notes in ${notes}: read them once at the start of this conversation, and follow them.` : ''}`
 
+// An agent working on one comment thread. Its last message in a turn becomes its reply there.
+const threadInstructions = (canvas, id, engine = 'tldraw') => `You are an agent working on comment thread #${id}, which someone attached to part of the ${engine} canvas "${canvas}". Others may be working on the canvas and in other threads at the same time, so keep to what this thread is about.
+Change the canvas with \`node bin/toucan.mjs --canvas ${canvas} <cmd>\`, giving each change a \`--label "#${id}: what this is"\`. AGENTS.md is already in your context: don't read it again. \`toucan.node\` changes only what you pass; \`import - --format mermaid\` lays out new connected boxes and only adds, so also remove what a request replaces. Trust the <canvas_brief> rather than re-reading the canvas, and get the visible edit done first.
+Your final message is posted as your reply in the thread, so write it for the people reading there: a line or two on what you did or found, and a clear question if you need a decision. If the request is for research or an opinion rather than an edit, answer in that reply. A message may arrive while you work: take it into account and carry on.
+Leave closing the thread to people, unless they ask you to close it (\`threads close ${id}\`).`
+
 export class CodexChat {
-	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null }) {
+	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null, onThread = () => {} }) {
+		this.onThread = onThread // (canvas, id, event): what's happening in a comment thread's own conversation
 		this.engineOf = engineOf
 		this.brief = brief // (canvas) => the canvas brief for a message
 		this.direct = direct // (canvas, text) => a reply, if this message needed no agent
@@ -76,6 +84,9 @@ export class CodexChat {
 	}
 
 	emit(canvas, event, keep = true) {
+		// A key like "name#3" is comment thread 3's conversation; a canvas name can't contain a #.
+		const [name, thread] = canvas.split('#')
+		if (thread) return this.onThread(name, Number(thread), event)
 		if (keep) {
 			const h = this.history.get(canvas) ?? []
 			h.push(event)
@@ -100,12 +111,17 @@ export class CodexChat {
 			console.error(`[codex] app-server exited (${code})`)
 			this.proc = null
 			this.threads.clear()
+			// Nothing will say these turns ended, so say it here.
+			for (const key of [...this.turns.keys()]) {
+				this.turns.delete(key)
+				this.emit(key, { type: 'turn', status: 'failed', error: 'Codex stopped unexpectedly.' })
+			}
 			for (const [, c] of this.calls) c.reject(new Error('codex app-server exited'))
 			this.calls.clear()
 		})
 		readline.createInterface({ input: this.proc.stdout }).on('line', (line) => this.onLine(line))
 		this.ready = (async () => {
-			await this.call('initialize', { clientInfo: { name: 'toucan', title: 'toucan', version: '0.4.0' }, capabilities: null })
+			await this.call('initialize', { clientInfo: { name: 'toucan', title: 'toucan', version: '0.5.0' }, capabilities: null })
 			this.notify('initialized', {})
 			// Without it, turns use the machine's own Codex config, which may name a different model.
 			const models = await this.call('model/list', {}).catch(() => null)
@@ -171,6 +187,7 @@ export class CodexChat {
 				this.turns.delete(canvas)
 				return this.emit(canvas, { type: 'turn', status: p.turn?.status, error: p.turn?.error?.message })
 			case 'error':
+				if (p.willRetry) return // Codex is retrying: not a failure yet
 				return this.emit(canvas, { type: 'error', message: p.error?.message ?? JSON.stringify(p) })
 		}
 	}
@@ -204,7 +221,9 @@ export class CodexChat {
 	async thread(canvas) {
 		await this.start()
 		if (this.threads.has(canvas)) return this.threads.get(canvas)
-		const opts = { cwd: this.root, approvalPolicy: 'on-request', developerInstructions: instructions(canvas, this.engineOf(canvas), existsSync(this.notes) ? this.notes : null), serviceName: 'toucan' }
+		const [name, comment] = canvas.split('#')
+		const developerInstructions = comment ? threadInstructions(name, comment, this.engineOf(name)) : instructions(name, this.engineOf(name), existsSync(this.notes) ? this.notes : null)
+		const opts = { cwd: this.root, approvalPolicy: 'on-request', developerInstructions, serviceName: 'toucan' }
 		let res
 		if (this.saved[canvas]) {
 			try {
@@ -223,6 +242,27 @@ export class CodexChat {
 	}
 
 	/** Messages for a canvas are handed over one at a time, so a quick follow-up finds the turn it should join. */
+	/** Hands a comment thread's latest to its own conversation, or to the turn already running there. */
+	askThread(canvas, id, prompt, mode) {
+		return this.queue(`${canvas}#${id}`, prompt, mode)
+	}
+
+	stopThread(canvas, id) {
+		return this.interrupt(`${canvas}#${id}`)
+	}
+
+	/** An archived canvas's thread conversations shouldn't be picked up by a later canvas of that name. */
+	forgetThreads(canvas) {
+		for (const key of Object.keys(this.saved)) if (key.startsWith(`${canvas}#`)) delete this.saved[key]
+		for (const key of this.threads.keys()) if (key.startsWith(`${canvas}#`)) this.threads.delete(key)
+	}
+
+	queue(key, text, mode) {
+		const next = (this.sending.get(key) ?? Promise.resolve()).catch(() => {}).then(() => this.send(key, text, mode))
+		this.sending.set(key, next)
+		return next
+	}
+
 	async enqueue(canvas, text, mode) {
 		this.emit(canvas, { type: 'user', text })
 		// A direct run can take a while; it doesn't hold up messages for the agent behind it.
@@ -231,9 +271,7 @@ export class CodexChat {
 			this.emit(canvas, { type: 'item', phase: 'completed', item: { id: `direct-${++this.seq}`, type: 'agentMessage', text: reply } })
 			return this.emit(canvas, { type: 'direct-done' }, false)
 		}
-		const next = (this.sending.get(canvas) ?? Promise.resolve()).catch(() => {}).then(() => this.send(canvas, text, mode))
-		this.sending.set(canvas, next)
-		return next
+		return this.queue(canvas, text, mode)
 	}
 
 	async send(canvas, text, mode) {
@@ -248,7 +286,7 @@ export class CodexChat {
 				// That turn just ended: this message starts the next one.
 			}
 		}
-		const brief = await this.brief(canvas).catch(() => null)
+		const brief = await this.brief(canvas.split('#')[0]).catch(() => null)
 		const { model = this.defaultModel, effort } = MODES[mode] ?? MODES.fast
 		const started = await this.call('turn/start', {
 			threadId,

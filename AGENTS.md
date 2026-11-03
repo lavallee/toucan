@@ -25,6 +25,7 @@ node bin/toucan.mjs --canvas NAME log [--since 2h]           # edits agents made
 node bin/toucan.mjs --canvas NAME versions [save LABEL | show N [--format F] | restore N]   # the canvas's history
 node bin/toucan.mjs routine list | show NAME | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME   # the routine bank
 node bin/toucan.mjs --canvas NAME routine run NAME [--args JSON]   # run a banked routine: one undo step, on the history
+node bin/toucan.mjs --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes   # comment threads
 ```
 
 There can be many canvases, each on one engine (tldraw or Excalidraw); name one with `--canvas` or `TOUCAN_CANVAS`. In the chat
@@ -60,6 +61,25 @@ person's most recently focused tab) and, on tldraw, `others` (each other person'
 from live presence). `summary` also carries `selected` (keys) when anything is. If nothing is selected
 and the reference is unclear, ask. In exec code: `toucan.selection()`. Excalidraw tabs share no presence,
 so there `others` is always empty.
+
+## Threads: comments on shapes and regions
+
+People attach comments to a shape (or several) or a region of the page, and each one is a **thread**: a
+back-and-forth that someone eventually closes. Threads live beside the canvas, not in it, so they work on both engines
+and with no tab open, survive undo and version restores, and stay out of exports. The brief at the top of a chat
+message lists the open ones.
+
+- `toucan --canvas NAME threads` lists the open ones, each with `attached`: the shapes it's on as they are now, or what's
+  inside its region. `threads show N` is one thread; `--all` includes closed ones.
+- `threads reply N "what I did or found"` answers. The CLI speaks as the agent unless told `--as NAME`.
+- `threads new "worth checking" --on KEY` raises something yourself, on a shape or `--region X,Y,W,H`.
+- `threads close N --reply "done"` closes one. **Leave that to people** unless they ask, or it was your own.
+- `threads adopt-notes` brings sticky notes in as threads attached to them, once each. The notes stay.
+
+A person chooses who each message is for. **Agent** starts or steers that thread's own agent conversation, whose last
+message in a turn becomes its reply there, so several threads can be worked at once. **Main chat** sends it to the chat
+panel, where it adjusts the turn in progress if one is running; answer that with `threads reply`. **People** leaves it
+for people. A reply in a closed thread reopens it.
 
 ## Notes: sticky notes addressed to you
 
@@ -141,6 +161,7 @@ Mermaid flowcharts, DOT (export only) and `.excalidraw`.
 - `node(key, {x,y,w,h,text,geo,color,fill,dash,size,parent,meta,move,proposed})` — create/update a box. An existing
   box changes only in what you pass, and keeps its position unless `move: true`. A new box with no position goes
   somewhere free. `parent` is a frame key; x/y are then frame-relative.
+- A frame, like a box, changes only in what you pass.
 - `frame(key, {x,y,w,h,name,color})`, `edge(fromKey, toKey, {text,color,dash,kind,bend,proposed})` — bound arrow.
 - `propose(...keys)`, `proposals()`, `accept(...keys)`, `reject(...keys)` — see Proposals.
 - `get(key)`, `idFor(key)`, `text(shape)`, `find(q)`, `summary({within})`, `remove(...keys)`, `zoomTo(keys?)`, `pulse(keys)`

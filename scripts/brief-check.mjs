@@ -16,6 +16,8 @@ assert.ok(formatBrief({}, { selected: [] }).includes('Nothing is selected'))
 const sketch = formatBrief({ skipped: [{ type: 'draw' }, { type: 'image' }] })
 assert.ok(!sketch.includes('The canvas is empty.') && sketch.includes('2 other shapes'), 'shapes TG skips are not an empty canvas')
 
+assert.ok(formatBrief({}, null, ['#3 on orders: "why?"']).includes('Open comment thread #3 on orders: "why?"'), 'open threads are in the brief')
+
 const many = { nodes: Array.from({ length: 1000 }, (_, i) => ({ key: `n${i}`, text: 'x'.repeat(500) })) }
 const big = formatBrief(many)
 assert.ok(big.includes('800 more boxes') && big.length < 20000, 'a huge canvas is capped')
