@@ -124,7 +124,7 @@ export class CodexChat {
 		})
 		readline.createInterface({ input: this.proc.stdout }).on('line', (line) => this.onLine(line))
 		this.ready = (async () => {
-			await this.call('initialize', { clientInfo: { name: 'toucan', title: 'toucan', version: '0.6.0' }, capabilities: null })
+			await this.call('initialize', { clientInfo: { name: 'toucan', title: 'toucan', version: '0.7.0' }, capabilities: null })
 			this.notify('initialized', {})
 			// Without it, turns use the machine's own Codex config, which may name a different model.
 			const models = await this.call('model/list', {}).catch(() => null)
