@@ -8,6 +8,7 @@ All notable changes to toucan are recorded here. The format follows
 ### Added
 
 - 22 templates, from `toucan templates` or **New canvas**: flowchart, swimlane, org chart, decision tree, mind map, sequence, layered architecture, service map, network, entity relationships, state machine, pipeline, roadmap, timeline, kanban, 2x2, customer journey, responsibility chart, comparison, fishbone, funnel and cycle. Each is data for a layout rule in `lib/layouts.mjs`.
+- `toucan draw FILE`: describe a diagram as data, in the same form as a template, and the layout engine places it on the canvas. The chat agent is told to draw this way.
 - Tidying routines: **Clean up**, **Lay it out again**, **Line things up**, **Even out the gaps**, **Match box sizes**, **Fix overlaps**, **Fit frames**, **Neat arrows** and **Colour by frame**. Each keeps boxes, frames and connections, never moves a sticky note, and changes nothing when run again.
 - **Check this diagram**, and `toucan.measure()`: a score out of 100 and what's wrong, measured from what's drawn and naming the shapes involved.
 - `npm run test:diagrams`: makes every template, scores it, knocks eight of them about and runs every routine on them. Scores can't fall below `evals/baseline.json`.

@@ -121,6 +121,31 @@ export function measureDiagram(e, t) {
 		const a = bounds(s), b = bounds(o)
 		if (Math.abs(a.y + a.h / 2 - (b.y + b.h / 2)) < 2 && Math.abs(a.h - b.h) > 4 && s.parentId === o.parentId && s.props.geo === 'rectangle' && o.props.geo === 'rectangle') (unevenRows++, found('uneven row', s, o))
 	}))
+	// The same in a stack of equally wide boxes: a column of cards that differ by a line of text.
+	// A table's rows may differ, since each row keeps one height across; text without a border has no visible box to compare.
+	let unevenColumns = 0
+	const boxed = solid.filter((s) => s.props.geo === 'rectangle' && s.meta?.borderless !== true && s.props.dash !== 'none' && s.props.color !== undefined)
+	const inRow = (s) => {
+		const a = bounds(s)
+		return boxed.some((o) => o !== s && o.parentId === s.parentId && Math.abs(bounds(o).y - a.y) < 2 && Math.abs(bounds(o).h - a.h) < 2)
+	}
+	const stackable = boxed.filter((s) => !inRow(s))
+	stackable.forEach((s, i) => stackable.forEach((o, j) => {
+		if (j <= i) return
+		const a = bounds(s), b = bounds(o)
+		if (Math.abs(a.x - b.x) < 2 && Math.abs(a.w - b.w) < 2 && Math.abs(a.h - b.h) > 4 && s.parentId === o.parentId) (unevenColumns++, found('uneven column', s, o))
+	}))
+	// A few straight arrows among elbows read as a mistake. A deliberate curve doesn't count, nor an elbow rerouted around a box in a straight diagram.
+	const elbows = arrows.filter((a) => a.props.kind === 'elbow'), straight = arrows.filter((a) => a.props.kind !== 'elbow' && !a.props.bend)
+	const mixedArrows = elbows.length > straight.length ? straight.length : 0
+	if (mixedArrows) found('straight arrows among elbows', ...straight.slice(0, 6))
+	// Every frame's content starting well in from its left edge: a gutter nothing uses.
+	const insets = frames.flatMap((f) => {
+		const inside = solid.filter((s) => s.parentId === f.id)
+		return inside.length ? [Math.min(...inside.map((s) => bounds(s).x)) - bounds(f).x] : []
+	})
+	const emptyGutter = insets.length > 1 && Math.min(...insets) > 100 ? 1 : 0
+	if (emptyGutter) found('empty gutter down the frames', ...frames.slice(0, 3))
 	// Within a row or column of three or more, how even the gaps are (0 is perfectly even). A deliberate hole doesn't count.
 	const lineSpread = []
 	const lines = (centre, start, size) => {
@@ -159,7 +184,7 @@ export function measureDiagram(e, t) {
 	return {
 		findings,
 		boxes: solid.length, arrows: arrows.length, frames: frames.length,
-		overlaps, tooClose, outgrew, frameOverflow, framesOverlap: labelClipped, throughBoxes, crossings, labelOnBox, labelOnMarker, unevenRows, labelSqueezed, shortArrows, looseArrows: loose,
+		overlaps, tooClose, outgrew, frameOverflow, framesOverlap: labelClipped, throughBoxes, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, shortArrows, looseArrows: loose,
 		aligned: +aligned.toFixed(2), sizeVariety: +sizeVariety.toFixed(2), gapEvenness: +cv(gaps).toFixed(2), lineEvenness: +mean(lineSpread).toFixed(2), lengthEvenness: +cv(lengths).toFixed(2), flow: +flow.toFixed(2),
 		aspect: page ? +(page.w / page.h).toFixed(2) : 1, fitZoom: +fitZoom.toFixed(2), textAtFit: +(fitZoom * minFont).toFixed(1),
 	}
@@ -170,7 +195,7 @@ export function scoreDiagram(m) {
 	let score = 100
 	const fault = (n, each, cap) => (score -= Math.min(cap, n * each))
 	fault(m.overlaps, 12, 40); fault(m.frameOverflow, 8, 24); fault(m.framesOverlap, 8, 16); fault(m.outgrew, 3, 15)
-	fault(m.throughBoxes, 6, 30); fault(m.crossings, 3, 15); fault(m.labelOnBox, 5, 20); fault(m.labelOnMarker, 3, 15); fault(m.unevenRows, 1, 8); fault(m.labelSqueezed, 3, 12); fault(m.tooClose, 2, 10); fault(m.shortArrows, 2, 8)
+	fault(m.throughBoxes, 6, 30); fault(m.crossings, 3, 15); fault(m.labelOnBox, 5, 20); fault(m.labelOnMarker, 3, 15); fault(m.unevenRows, 1, 8); fault(m.unevenColumns ?? 0, 1, 8); fault(m.mixedArrows ?? 0, 2, 8); fault(m.emptyGutter ?? 0, 6, 6); fault(m.labelSqueezed, 3, 12); fault(m.tooClose, 2, 10); fault(m.shortArrows, 2, 8)
 	score -= (1 - m.aligned) * 12
 	if (m.arrows > 1) score -= (1 - m.flow) * 4
 	if (m.textAtFit < 11) score -= (11 - m.textAtFit) * 3

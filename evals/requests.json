@@ -1,0 +1,10 @@
+[
+  { "id": "checkout", "ask": "Draw the checkout process for an online shop, including what happens when payment fails." },
+  { "id": "org", "ask": "Make an org chart: a CEO, with VPs of sales, product and engineering, each with two teams under them." },
+  { "id": "web-stack", "ask": "Diagram a web app's architecture with a CDN, load balancer, two app servers, a database and a cache." },
+  { "id": "reset", "ask": "A sequence diagram of a user resetting their password by email." },
+  { "id": "roadmap", "ask": "A roadmap for next year with three workstreams: product, platform and marketing." },
+  { "id": "moving", "ask": "A mind map of things to think about when moving house." },
+  { "id": "redesign", "ask": "A kanban board for a small website redesign." },
+  { "id": "ticket", "ask": "The states a support ticket moves through, and what moves it between them." }
+]

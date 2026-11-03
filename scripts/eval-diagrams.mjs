@@ -121,6 +121,18 @@ async function evalExcalidraw() {
 			return { boxes: shapes.filter((e) => !['arrow', 'frame'].includes(e.type)).length, arrows: shapes.filter((e) => e.type === 'arrow').length, frames: shapes.filter((e) => e.type === 'frame').length }
 		})
 		assert.deepEqual(got, { boxes: want.nodes.length, arrows: want.edges.length, frames: want.groups.length }, `${t.id} on Excalidraw`)
+		// Every label readable: not the colour of what's behind it, and not wrapped mid-word.
+		const labels = await page.evaluate(() => {
+			const els = window.editor.getSceneElements()
+			const byId = new Map(els.map((e) => [e.id, e]))
+			return els.filter((e) => e.type === 'text' && e.containerId).map((e) => {
+				const box = byId.get(e.containerId)
+				const words = e.originalText.split(/\s+/)
+				return { text: e.originalText, sameColour: box?.fillStyle === 'solid' && box.backgroundColor?.toLowerCase() === e.strokeColor?.toLowerCase(), broken: e.text.split('\n').some((line) => line.trim() && !e.originalText.includes(line.trim())) || words.some((w) => w.length && !e.text.includes(w)) }
+			})
+		})
+		assert.deepEqual(labels.filter((l) => l.sameColour).map((l) => l.text), [], `${t.id} on Excalidraw: labels the colour of their box`)
+		assert.deepEqual(labels.filter((l) => l.broken).map((l) => l.text), [], `${t.id} on Excalidraw: labels wrapped mid-word`)
 		await toucan('--canvas', canvas, 'screenshot', join(OUT, `x-${t.id}.png`), '--max', '1400')
 	}
 	console.log(`ok  all whole, with pictures in evals/out/`)
