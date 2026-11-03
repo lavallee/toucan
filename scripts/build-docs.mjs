@@ -445,7 +445,9 @@ function specText(spec) {
 function writeTour() {
 	const asked = agentRequests() ?? facts.asked
 	if (asked) facts.asked = asked
-	const pic = (name, alt, caption) => `![${alt}](assets/tour/${name}.png${caption ? ` "${caption}"` : ''})`
+	// A straight quote would end the Markdown title early, and the image would come out as text.
+	const curly = (t) => t.replace(/"([^"]*)"/g, '“$1”').replace(/"/g, '”')
+	const pic = (name, alt, caption) => `![${alt}](assets/tour/${name}.png${caption ? ` "${curly(caption)}"` : ''})`
 	const f = facts
 	const spec = f.draw?.spec && { ...f.draw.spec, nodes: f.draw.spec.nodes.slice(0, 4), edges: f.draw.spec.edges.slice(0, 3) }
 	const lines = [

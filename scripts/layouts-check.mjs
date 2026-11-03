@@ -83,3 +83,13 @@ console.log(`ok  layouts: ${TEMPLATES.length} templates`)
 	assert.ok(apart.nodes[0].box.x > 2200, 'unconnected box should go beside everything')
 	console.log('ok  layouts: where an import lands')
 }
+
+// Every picture the tour was given made it onto the page: a stray quote in a caption turns an image into text.
+{
+	const { readFileSync } = await import('node:fs')
+	const tour = readFileSync(new URL('../website/content/tour.md', import.meta.url), 'utf8')
+	for (const line of tour.split('\n').filter((l) => l.startsWith('!['))) {
+		assert.match(line, /^!\[[^\]]*\]\(assets\/tour\/[a-z-]+\.png( "[^"]*")?\)$/, `tour image won't render: ${line.slice(0, 90)}`)
+	}
+	console.log('ok  docs: tour images')
+}
