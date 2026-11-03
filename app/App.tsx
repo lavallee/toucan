@@ -11,6 +11,8 @@ import { PulseBoxes, usePulses } from './pulses'
 import { ProposalBar } from './ProposalBar'
 import { ThreadsLayer } from './Threads'
 import { DetailsCard } from './Details'
+import { keepPicturesWhole, overviewShowing, overviewVisibility, SystemOverview, systemFormat } from './Overview'
+import { useFormat } from './formats'
 import { myName, startComment } from './threads-store'
 import { getAppearance, setTheme, useAppearance, type Theme } from './theme'
 import geist from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url'
@@ -79,6 +81,10 @@ export function App() {
 	const [helpers, setHelpers] = useState<{ toucan: any; subscribe: (f: () => void) => () => void } | null>(null)
 	const [editor, setEditor] = useState<Editor | null>(null)
 	const { theme } = useAppearance()
+	const format = useFormat()
+	useEffect(() => {
+		systemFormat.set(format?.id === 'system')
+	}, [format])
 	useEffect(() => {
 		editor?.user.updateUserPreferences({ colorScheme: theme })
 	}, [editor, theme])
@@ -86,6 +92,7 @@ export function App() {
 	const onMount = useCallback((editor: Editor) => {
 		editor.user.updateUserPreferences({ colorScheme: getAppearance().theme })
 		setEditor(editor)
+		keepPicturesWhole(editor)
 		const toucan = makeHelpers(editor)
 		setHelpers({ toucan, subscribe: (f) => editor.store.listen(f) })
 		window.editor = editor
@@ -99,6 +106,8 @@ export function App() {
 				const ids = [...editor.getCurrentPageShapeIds()]
 				const bounds = editor.getCurrentPageBounds()
 				if (!ids.length || !bounds) return null
+				// Not while the overview is showing: drawing it would flash every shape on screen, and it can wait.
+				if (overviewShowing(editor)) return null
 				const { blob } = await editor.toImage(ids, { format: 'png', scale: Math.min(1, 640 / bounds.w, 400 / bounds.h), pixelRatio: 2, background: true, darkMode: false, padding: 16 })
 				return blob
 			},
@@ -125,8 +134,9 @@ export function App() {
 		<CanvasFrame live={status === 'live' && store.status === 'synced-remote'} engine="tldraw" preview={VersionPreview} onComment={() => startComment(helpers?.toucan)}>
 			{helpers && <ProposalBar {...helpers} />}
 			{helpers && <ThreadsLayer {...helpers} />}
+			{editor && <SystemOverview editor={editor} />}
 			{helpers && <DetailsCard {...helpers} />}
-			<Tldraw store={store} onMount={onMount} components={components} assetUrls={assetUrls} colorScheme="system" licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY} />
+			<Tldraw store={store} onMount={onMount} components={components} assetUrls={assetUrls} getShapeVisibility={overviewVisibility} colorScheme="system" licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY} />
 		</CanvasFrame>
 	)
 }

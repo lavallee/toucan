@@ -8,7 +8,8 @@ All notable changes to toucan are recorded here. The format follows
 ### Added
 
 - Details: a box stays short, and selecting it opens a card with what's behind it (`meta.detail`), its open threads, and jumps to related boxes (`meta.see`). Both engines. A plain canvas with no details behaves as before.
-- Formats: **Story map**, **Ideas map** and **System diagram**, chosen in the app bar or with `toucan meta --format` and `new --format`. A format moves nothing. It lets ← and → walk the canvas from the card, along arrows or along a frame, and tells agents how to work there.
+- Formats: **Story map**, **Ideas map** and **System diagram**, chosen in the app bar or with `toucan meta --canvas-format` and `new --canvas-format`. A format moves nothing. It lets ← and → walk the canvas from the card, along arrows or along a frame, and tells agents how to work there.
+- Zoomed out on a system diagram (tldraw), you see its frames, how many parts each holds, and how many connections run between them, and a frame opens on click. Zoom in or **Show everything** for the rest. Nothing in the document changes, and agents and exports still see every shape. Index thumbnails wait until it's zoomed back in.
 - The **Air out** routine converts a dense diagram: long box text moves into the details, names get larger, and things spread a little. One undo reverses it.
 
 ### Changed

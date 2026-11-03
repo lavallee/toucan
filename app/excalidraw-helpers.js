@@ -282,11 +282,25 @@ export function makeExcalidrawHelpers(api, ex) {
 		if (!me) return { next: [], prev: [] }
 		const row = shapes().filter((e) => e.type !== 'arrow' && e.type !== 'frame' && e.frameId === me.frameId).sort((a, b) => a.x - b.x || a.y - b.y)
 		const i = row.findIndex((e) => e.id === me.id)
+		if (i < 0) return { next: [], prev: [] } // a frame or an arrow isn't on the lane
 		return { next: row[i + 1] ? [stepOf(row[i + 1])] : [], prev: i > 0 ? [stepOf(row[i - 1])] : [] }
 	}
 	const walkView = {
-		detailOf: (key) => get(key)?.customData?.meta?.detail ?? '',
-		seeAlsoOf: (key) => (get(key)?.customData?.meta?.see ?? []).filter((s) => get(s.key)).map((s) => ({ ...s, text: text(get(s.key)) || s.key })),
+		// Meta comes from synced documents and from agents, so its shape can't be taken on trust.
+		detailOf: (key) => {
+			const detail = get(key)?.customData?.meta?.detail
+			return typeof detail === 'string' ? detail : ''
+		},
+		seeAlsoOf: (key) => {
+			const see = get(key)?.customData?.meta?.see
+			return (Array.isArray(see) ? see : []).filter((s) => typeof s?.key === 'string' && get(s.key)).map((s) => ({ key: s.key, ...(typeof s.label === 'string' && { label: s.label }), text: text(get(s.key)) || s.key }))
+		},
+		selectedKey: () => {
+			const ids = Object.keys(api.getAppState().selectedElementIds ?? {})
+			if (ids.length !== 1) return null
+			const e = shapes().find((x) => x.id === ids[0])
+			return e ? keyOf(e) : null
+		},
 		neighbours: (key, walk) => (walk === 'lanes' ? viaLanes(key) : viaEdges(key)),
 		isIdle: () => {
 			const s = api.getAppState()

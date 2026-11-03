@@ -13,10 +13,10 @@ toucan --canvas NAME exec FILE.js               # same, from a file (use for any
 toucan --canvas NAME screenshot [OUT.png]       # look at it (<=1800px)
 toucan --canvas NAME script list|put NAME FILE|rm NAME   # persistent canvas scripts
 toucan canvases                                 # every canvas: title, description, shapes, open tabs
-toucan new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE]
+toucan new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--canvas-format F]
 toucan --canvas NAME graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   # no tab needed
 toucan --canvas NAME import FILE|- [--format F] [--move] [--prune] [--propose] [--label T]   # keyed upsert of a graph file
-toucan --canvas NAME meta --title T --description D
+toucan --canvas NAME meta --title T --description D [--canvas-format F]
 toucan --canvas NAME proposals [accept|reject [KEY...]]   # dashed = proposed
 toucan --canvas NAME selection                  # what people selected: resolve "this" / "these"
 toucan --canvas NAME notes [--all]              # sticky notes left for you, with what they're on/near
@@ -166,15 +166,16 @@ A box should be short: a name or a title. What's behind it goes in `meta.detail`
 opens in a card when someone selects the box. `meta.see` is a list of `{key, label}` cross-references, shown as jumps in that card, which
 keeps long arrows off the canvas. A thread on a box tells its agent the box's detail.
 
-A canvas can have a **format**, set with `toucan meta --format story|ideas|system|none` or `new --format`. It moves nothing. It says how to
+A canvas can have a **format**, set with `toucan meta --canvas-format story|ideas|system|none` or `new --canvas-format`. It moves nothing. It says how to
 move through the canvas with ← and → in that card, and tells agents how to behave there, through the brief:
 
 - **story**: one path; ← → follow the arrows. Answers go as dashed branches beside the stop.
 - **ideas**: frames are ideas and a gap means something; ← → move along a frame. Don't fill gaps.
-- **system**: named parts and real connections; ← → follow arrows, and the card lists the choices where they branch.
+- **system**: named parts and real connections; ← → follow arrows, and the card lists the choices where they branch. Zoomed out on tldraw, people see frames and
+  how many connections run between them, and a frame opens on click. That's only what they see: `summary`, `graph`, `screenshot` and exports still have every shape.
 
 Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. The **Air out** routine (`routine run air-out`, tldraw)
-converts a dense diagram: long text moves to `meta.detail`, names get larger, and things spread a little. Run it only when asked.
+converts a dense diagram: long text moves to `meta.detail`, names get larger, and things spread a little. Run it only when asked. Region threads keep their position, so they may need re-anchoring afterwards.
 
 ## Files: what you write for a canvas
 
@@ -203,7 +204,7 @@ Scripts, titles and chat threads aren't versioned.
 
 A **routine** is a chore banked once and run on any canvas, from the person's **Routines** menu or the CLI. A
 canvas script is lasting behaviour on one canvas (a button, an overlay, a reaction); a routine runs once, when
-asked, anywhere. toucan ships two, `tidy-arrows` and `straighten-lines`.
+asked, anywhere. toucan ships `tidy-arrows`, `straighten-lines` and `air-out`.
 
 ```js
 // routine: Colour the blocked boxes

@@ -341,6 +341,7 @@ export function ThreadsLayer({ toucan, subscribe }: { toucan: any; subscribe: (o
 	const litTop = lit && toScreen({ x: lit.x, y: lit.y })
 	const litEnd = lit && toScreen({ x: lit.x + lit.w, y: lit.y + lit.h })
 	const cardAt = (a: Anchor) => {
+		if (width < 768) return undefined // a narrow screen docks the card along the bottom
 		const p = pinOf(a) ?? { x: 40, y: 40 }
 		// Clear of the panel when it's open, which takes the same strip at the right.
 		const room = panel ? width - 336 : width

@@ -10,7 +10,8 @@ const listeners = new Set<() => void>()
 const changed = () => listeners.forEach((f) => f())
 export const getFormat = () => current
 export const useFormat = () => useSyncExternalStore((f) => (listeners.add(f), () => listeners.delete(f)), getFormat)
-export const formatList = () => known
+const getKnown = () => known
+export const useFormatList = () => useSyncExternalStore((f) => (listeners.add(f), () => listeners.delete(f)), getKnown)
 
 export function setFormatId(id: string | null | undefined) {
 	current = known.find((f) => f.id === id) ?? null

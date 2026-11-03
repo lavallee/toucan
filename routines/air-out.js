@@ -10,7 +10,7 @@ const MAX_TITLE = 42
 function split(full) {
 	const lines = full.split('\n').map((l) => l.trim()).filter(Boolean)
 	const first = lines[0] ?? ''
-	if (lines.length === 1 && first.length <= MAX_TITLE) return null // already short
+	if (!lines.length || (lines.length === 1 && first.length <= MAX_TITLE)) return null // empty, or already short
 	if (first.length <= MAX_TITLE) return { title: first, detail: lines.slice(1).join('\n') }
 	// One long line: end the title at a word, and keep all of it in the details.
 	const cut = first.slice(0, MAX_TITLE)
@@ -20,14 +20,21 @@ function split(full) {
 const shapes = editor.getCurrentPageShapes()
 let shortened = 0
 const updates = shapes.flatMap((s) => {
-	if (s.type === 'arrow' || s.type === 'note') return [] // an arrow follows its ends, and a note is a person's message
 	const move = { id: s.id, type: s.type, x: s.x * FACTOR, y: s.y * FACTOR }
+	if (s.type === 'arrow') {
+		// A bound end follows what it's bound to, and a free end moves with everything else.
+		const bound = editor.getBindingsFromShape(s, 'arrow').map((b) => b.props.terminal)
+		if (bound.length === 2) return []
+		const free = (end) => (bound.includes(end) ? {} : { [end]: { x: s.props[end].x * FACTOR, y: s.props[end].y * FACTOR } })
+		return [{ ...move, props: { ...free('start'), ...free('end') } }]
+	}
+	if (s.type === 'note') return [move] // keeps its size, and stays where it was relative to what it's about
 	if (s.type === 'frame') return [{ ...move, props: { w: s.props.w * FACTOR, h: s.props.h * FACTOR } }]
 	if (s.type !== 'geo') return [move]
 	const parts = split(toucan.text(s))
 	if (!parts) return [{ ...move, props: { size: 'l' } }]
 	shortened++
-	const detail = s.meta?.detail ? `${parts.detail}\n${s.meta.detail}` : parts.detail
+	const detail = [parts.detail, typeof s.meta?.detail === 'string' ? s.meta.detail : ''].filter(Boolean).join('\n')
 	return [{ ...move, props: { richText: tl.toRichText(parts.title), size: 'l', w: s.props.w * FACTOR, h: Math.min(s.props.h, 120) }, meta: { ...s.meta, detail } }]
 })
 editor.updateShapes(updates)

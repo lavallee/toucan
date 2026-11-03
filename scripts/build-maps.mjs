@@ -135,5 +135,5 @@ for (const [name, tg] of [['meditations', med], ['odyssey', ody]]) {
 	assert.equal(new Set(keys).size, keys.length, `${name}: an arrow is defined twice, and the later one would win`)
 	writeFileSync(`examples/${name}.tg.json`, JSON.stringify(tg, null, 1) + '\n')
 	console.log(`ok  ${name}: ${tg.nodes.length} boxes, ${tg.edges.length} arrows, every quotation found`)
-	console.log(`    toucan new ${name} --from examples/${name}.tg.json --title ${JSON.stringify(maps[name].title)} --description ${JSON.stringify(maps[name].description)} --format ${maps[name].format}`)
+	console.log(`    toucan new ${name} --from examples/${name}.tg.json --title ${JSON.stringify(maps[name].title)} --description ${JSON.stringify(maps[name].description)} --canvas-format ${maps[name].format}`)
 }

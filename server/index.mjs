@@ -403,7 +403,7 @@ const server = createServer(async (req, res) => {
 		}
 		if (route === 'canvases' && !canvas && req.method === 'POST') {
 			const { name, title, description, engine = 'tldraw', from, graph, format } = JSON.parse(await body(req))
-			if (format && !CANVAS_FORMATS[format]) return json(res, 400, { error: `format: one of ${Object.keys(CANVAS_FORMATS).join(', ')}` })
+			if (format && !Object.hasOwn(CANVAS_FORMATS, format)) return json(res, 400, { error: `format: one of ${Object.keys(CANVAS_FORMATS).join(', ')}` })
 			if (!NAME.test(name ?? '')) return json(res, 400, { error: 'name: letters, digits, - and _, up to 64' })
 			if (!ENGINES.includes(engine)) return json(res, 400, { error: `engine: one of ${ENGINES.join(', ')}` })
 			if (canvasNames().includes(name)) return json(res, 409, { error: `${name} already exists` })
@@ -411,7 +411,7 @@ const server = createServer(async (req, res) => {
 			// Seeding goes through the graph, so it works across engines: tldraw → TG → Excalidraw, and back.
 			const seed = graph ?? (from ? graphOf(from) : null)
 			const idx = readIndex()
-			idx[name] = { title: title || name, description: description ?? '', engine, created: new Date().toISOString(), ...(from && { from }), ...(format && { format }) }
+			idx[name] = { title: title || name, description: description ?? '', engine, created: new Date().toISOString(), ...(from && { from }), ...((format ?? readIndex()[from]?.format) && { format: format ?? readIndex()[from]?.format }) }
 			writeIndex(idx)
 			if (engine === 'excalidraw') writeFileSync(scenePath(name), JSON.stringify({ type: 'excalidraw', version: 2, source: 'toucan', elements: seed ? toExcalidrawElements(seed) : [], appState: {}, files: {} }))
 			else if (seed) writeFileSync(seedPath(name), JSON.stringify(seed))
@@ -456,7 +456,7 @@ const server = createServer(async (req, res) => {
 			const cur = idx[canvas] ?? { created: null }
 			for (const k of ['title', 'description']) if (typeof patch[k] === 'string') cur[k] = patch[k]
 			if (typeof patch.format === 'string') {
-				if (patch.format && !CANVAS_FORMATS[patch.format]) return json(res, 400, { error: `format: one of ${Object.keys(CANVAS_FORMATS).join(', ')}` })
+				if (patch.format && !Object.hasOwn(CANVAS_FORMATS, patch.format)) return json(res, 400, { error: `format: one of ${Object.keys(CANVAS_FORMATS).join(', ')}` })
 				if (patch.format) cur.format = patch.format
 				else delete cur.format
 				broadcast(canvas, { type: 'format', format: cur.format ?? null })

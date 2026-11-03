@@ -20,7 +20,7 @@ export const FORMATS = {
 		label: 'System diagram',
 		description: 'Named parts and what connects them',
 		walk: 'edges',
-		guide: 'This canvas is a system diagram: a box is a named component, a frame is a boundary, and an arrow means something real depends on or flows to something else. Keep box names short and put responsibilities and notes in `meta.detail`. Propose new components and connections dashed (`proposed: true`) beside what they connect to, and don\'t add an arrow you can\'t justify.',
+		guide: 'This canvas is a system diagram: a box is a named component, a frame is a boundary, and an arrow means something real depends on or flows to something else. Keep box names short and put responsibilities and notes in `meta.detail`. Propose new components and connections dashed (`proposed: true`) beside what they connect to, and don\'t add an arrow you can\'t justify. Keep related parts in a frame with a clear name: zoomed out, people see only frames and the connections between them.',
 	},
 }
 

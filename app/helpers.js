@@ -121,7 +121,8 @@ export function makeHelpers(editor) {
 	// ---- notes: sticky notes on the canvas addressed to the agent ----------------------------------
 	// Convention: every tldraw `note` shape (the sticky-note tool) is for the agent. A note is open until
 	// it is resolved: then it turns green, gains a one-line reply, and keeps meta.resolved. Never deleted.
-	const keyOf = (s) => s.meta?.key ?? s.id.replace(/^shape:/, '')
+	// A duplicated box keeps its original's meta.key, and that key has to lead back to this shape, not the original.
+	const keyOf = (s) => (s.meta?.key && idFor(s.meta.key) === s.id ? s.meta.key : s.id.replace(/^shape:/, ''))
 	const noteByKey = (key) => editor.getCurrentPageShapes().find((s) => s.type === 'note' && keyOf(s) === key)
 
 	/**
@@ -230,11 +231,24 @@ export function makeHelpers(editor) {
 		if (!me) return { next: [], prev: [] }
 		const row = editor.getSortedChildIdsForParent(me.parentId).map((id) => editor.getShape(id)).filter((s) => s && s.type !== 'arrow' && s.type !== 'frame').sort((a, b) => a.x - b.x || a.y - b.y)
 		const i = row.findIndex((s) => s.id === me.id)
+		if (i < 0) return { next: [], prev: [] } // a frame or an arrow isn't on the lane
 		return { next: row[i + 1] ? [stepOf(row[i + 1])] : [], prev: i > 0 ? [stepOf(row[i - 1])] : [] }
 	}
 	const walkView = {
-		detailOf: (key) => get(key)?.meta?.detail ?? '',
-		seeAlsoOf: (key) => (get(key)?.meta?.see ?? []).filter((s) => get(s.key)).map((s) => ({ ...s, text: text(get(s.key)) || s.key })),
+		// Meta comes from synced documents and from agents, so its shape can't be taken on trust.
+		detailOf: (key) => {
+			const detail = get(key)?.meta?.detail
+			return typeof detail === 'string' ? detail : ''
+		},
+		seeAlsoOf: (key) => {
+			const see = get(key)?.meta?.see
+			return (Array.isArray(see) ? see : []).filter((s) => typeof s?.key === 'string' && get(s.key)).map((s) => ({ key: s.key, ...(typeof s.label === 'string' && { label: s.label }), text: text(get(s.key)) || s.key }))
+		},
+		/** The selected shape's key if exactly one is selected. Cheap enough to ask on every store change. */
+		selectedKey: () => {
+			const only = editor.getOnlySelectedShape()
+			return only ? keyOf(only) : null
+		},
 		neighbours: (key, walk) => (walk === 'lanes' ? viaLanes(key) : viaEdges(key)),
 		isIdle: () => editor.isIn('select.idle') && !editor.getEditingShapeId(),
 		walkTo: (key) => {

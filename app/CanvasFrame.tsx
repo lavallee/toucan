@@ -10,7 +10,7 @@ import { CommentButton, ThreadsButton, ThreadsPanel } from './Threads'
 import { update as updateThreads, useThreads } from './threads-store'
 import { AppearanceMenu } from './Appearance'
 import { api, canvasName, headless } from './net'
-import { chooseFormat, formatList, loadFormats, useFormat } from './formats'
+import { chooseFormat, loadFormats, useFormat, useFormatList } from './formats'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { AwayNotice } from './AwayNotice'
 
@@ -22,6 +22,7 @@ const BANK_PROMPT = 'Bank what you just did as a routine I can run on any canvas
 export function CanvasFrame({ live, engine, preview, onComment, children }: { live: boolean; engine: string; preview: VersionPreview; onComment: () => void; children: ReactNode }) {
 	const { panel: threadsOpen } = useThreads()
 	const format = useFormat()
+	const formats = useFormatList()
 	const [chatOpen, setChatOpen] = useState(() => !headless && localStorage.getItem('toucan.chat') !== 'closed')
 	const [historyOpen, setHistoryOpen] = useState(false)
 	const [title, setTitle] = useState(canvasName)
@@ -67,7 +68,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 					</PopoverTrigger>
 					<PopoverContent className="w-72 p-1">
 						<ul role="radiogroup" aria-label="Format">
-							{[{ id: null as string | null, label: 'None', description: 'A free canvas' }, ...formatList()].map((f) => (
+							{[{ id: null as string | null, label: 'None', description: 'A free canvas' }, ...formats].map((f) => (
 								<li key={f.id ?? 'none'}>
 									<button type="button" role="radio" aria-checked={(format?.id ?? null) === f.id} onClick={() => chooseFormat(f.id)} className={cn('w-full rounded-md px-2 py-1.5 text-left outline-none hover:bg-muted focus-visible:bg-muted', (format?.id ?? null) === f.id && 'bg-muted')}>
 										<span className="block text-sm font-medium">{f.label}</span>
