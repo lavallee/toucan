@@ -143,7 +143,7 @@ Mermaid flowcharts, DOT (export only) and `.excalidraw`.
 - **Import is a keyed upsert.** Existing shapes get only the fields the file carries and keep their
   position unless `--move`; a missing field means "leave it" (a bare Mermaid reference `a --> b` doesn't
   relabel `a`; a node outside any subgraph keeps its frame). New shapes without a position are laid out
-  with ELK beside the existing content. Arrows match by endpoints (`edge:<from>-><to>`). Nothing is
+  with ELK beside the existing content, or below what they connect to. Arrows match by endpoints (`edge:<from>-><to>`). Nothing is
   deleted without `--prune`.
 - **Mermaid is a good edit language** for structure: write a small flowchart of what to add or relabel
   and `import` it. Use `exec` with the engine's own API for styling or anything TG can't say.

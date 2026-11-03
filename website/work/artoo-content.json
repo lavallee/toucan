@@ -2,11 +2,13 @@
   "contract": "artoo-content/1",
   "files": [
     "site/agents.html",
+    "site/explore.html",
     "site/extending.html",
     "site/gallery.html",
     "site/habits.html",
     "site/how-it-works.html",
     "site/index.html",
-    "site/quickstart.html"
+    "site/quickstart.html",
+    "site/tour.html"
   ]
 }

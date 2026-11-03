@@ -12,6 +12,9 @@ function split(full) {
 	const first = lines[0] ?? ''
 	if (!lines.length || (lines.length === 1 && first.length <= MAX_TITLE)) return null // empty, or already short
 	if (first.length <= MAX_TITLE) return { title: first, detail: lines.slice(1).join('\n') }
+	// A short opening sentence is the name the writer already gave it.
+	const opening = first.match(/^(.{3,42}?)[.:;]\s+(.+)$/)
+	if (opening) return { title: opening[1], detail: [opening[2], ...lines.slice(1)].join('\n') }
 	// One long line: end the title at a word, and keep all of it in the details.
 	const cut = first.slice(0, MAX_TITLE)
 	return { title: `${cut.slice(0, cut.lastIndexOf(' ') > 12 ? cut.lastIndexOf(' ') : MAX_TITLE)}…`, detail: lines.join('\n') }

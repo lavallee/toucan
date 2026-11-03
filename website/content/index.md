@@ -7,12 +7,15 @@ canvas, send JavaScript to the live editor, look at a screenshot, or merge a Mer
 Excalidraw file in by key. You keep drawing the whole time, and every edit, yours or theirs, lands on
 one shared document.
 
-[Get started →](quickstart.html) · [Source on GitHub ↗](https://github.com/lavallee/toucan)
+[See it work →](tour.html) · [Click through a canvas →](explore.html) · [Get started →](quickstart.html) · [Source on GitHub ↗](https://github.com/lavallee/toucan)
 
-![A tldraw canvas of a shop's services with the History panel open: an earlier version, named Before the cache, is shown read-only over the live canvas, with Restore below the list of versions. The Codex chat panel sits to the right.](assets/toucan-history.png)
+![The canvas with the chat panel open. Asked for a sequence diagram of a password reset, the agent has drawn four participants and a column of messages between them.](assets/tour/chat.png "A real turn of the chat agent, from a one-line request.")
 
 ## What you can do with it
 
+- **Start from a known shape.** 22 [templates](gallery.html) cover flowcharts, org charts, sequences, architecture, roadmaps, kanban and more, and agents draw their own in the same form.
+- **Read a canvas, not just look at it.** Boxes stay short, with the rest a click away. [Walk the Odyssey](explorer.html?map=odyssey) with the arrow keys to see how.
+- **Comment where the problem is.** [Threads](tour.html#comment-and-have-it-answered) on a box or region drive their own agent, and a sticky note is a message to one.
 - **Grow a diagram by talking to it.** Ask the chat to add a service, regroup a cluster or draw the arrows between two systems. Then fix the layout by hand.
 - **Generate a canvas from your own data.** A script reads your inventory, your dependency graph or your notes and upserts shapes by key. It reruns without disturbing what people moved or annotated.
 - **Give a canvas behaviour.** *Canvas scripts* are small JavaScript functions stored with a canvas and run whenever it loads: a button, a live overlay, a reaction to edits.
@@ -39,6 +42,9 @@ client on your sign-in, and terminal agents bring their own.
 
 ## Where to go next
 
+- [See it work](tour.html): the whole thing in screenshots of real runs.
+- [Explore](explore.html): click through real canvases, with nothing to install.
+- [Gallery](gallery.html): every diagram toucan starts from.
 - [Quick start](quickstart.html): install, sign in, and make your first canvas.
 - [Agent guide](agents.html): the CLI, the `toucan.*` helpers, and the graph format agents work with.
 - [How it works](how-it-works.html): sync, exec routing, the chat relay and the security model.
