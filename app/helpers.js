@@ -175,22 +175,53 @@ export function makeHelpers(editor) {
 		return { key, reply: line }
 	}
 
-	/** Create or update a box. `move: true` repositions an existing one. */
-	function node(key, { x = 0, y = 0, w = 180, h = 64, text: label = key, geo = 'rectangle', color = 'black', fill = 'semi', dash = 'solid', size = 's', parent, meta = {}, move = false, proposed = false } = {}) {
+	/**
+	 * Internal (the exec relay): an edit nobody can see hasn't landed. When a run adds shapes outside the view,
+	 * or starts an empty canvas, fit the canvas in view, unless the person is in the middle of doing something.
+	 */
+	function reveal(addedIds) {
+		const added = addedIds.map((id) => editor.getShape(id)).filter(Boolean)
+		if (!added.length || !editor.isIn('select.idle')) return
+		const view = editor.getViewportPageBounds()
+		const startedEmpty = editor.getCurrentPageShapeIds().size === added.length
+		if (startedEmpty || added.some((s) => !view.contains(editor.getShapePageBounds(s)))) editor.zoomToFit({ animation: { duration: 250 } })
+	}
+
+	const GAP = 40
+	/** A free spot for a new box given no position: under what's in its frame, or right of everything on the page. */
+	function freeSpot(frameId, w, h) {
+		if (!frameId) {
+			const page = editor.getCurrentPageBounds()
+			return page ? { x: page.maxX + GAP, y: page.minY } : { x: 0, y: 0 }
+		}
+		const frame = editor.getShape(frameId)
+		const kids = editor.getSortedChildIdsForParent(frameId).map((id) => editor.getShape(id)).filter((s) => s && s.type !== 'arrow')
+		const bottom = kids.reduce((m, s) => Math.max(m, s.y + editor.getShapeGeometry(s).bounds.h), 0)
+		const spot = { x: GAP, y: kids.length ? bottom + GAP : GAP }
+		// The frame grows to hold it, since a frame clips what spills out.
+		if (frame && (spot.y + h + GAP > frame.props.h || spot.x + w + GAP > frame.props.w)) editor.updateShape({ id: frameId, type: 'frame', props: { h: Math.max(frame.props.h, spot.y + h + GAP), w: Math.max(frame.props.w, spot.x + w + GAP) } })
+		return spot
+	}
+
+	/**
+	 * Create or update a box. An existing box changes only in what you pass, and keeps its position unless
+	 * `move: true`. A new box with no position goes somewhere free (see freeSpot).
+	 */
+	function node(key, { x, y, w, h, text: label, geo, color, fill, dash, size, parent, meta = {}, move = false, proposed = false } = {}) {
 		const id = idFor(key)
-		// Always explicit: without it tldraw drops new shapes into whatever frame is under them.
-		const parentId = parent ? idFor(parent) : editor.getCurrentPageId()
 		const existing = editor.getShape(id)
-		const props = { geo, w, h, color, fill, dash, size, richText: toRichText(label) }
+		const passed = Object.fromEntries(Object.entries({ geo, w, h, color, fill, dash, size }).filter(([, v]) => v !== undefined))
+		if (label !== undefined) passed.richText = toRichText(label)
 		if (existing) {
-			// Keep shape-level extras added outside this helper (for example GitHub URLs).
-			if (existing.props.url) props.url = existing.props.url
-			if (existing.props.font) props.font = existing.props.font
-			const update = { id, type: 'geo', props, meta: { ...existing.meta, ...meta, key } }
-			if (move) Object.assign(update, { x, y })
+			const update = { id, type: existing.type, props: passed, meta: { ...existing.meta, ...meta, key } }
+			if (move) Object.assign(update, x !== undefined && { x }, y !== undefined && { y })
 			editor.updateShape(update)
 		} else {
-			editor.createShape({ id, type: 'geo', x, y, parentId, props, meta: { ...meta, key } })
+			// Always explicit: without it tldraw drops new shapes into whatever frame is under them.
+			const parentId = parent ? idFor(parent) : editor.getCurrentPageId()
+			const props = { geo: 'rectangle', w: 180, h: 64, color: 'black', fill: 'semi', dash: 'solid', size: 's', richText: toRichText(key), ...passed }
+			const spot = x === undefined || y === undefined ? freeSpot(parent ? parentId : null, props.w, props.h) : null
+			editor.createShape({ id, type: 'geo', x: x ?? spot.x, y: y ?? spot.y, parentId, props, meta: { ...meta, key } })
 		}
 		if (proposed) propose(key)
 		return id
@@ -467,5 +498,5 @@ export function makeHelpers(editor) {
 		}
 	}
 
-	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track }
+	return { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal }
 }

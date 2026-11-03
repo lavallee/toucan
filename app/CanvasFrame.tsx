@@ -75,7 +75,7 @@ export function CanvasFrame({ live, engine, preview, children }: { live: boolean
 				</div>
 				{chatOpen && (
 					<ChatDock chat={chat} stage={stage}>
-						{(startDrag) => <Chat toolbar={<DockButtons dock={chat.dock} onDock={(dock) => chat.set((l) => ({ ...l, dock }))} />} onHeaderPointerDown={startDrag} draftRequest={draftRequest} onDraftTaken={takeDraft} />}
+						{(startDrag) => <Chat engine={engine} toolbar={<DockButtons dock={chat.dock} onDock={(dock) => chat.set((l) => ({ ...l, dock }))} />} onHeaderPointerDown={startDrag} draftRequest={draftRequest} onDraftTaken={takeDraft} />}
 					</ChatDock>
 				)}
 			</div>

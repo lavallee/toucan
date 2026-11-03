@@ -106,6 +106,12 @@ try {
 		await toucan('--canvas', hist, 'exec', '--label', 'first boxes', '-e', 'await toucan.applyGraph({groups:[],nodes:[{key:"a",text:"Alpha",box:{x:0,y:0,w:180,h:64}}],edges:[]}); return 1')
 		// History and routines work with nobody watching too.
 		await new Promise((r) => setTimeout(r, 2500)) // a version lands just after the run it records
+		if (engine === 'tldraw') {
+			// A helper update changes only what it's given; a new box with no position goes somewhere free.
+			const kept = await json('--canvas', hist, 'exec', '-e', 'toucan.node("a",{text:"Alpha",w:300,h:100,color:"red",move:true,x:0,y:0}); toucan.node("a",{color:"blue"}); toucan.node("spot",{text:"Free"}); const a=toucan.get("a"), s=toucan.get("spot"); return {text:toucan.text(a),w:a.props.w,color:a.props.color,clear:s.x>=a.x+a.props.w}')
+			assert.deepEqual(kept, { text: 'Alpha', w: 300, color: 'blue', clear: true }, 'node() keeps what it is not given, and places new boxes clear')
+			await new Promise((r) => setTimeout(r, 2500))
+		}
 		const versions = await json('--canvas', hist, 'versions')
 		assert.equal(versions[0].source, 'agent', 'agent edits became a version')
 		const checkpoint = (await json('--canvas', hist, 'versions', 'save', 'checkpoint')).n

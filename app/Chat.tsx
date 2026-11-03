@@ -56,13 +56,13 @@ import {
 	messageText,
 } from '@/lib/codex-messages'
 import { cn } from '@/lib/utils'
-import { wsUrl } from './net'
+import { api, wsUrl } from './net'
 
 type Send = (msg: Record<string, unknown>) => void
 
 // Chat panel for the Codex agent: the shadcn AI Elements "Chat" pattern, fed by
 // server/codex.mjs over /ws/chat through the adapter in lib/codex-messages.ts.
-export function Chat({ toolbar, onHeaderPointerDown, draftRequest, onDraftTaken }: { toolbar?: React.ReactNode; onHeaderPointerDown?: (e: React.PointerEvent) => void; draftRequest?: { text: string } | null; onDraftTaken?: () => void }) {
+export function Chat({ toolbar, onHeaderPointerDown, engine, draftRequest, onDraftTaken }: { engine: string; toolbar?: React.ReactNode; onHeaderPointerDown?: (e: React.PointerEvent) => void; draftRequest?: { text: string } | null; onDraftTaken?: () => void }) {
 	const transcript = React.useRef(new CodexTranscript())
 	const [view, setView] = React.useState(() => transcript.current.snapshot())
 	const [online, setOnline] = React.useState(false)
@@ -71,6 +71,15 @@ export function Chat({ toolbar, onHeaderPointerDown, draftRequest, onDraftTaken 
 	const ws = React.useRef<WebSocket | null>(null)
 	const formRef = React.useRef<HTMLFormElement>(null)
 	const inputRef = React.useRef<HTMLTextAreaElement>(null)
+	const [mode, setMode] = React.useState<'fast' | 'thorough'>(() => (localStorage.getItem('toucan.chatMode') === 'thorough' ? 'thorough' : 'fast'))
+	const [routines, setRoutines] = React.useState<{ name: string; title: string; description: string; engines: string[] }[]>([])
+	React.useEffect(() => {
+		api('/api/routines').then((r) => setRoutines(r.routines), () => {})
+	}, [])
+	const chooseMode = (next: 'fast' | 'thorough') => {
+		setMode(next)
+		localStorage.setItem('toucan.chatMode', next)
+	}
 
 	// Something outside the panel starts a message for the person to finish (the Routines menu).
 	React.useEffect(() => {
@@ -98,7 +107,7 @@ export function Chat({ toolbar, onHeaderPointerDown, draftRequest, onDraftTaken 
 			sock.onmessage = (ev) => {
 				const e: ServerEvent = JSON.parse(ev.data)
 				transcript.current.apply(e)
-				if (e.type === 'turn' || e.type === 'error' || e.type === 'history') setPending(false)
+				if (e.type === 'turn' || e.type === 'error' || e.type === 'history' || e.type === 'direct-done') setPending(false)
 				// Deltas arrive many times a second; render at most once per frame.
 				frame ||= requestAnimationFrame(flush)
 			}
@@ -114,12 +123,15 @@ export function Chat({ toolbar, onHeaderPointerDown, draftRequest, onDraftTaken 
 	const send: Send = (msg) => ws.current?.readyState === 1 && ws.current.send(JSON.stringify(msg))
 	const busy = view.busy || pending
 	const text = draft.trim()
-	const canSend = online && text.length > 0 && !busy
+	const canSend = online && text.length > 0 // a message sent mid-turn adjusts the work in progress
+	// Typing "/" offers the banked routines, which run straight away with no agent.
+	const slash = /^\/([\w-]*)$/.exec(draft)
+	const matches = slash ? routines.filter((r) => r.engines.includes(engine) && (r.name.includes(slash[1].toLowerCase()) || r.title.toLowerCase().includes(slash[1].toLowerCase()))) : []
 
 	function onSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault()
 		if (!canSend) return
-		send({ type: 'send', text })
+		send({ type: 'send', text, mode })
 		setDraft('')
 		setPending(true)
 	}
@@ -209,13 +221,32 @@ export function Chat({ toolbar, onHeaderPointerDown, draftRequest, onDraftTaken 
 			</MessageScrollerProvider>
 
 			<div className="p-3 pt-0">
-				<form ref={formRef} onSubmit={onSubmit} className="w-full">
+				<form ref={formRef} onSubmit={onSubmit} className="relative w-full">
+					{matches.length > 0 && (
+						<ul aria-label="Routines" className="absolute inset-x-0 bottom-full z-10 mb-1 max-h-48 overflow-y-auto rounded-lg border bg-popover py-1 shadow-md">
+							{matches.map((r) => (
+								<li key={r.name}>
+									<button
+										type="button"
+										className="block w-full px-3 py-1.5 text-left outline-none hover:bg-muted focus-visible:bg-muted"
+										onClick={() => {
+											send({ type: 'send', text: `/${r.name}`, mode })
+											setDraft('')
+											setPending(true)
+										}}
+									>
+										<span className="font-mono text-xs">/{r.name}</span> <span className="text-xs text-muted-foreground">{r.description || r.title}</span>
+									</button>
+								</li>
+							))}
+						</ul>
+					)}
 					<InputGroup>
 						<InputGroupTextarea
-							ref={inputRef}
 							value={draft}
 							onChange={(event) => setDraft(event.target.value)}
-							placeholder={online ? 'Message Codex…' : 'Reconnecting…'}
+							ref={inputRef}
+							placeholder={!online ? 'Reconnecting…' : busy ? 'Add to what it’s doing…' : 'Tell it what to put on the canvas, or / for a routine'}
 							aria-label="Message"
 							className="max-h-48 min-h-14 p-3"
 							onKeyDown={(event) => {
@@ -226,29 +257,26 @@ export function Chat({ toolbar, onHeaderPointerDown, draftRequest, onDraftTaken 
 							}}
 						/>
 						<InputGroupAddon align="block-end">
-							<span className="text-xs text-muted-foreground">Enter to send · Shift+Enter for a new line</span>
-							{busy ? (
-								<InputGroupButton
-									type="button"
-									size="icon-sm"
-									variant="default"
-									className="ml-auto rounded-full"
-									aria-label="Stop"
-									title="Stop"
-									onClick={() => send({ type: 'interrupt' })}
-								>
+							<div role="radiogroup" aria-label="Agent speed" className="flex items-center rounded-md border p-px">
+								{(
+									[
+										['fast', 'Fast', 'Quick edits: a lighter model that acts straight away'],
+										['thorough', 'Thorough', 'Planning and hard layout: slower, thinks longer'],
+									] as const
+								).map(([value, label, title]) => (
+									<button key={value} type="button" role="radio" aria-checked={mode === value} title={title} onClick={() => chooseMode(value)} className={cn('rounded-[5px] px-1.5 py-0.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50', mode === value && 'bg-muted text-foreground')}>
+										{label}
+									</button>
+								))}
+							</div>
+							<span className="ml-auto" />
+							{busy && (
+								<InputGroupButton type="button" size="icon-sm" variant="outline" className="rounded-full" aria-label="Stop" title="Stop" onClick={() => send({ type: 'interrupt' })}>
 									<SquareIcon className="fill-current" />
 								</InputGroupButton>
-							) : (
-								<InputGroupButton
-									type="submit"
-									size="icon-sm"
-									variant="default"
-									className="ml-auto rounded-full"
-									disabled={!canSend}
-									aria-label="Send"
-									title="Send"
-								>
+							)}
+							{(!busy || text.length > 0) && (
+								<InputGroupButton type="submit" size="icon-sm" variant="default" className="rounded-full" disabled={!canSend} aria-label={busy ? 'Add to this turn' : 'Send'} title={busy ? 'Add to this turn' : 'Send'}>
 									<ArrowUpIcon />
 								</InputGroupButton>
 							)}

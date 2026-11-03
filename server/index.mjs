@@ -22,6 +22,7 @@ import { createHeadless } from './headless.mjs'
 import * as trail from './trail.mjs'
 import * as versions from './versions.mjs'
 import { createRoutines } from './routines.mjs'
+import { formatBrief, parseDirect } from './brief.mjs'
 import { FORMATS, fromTldraw, fromExcalidraw, toExcalidrawElements } from '../lib/tg.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -551,7 +552,37 @@ function serveStatic(url, res) {
 
 // ---- websockets --------------------------------------------------------------
 const wss = new WebSocketServer({ noServer: true })
-const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES })
+const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect })
+
+/** Selection and notes need a person's tab; with none, or a slow one, the brief goes without them. */
+async function chatBrief(canvas) {
+	const tg = graphOf(canvas)
+	if (!(tabs.get(canvas) ?? []).some((w) => !w.headless)) return formatBrief(tg)
+	const live = exec(canvas, 'const s = toucan.summary({ limit: 0 }); return { selected: s.selected, openNotes: s.openNotes }', 1000)
+	const seen = await Promise.race([live, new Promise((r) => setTimeout(r, 800))]).catch(() => null)
+	return formatBrief(tg, seen ?? {})
+}
+
+/** A message that needs no agent: run it, and return what to say. Null: it's for the agent. */
+async function chatDirect(canvas, text) {
+	const what = parseDirect(text)
+	if (!what) return null
+	try {
+		if (what.routine) {
+			const routine = routines.get(what.routine)
+			if (!routine) return null // not one of ours: perhaps the agent knows what was meant
+			if (!routine.engines.includes(engineOf(canvas))) return `${routine.title} doesn't run on ${engineOf(canvas)}.`
+			const result = await exec(canvas, routines.program(routine), 120000, `routine ${what.routine}`)
+			return `**${routine.title}:** ${result?.summary ?? 'done'}`
+		}
+		const tg = FORMATS.mermaid.import(what.mermaid)
+		const r = await exec(canvas, `return await toucan.applyGraph(${JSON.stringify(tg)}, {})`, 120000, 'Mermaid from chat')
+		const skipped = tg.warnings?.length ? ` ${tg.warnings.length} line${tg.warnings.length === 1 ? " wasn't" : "s weren't"} understood.` : ''
+		return `Added ${r?.created ?? 0} and updated ${r?.updated ?? 0} on the canvas.${skipped}`
+	} catch (e) {
+		return `Couldn't do that: ${e.message ?? e}`
+	}
+}
 
 server.on('upgrade', (req, socket, head) => {
 	const url = new URL(req.url, 'http://x')
