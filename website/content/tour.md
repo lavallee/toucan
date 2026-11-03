@@ -141,7 +141,7 @@ Long text in boxes makes a canvas hard to read and hard to talk about. The **Air
 
 A comment on a box or a region is a **thread**: a back-and-forth that someone eventually closes. Send a message to the agent and it works that thread on its own, so several can run at once.
 
-![A thread open on the Show the error box. A person asks whether to retry the card automatically, and the agent answers in the thread.](assets/tour/thread.png "Asked: "Should we retry the card automatically before showing an error?" The answer is the agent's, unedited.")
+![A thread open on the Show the error box. A person asks whether to retry the card automatically, and the agent answers in the thread.](assets/tour/thread.png "Asked: “Should we retry the card automatically before showing an error?” The answer is the agent's, unedited.")
 
 ## Leave a sticky note
 
@@ -149,13 +149,13 @@ Pin a note where the problem is instead of describing it in chat. Its position i
 
 ![The checkout flow with a yellow sticky note above the Take payment box: missing, what if an item went out of stock?](assets/tour/notes-before.png "A note left on the canvas.")
 
-![The flow now has a step for the out-of-stock case, and the note has turned green with the agent's reply.](assets/tour/notes-after.png "The agent's reply: "Added stock check before payment. Out-of-stock items lead to showing unavailable items and updating the cart."")
+![The flow now has a step for the out-of-stock case, and the note has turned green with the agent's reply.](assets/tour/notes-after.png "The agent's reply: “Added stock check before payment. Out-of-stock items lead to showing unavailable items and updating the cart.”")
 
 ## Take it or leave it
 
 Ask for an opinion and the answer arrives as a **proposal**: drawn dashed, with Accept and Reject above the canvas. Nothing is final until you say so.
 
-![The checkout flow with new dashed boxes and arrows the agent proposes, and a bar above the canvas with Accept and Reject.](assets/tour/proposal.png "Asked: "What is missing from this flow? Answer on the canvas as a proposal."")
+![The checkout flow with new dashed boxes and arrows the agent proposes, and a bar above the canvas with Accept and Reject.](assets/tour/proposal.png "Asked: “What is missing from this flow? Answer on the canvas as a proposal.”")
 
 ## Go back
 
