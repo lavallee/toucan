@@ -11,10 +11,41 @@
 // that its relay socket presents, so the server knows which socket is the page it launched.
 
 import { randomBytes } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import { delimiter, join } from 'node:path'
 
 const IDLE_MS = Number(process.env.TOUCAN_HEADLESS_IDLE ?? 120) * 1000
 const MAX = Number(process.env.TOUCAN_HEADLESS_MAX ?? 2)
 const START_MS = 30000
+
+// Browsers a machine may already have, so that most people never download one.
+function systemBrowsers({ platform = process.platform, env = process.env } = {}) {
+	if (platform === 'darwin') return ['Google Chrome', 'Chromium', 'Microsoft Edge', 'Brave Browser'].map((a) => `/Applications/${a}.app/Contents/MacOS/${a}`)
+	if (platform === 'win32') {
+		const roots = [env.PROGRAMFILES, env['PROGRAMFILES(X86)'], env.LOCALAPPDATA].filter(Boolean)
+		return roots.flatMap((r) => ['Google/Chrome/Application/chrome.exe', 'Microsoft/Edge/Application/msedge.exe'].map((p) => join(r, p)))
+	}
+	const dirs = (env.PATH ?? '').split(delimiter).filter(Boolean)
+	return ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'microsoft-edge', 'brave-browser'].flatMap((n) => dirs.map((d) => join(d, n)))
+}
+
+/** Start headless Chromium: Playwright's own if it was downloaded, otherwise whichever Chromium-family browser is here. */
+export async function launchBrowser(pw) {
+	// The server decides when the browser goes: on a signal it first waits for the page's last edits to arrive.
+	const opts = { headless: true, args: ['--disable-dev-shm-usage'], handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false }
+	let first
+	try {
+		return { browser: await pw.chromium.launch(opts), how: "Playwright's Chromium" }
+	} catch (e) {
+		first = e
+	}
+	for (const executablePath of systemBrowsers().filter((p) => existsSync(p))) {
+		try {
+			return { browser: await pw.chromium.launch({ ...opts, executablePath }), how: executablePath }
+		} catch {} // try the next one
+	}
+	throw new Error(`no browser for headless mode (${String(first.message ?? first).split('\n')[0]}). Install Chrome or Chromium, or run \`toucan setup --browser\`.`)
+}
 
 export function createHeadless({ enabled, port, token, log = console.log }) {
 	const pages = new Map() // canvas -> { nonce, page, context, ready: Promise<ws>, ws, timer, last, busy }
@@ -25,15 +56,11 @@ export function createHeadless({ enabled, port, token, log = console.log }) {
 		try {
 			pw = await import('playwright-core')
 		} catch {
-			throw new Error('headless mode needs playwright-core: run `npm install` (it is an optional dependency), then `npx playwright-core install chromium`')
+			throw new Error('headless mode needs playwright-core, an optional dependency that is missing here: reinstall toucan with optional dependencies')
 		}
-		try {
-			const b = await pw.chromium.launch({ headless: true, args: ['--disable-dev-shm-usage'] })
-			b.on('disconnected', () => (browser = undefined))
-			return b
-		} catch (e) {
-			throw new Error(`headless Chromium would not start (${String(e.message ?? e).split('\n')[0]}); install it with \`npx playwright-core install chromium\``)
-		}
+		const { browser: b } = await launchBrowser(pw)
+		b.on('disconnected', () => (browser = undefined))
+		return b
 	}
 
 	async function close(canvas, why = 'idle') {

@@ -91,7 +91,7 @@ only a Mermaid flowchart are applied directly. A message sent mid-turn steers th
 The chat panel talks to one `codex app-server` child process over stdio JSON-RPC, with one Codex thread
 per canvas. Codex runs on the machine's ChatGPT sign-in (`codex login`); toucan never holds a model key.
 It edits the canvas the same way a terminal agent does, by running the CLI, so both share one path.
-Codex runs with `workspace-write` rooted at the checkout, network access for the loopback CLI, and
+Codex runs with `workspace-write` rooted at the install directory, network access for the loopback CLI, and
 `on-request` approval. Anything outside its sandbox shows up as allow/deny buttons in the panel.
 
 The UI is React 19 with shadcn/ui; the chat follows shadcn's AI Elements patterns. Tailwind's preflight

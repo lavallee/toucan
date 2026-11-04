@@ -58,10 +58,11 @@ to describe your house canvases and extension commands without forking toucan.
 |---|---|---|
 | `--host` / `TOUCAN_HOST` | `127.0.0.1` | interface to listen on |
 | `--port` / `TOUCAN_PORT` | `8893` | |
-| `--data` / `TOUCAN_DATA` | `canvases/` in the checkout | where canvases, scripts and previews live |
+| `--data` / `TOUCAN_DATA` | your data directory ([where things live](quickstart.html#where-things-live)) | where canvases, scripts and previews live |
 | `TOUCAN_PUBLIC_HOST` | `127.0.0.1`, or the hostname when bound to all interfaces | host used in printed links |
 | `TOUCAN_CANVAS` | none | default canvas for the CLI |
-| `TOUCAN_URL` | from `~/.config/toucan/server.json` | server the CLI talks to |
+| `TOUCAN_URL` | from `~/.config/toucan/server.json` | server the CLI talks to; it won't start one |
+| `TOUCAN_TOKEN` | from `~/.config/toucan/server.json` | with `TOUCAN_URL`: for a server on another machine or outside a container |
 | `VITE_TLDRAW_LICENSE_KEY` | none | tldraw licence key, read at build time |
 
 ## Licences

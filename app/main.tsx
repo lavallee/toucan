@@ -44,7 +44,7 @@ root.render(
 			<div className="max-w-md space-y-3">
 				<h1 className="text-2xl font-semibold">toucan</h1>
 				<p className="text-muted-foreground">
-					Sign in by opening the link printed by <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">node bin/toucan.mjs url</code> on the server.
+					Sign in by running <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">toucan open</code> on this machine. On another machine, open the link printed by <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">toucan url</code> on the server.
 				</p>
 			</div>
 		</div>

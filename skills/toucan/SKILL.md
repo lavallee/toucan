@@ -1,6 +1,6 @@
 ---
 name: toucan
-description: Read and change a live toucan canvas (tldraw or Excalidraw in a browser tab) through the toucan CLI while a person edits it by hand. Use when asked to draw, update, lay out, inspect, screenshot, export or import a diagram on a toucan canvas, to turn data or a Mermaid sketch into one, or to add lasting behaviour to a canvas with a canvas script. Do not use for diagrams that are not on a toucan canvas.
+description: Draw on and read a live toucan canvas (tldraw or Excalidraw in a browser tab) through the toucan CLI while a person edits it by hand. Use when asked to use toucan, to start or open a canvas for this project, to draw, update, lay out, inspect, screenshot, export or import a diagram on a toucan canvas, to turn data or a Mermaid sketch into one, or to add lasting behaviour to a canvas with a canvas script. Do not use for diagrams that are not meant for a toucan canvas.
 ---
 
 # toucan
@@ -9,28 +9,43 @@ A toucan canvas is a tldraw or Excalidraw document open in someone's browser. Yo
 JavaScript to the live editor through the `toucan` CLI. **A person is looking at it and may be editing it
 at the same time:** inspect before you change, keep edits small and keyed, and never wipe their work.
 
-## Check the setup
+## Which way in
+
+Use the `toucan` CLI as below. **If you have tools named `toucan_*`, and especially in Codex, whose sandbox blocks the local
+network the CLI needs by default, use those instead:** `toucan_project_canvas`, `toucan_open`, `toucan_guide`, `toucan_summary`,
+`toucan_draw`, `toucan_import`, `toucan_exec`, `toucan_screenshot`, and `toucan_cli` for everything else. They do the same things,
+and a CLI error about a sandbox isn't a reason to give up.
+
+## Get a canvas
+
+From the project you're working in:
 
 ```sh
-toucan canvases          # lists canvases and how many tabs have each open
+toucan init --open       # finds or makes this project's canvas, and opens it for the person
 ```
 
-If `toucan` is missing, toucan is not installed here (see https://lavallee.github.io/toucan/quickstart.html);
-say so rather than editing files by hand. `exec`, `summary`, `screenshot` and `import` need a tab open on
-the canvas, unless the server runs in headless mode (then it opens the canvas itself, and your edits go
-on the canvas's trail, `toucan log`); if they fail with "no browser tab", ask the person to open the
-link from `toucan url --canvas NAME`.
+It adds nothing to the repository. After that, commands run anywhere in the project use that canvas, so
+`--canvas NAME` is optional below. The server starts by itself when a command needs it. To work on another
+canvas, `toucan canvases` lists them and `toucan new NAME --template ID` makes one.
+
+If `toucan` isn't found, it isn't installed here. Ask before installing it, then:
+
+```sh
+curl -fsSL https://github.com/lavallee/toucan/releases/latest/download/install.sh | sh
+```
+
+Never `npm install toucan`: that name on the npm registry is an unrelated package. If something's wrong,
+`toucan doctor` says what. If the MCP tools are what you need and you don't have them, ask the person to run
+`toucan agents install codex` (or `--mcp` for another agent) and start a new session.
+
+`exec`, `summary`, `screenshot` and `import` run in the person's tab if one is open. If not, they run in a
+headless browser, and your edits go on the canvas's trail (`toucan log`); if neither is possible, ask the person
+to open the canvas with `toucan open`.
 
 ## The full guide
 
-The authoritative guide is `AGENTS.md` in the toucan checkout, beside the CLI:
-
-```sh
-cat "$(dirname "$(readlink -f "$(command -v toucan)")")/../AGENTS.md"
-```
-
-Read it before your first edit. It covers the commands, the `toucan.*` helpers, the graph format, both
-engines and canvas scripts. A deployment may add notes in its data directory's `AGENTS.md`.
+Read it before your first edit: `toucan guide`. It covers the commands, the `toucan.*` helpers, the graph
+format, both engines and canvas scripts. A deployment may add notes in its data directory's `AGENTS.md`.
 
 ## The loop
 

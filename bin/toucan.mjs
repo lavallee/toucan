@@ -3,7 +3,20 @@
 // terminal) read and change a canvas that is open in a browser tab (or, on a server started
 // with --headless, in the server's own headless page when no tab is open).
 //
-//   toucan [--canvas NAME] <command>
+//   Getting going:
+//     setup [--data DIR] [--browser] [--no-agents] [--no-open]   get this machine ready: server, agents, a first canvas
+//     init [NAME] [--title T] [--template ID] [--engine E] [--open]   the canvas for the project you're in; later commands here use it
+//     open [NAME]                 open a canvas (or the index) in your browser, signed in
+//     agents [install [ID...] [--mcp] [--force] | remove [ID...]]   connect the agents on this machine (skill; MCP where it's needed)
+//     mcp                         run as an MCP server on stdio, for agents that can't run the CLI
+//     guide                       the full guide for agents
+//     status                      is the server running, and where
+//     start [--port P] [--host H] [--data DIR] [--no-headless] [--take-over] | stop | restart   the background server (commands start it when needed)
+//     doctor                      check this install, and say what to do about anything wrong
+//     update                      install the latest release
+//     --version
+//
+//   toucan [--canvas NAME] <command>     (the canvas: --canvas, then TOUCAN_CANVAS, then this project's from `toucan init`)
 //     url                         sign-in link for the browser (opens the index of canvases)
 //     canvases                    list canvases: title, shapes, scripts, open tabs
 //     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE | --template ID] [--title T] [--description D] [--canvas-format F]
@@ -34,12 +47,16 @@
 //   Any other command runs `toucan-<command>` from PATH with the same arguments and
 //   TOUCAN_CANVAS set, so extensions live in their own repos (see README, "Extending").
 
-import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync, mkdtempSync, accessSync, constants } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { FORMATS } from '../lib/tg.mjs'
 import { connect } from '../lib/client.mjs'
+import * as control from '../lib/control.mjs'
+import { chooseCanvas, findProject, linkProject, projectRoot, tooGeneral } from '../lib/projects.mjs'
+import { openInBrowser } from '../lib/open.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -51,9 +68,15 @@ const flag = (name, fallback) => {
 	argv.splice(i, v === undefined || v.startsWith('--') ? 1 : 2)
 	return v === undefined || v.startsWith('--') ? true : v
 }
-const explicitCanvas = argv.includes('--canvas') || !!process.env.TOUCAN_CANVAS
-const canvas = flag('canvas', process.env.TOUCAN_CANVAS)
-const server = flag('server', process.env.TOUCAN_URL)
+const named = flag('canvas', process.env.TOUCAN_CANVAS || undefined)
+const server = flag('server', process.env.TOUCAN_URL || undefined)
+for (const [name, value] of [['canvas', named], ['server', server]]) if (value === true) die(`--${name} needs a value`)
+// Inside a project with a canvas, that's the canvas. Not something anyone typed, so `url` can tell the difference.
+let here
+try {
+	here = process.cwd()
+} catch {} // the directory has gone: nothing here can be a project
+const canvas = named ?? (here && findProject(here)?.canvas)
 const [cmd, ...rest] = argv
 // Positional arguments after the command, once a case has consumed its flags.
 const positional = () => argv.slice(1)
@@ -63,14 +86,20 @@ function die(msg) {
 	process.exit(1)
 }
 
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw']
+// Needs a server to talk to, and starts one if there's none.
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open']
+// Works without one, or manages it.
+const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
-if (cmd && !BUILTIN.includes(cmd)) {
+if (cmd && !BUILTIN.includes(cmd) && !LOCAL.includes(cmd)) {
+	// The name goes on the end of `toucan-`, so it must not be able to say anywhere else to run.
+	if (!/^[a-z0-9][a-z0-9-]*$/i.test(cmd)) die(`unknown command ${cmd}`)
 	// An extension command: `toucan foo …` runs `toucan-foo …` from PATH.
 	const r = spawnSync(`toucan-${cmd}`, rest, { stdio: 'inherit', env: { ...process.env, ...(canvas && { TOUCAN_CANVAS: canvas }), ...(server && { TOUCAN_URL: server }) } })
 	if (r.error?.code !== 'ENOENT') process.exit(r.error ? (console.error(`toucan: ${r.error.message}`), 1) : (r.status ?? 1))
-} else if (cmd) {
+} else if (BUILTIN.includes(cmd)) {
 	try {
+		if (!server) await control.ensure()
 		client = connect({ canvas, server })
 	} catch (e) {
 		die(e.message)
@@ -95,11 +124,62 @@ function readGraph(file, format) {
 	return FORMATS[format].import(src)
 }
 
+/** `.toucan/` in a checkout, which is ignored there; an npm install's directory may not be writable, or shouldn't be written to. */
+function screenshotDir() {
+	const dir = join(ROOT, '.toucan')
+	try {
+		if (!existsSync(join(ROOT, '.git'))) throw new Error('not a checkout')
+		mkdirSync(dir, { recursive: true })
+		accessSync(dir, constants.W_OK)
+		return dir
+	} catch {
+		return mkdtempSync(join(tmpdir(), 'toucan-')) // private to this user, unlike a shared name in /tmp
+	}
+}
+
 const print = (v) => console.log(typeof v === 'string' ? v : JSON.stringify(v, null, 2))
 
 switch (cmd) {
 	case 'url': {
-		print(`${client.url(explicitCanvas ? canvas : null)}#token=${cfg.token}`)
+		print(`${client.url(named ?? null)}#token=${cfg.token}`)
+		break
+	}
+	case 'open': {
+		const [name] = positional()
+		const target = name ?? canvas ?? null
+		const url = client.url(target)
+		if (!(await openInBrowser(`${url}#token=${cfg.token}`))) {
+			// No screen here (over ssh, say), so the person has to take the link elsewhere. An agent over MCP
+			// shouldn't have the token in its transcript: someone at a terminal can print it.
+			if (process.env.TOUCAN_VIA_MCP) print(`can't open a browser from here. The canvas is at ${url}. If the person isn't signed in on that browser, they can run \`toucan url\` for a link that does it.`)
+			else print(`can't open a browser from here. Open this one, which signs you in:\n${url}#token=${cfg.token}`)
+			break
+		}
+		print(`opened ${url}`)
+		// Agents usually open a canvas to work on it: give the tab a moment to connect, so their next run lands there.
+		for (let i = 0; target && i < 40; i++) {
+			const c = (await call('/api/canvases')).canvases.find((x) => x.name === target)
+			if (!c || c.open) break
+			await new Promise((r) => setTimeout(r, 250))
+		}
+		break
+	}
+	case 'init': {
+		const title = flag('title'), description = flag('description'), engine = flag('engine'), template = flag('template'), canvasFormat = flag('canvas-format'), wantOpen = !!flag('open')
+		const [name] = positional()
+		if (!here) die("the directory you're in no longer exists")
+		const root = projectRoot(here)
+		if (tooGeneral(root) && !name) die(`${root} is too general to be one project. Run this inside a project, or name a canvas with \`toucan new NAME\`.`)
+		const existing = (await call('/api/canvases')).canvases.map((c) => c.name)
+		const { canvas: chosen, create } = chooseCanvas({ root, name, existing })
+		if (create) {
+			await call('/api/canvases', { method: 'POST', body: JSON.stringify({ name: chosen, title: typeof title === 'string' ? title : basename(root), description, ...(typeof engine === 'string' && { engine }), ...(typeof canvasFormat === 'string' && { format: canvasFormat }), ...(typeof template === 'string' && { template }) }) })
+		}
+		if (!tooGeneral(root)) linkProject(root, chosen)
+		const target = connect({ canvas: chosen, server })
+		const url = target.url(chosen)
+		const opened = wantOpen && (await openInBrowser(`${url}#token=${cfg.token}`))
+		print({ canvas: chosen, created: create, project: root, url, opened: !!opened, files: (await call(`/api/canvases/${encodeURIComponent(chosen)}/files`)).dir })
 		break
 	}
 	case 'canvases':
@@ -122,7 +202,7 @@ switch (cmd) {
 	case 'screenshot': {
 		const keys = flag('keys')
 		const max = Number(flag('max', 1800))
-		const out = positional()[0] ?? (mkdirSync(join(ROOT, '.toucan'), { recursive: true }), join(ROOT, '.toucan', `${canvas}.png`))
+		const out = positional()[0] ?? join(screenshotDir(), `${canvas}.png`)
 		const b64 = await exec(`return toucan.screenshot(${JSON.stringify({ keys: keys ? String(keys).split(',') : null, max })})`)
 		if (!b64) die('canvas is empty')
 		writeFileSync(out, Buffer.from(b64, 'base64'))
@@ -277,11 +357,110 @@ switch (cmd) {
 		else die('usage: routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME')
 		break
 	}
+	case 'guide':
+		// Written for the chat agent, which runs from the checkout. Everyone else has `toucan`.
+		print(readFileSync(join(ROOT, 'AGENTS.md'), 'utf8').replaceAll('node bin/toucan.mjs', 'toucan'))
+		break
+	case 'mcp':
+		(await import('../lib/mcp.mjs')).serve()
+		break
+	case 'status': {
+		const p = await control.probe(server)
+		const c = control.readCfg()
+		if (p.state === 'up') print({ running: true, url: p.url, version: p.health.version ?? null, pid: p.health.pid ?? null, startedByToucan: !!p.health.managed, data: p.health.data ?? c.data ?? null, headless: p.health.headless ?? null })
+		else print({ running: false, state: p.state, url: p.url })
+		break
+	}
+	case 'start': {
+		const opts = {}
+		const port = flag('port'), host = flag('host'), data = flag('data')
+		if (typeof port === 'string') opts.port = Number(port)
+		if (typeof host === 'string') opts.host = host
+		if (typeof data === 'string') opts.data = resolve(data)
+		if (flag('no-headless')) opts.headless = false
+		else if (flag('headless')) opts.headless = true
+		const takeOver = !!flag('take-over')
+		try {
+			const r = await control.start(opts, { takeOver })
+			print(r.already ? `already running at ${r.url}${r.pending ? '. `toucan restart` applies the new options' : ''}` : `running at ${r.url}, canvases in ${r.health.data}. Log: ${control.LOG}`)
+		} catch (e) {
+			die(e.message)
+		}
+		break
+	}
+	case 'stop': {
+		const r = await control.stop()
+		print(r.stopped ? 'stopped' : r.why)
+		if (!r.stopped && r.why !== 'not running') process.exitCode = 1
+		break
+	}
+	case 'restart': {
+		const r = await control.stop()
+		if (!r.stopped && r.why !== 'not running') die(r.why)
+		try {
+			const s = await control.start()
+			print(`running at ${s.url}, canvases in ${s.health.data}`)
+		} catch (e) {
+			die(e.message)
+		}
+		break
+	}
+	case 'doctor': {
+		const { doctor, printChecks } = await import('../lib/onboard.mjs')
+		const checks = await doctor()
+		if (flag('json')) print(checks)
+		else printChecks(checks)
+		if (checks.some((c) => !c.ok && !c.optional)) process.exitCode = 1
+		break
+	}
+	case 'setup': {
+		if (server) die('setup is for a server on this machine, and TOUCAN_URL or --server names another. To connect agents to that one: toucan agents install')
+		const { setup } = await import('../lib/onboard.mjs')
+		const opts = { data: flag('data'), browser: !!flag('browser'), agents: !flag('no-agents'), open: !flag('no-open') }
+		await setup(opts).catch((e) => die(e.message))
+		break
+	}
+	case 'agents': {
+		const agents = await import('../lib/agents.mjs')
+		const mcp = !!flag('mcp'), force = !!flag('force')
+		const [, sub, ...ids] = argv
+		try {
+			if (!sub) print(agents.status())
+			else if (sub === 'install') {
+				const rows = agents.install({ ids, mcp, force })
+				if (!rows.length) print('no agents found here. Name one: toucan agents install claude|codex|gemini|pi|cursor|opencode|claude-desktop')
+				for (const r of rows) {
+					console.log(`${r.name}: ${r.did.join(', ') || 'nothing done'}`)
+					for (const p of r.problems) console.error(`  ${p}`)
+				}
+				if (rows.some((r) => r.problems.length)) process.exitCode = 1
+			} else if (sub === 'remove') {
+				const rows = agents.remove({ ids })
+				print(rows.length ? rows.map((r) => `${r.name}: removed ${r.did.join(', ')}`).join('\n') : 'nothing to remove')
+			} else die('usage: agents [install [ID...] [--mcp] [--force] | remove [ID...]]')
+		} catch (e) {
+			die(e.message)
+		}
+		break
+	}
+	case 'update': {
+		const { update } = await import('../lib/onboard.mjs')
+		await update().catch((e) => die(e.message))
+		break
+	}
+	case 'version':
+	case '--version':
+	case '-v':
+		print(control.VERSION)
+		break
+	case 'help':
+	case '--help':
+	case '-h':
 	default:
 		{
 			// The comment block at the top of this file, however long it grows.
 			const lines = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1)
 			console.log(lines.slice(0, lines.findIndex((l) => !l.startsWith('//'))).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
 		}
-		if (cmd) die(`unknown command ${cmd} (no toucan-${cmd} on PATH)`)
+		if (cmd && !LOCAL.includes(cmd)) die(`unknown command ${cmd} (no toucan-${cmd} on PATH)`)
 }

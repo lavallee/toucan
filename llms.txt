@@ -4,10 +4,18 @@
 
 Agents: read AGENTS.md before changing a canvas. A person may be editing at the same time; inspect first, make small keyed edits, never wipe their work.
 
+## Install
+
+Requires Node 22+. Ask the person before installing. Do not `npm install toucan`: that registry name is an unrelated package.
+
+    curl -fsSL https://github.com/lavallee/toucan/releases/latest/download/install.sh | sh
+
+Then, in a project: `toucan init --open`, and `toucan guide` for the rest. Agents that can't run a CLI: `toucan mcp` is an MCP server on stdio.
+
 ## Docs
 
 - [Agent guide](https://github.com/lavallee/toucan/blob/main/AGENTS.md): CLI, `toucan.*` helpers, the graph format, engines, canvas scripts
-- [Quick start](https://lavallee.github.io/toucan/quickstart.html): install, sign in, first canvas
+- [Quick start](https://lavallee.github.io/toucan/quickstart.html): install, connect your agent, first canvas
 - [How it works](https://lavallee.github.io/toucan/how-it-works.html): sync, exec relay, headless mode and the trail, chat, security model
 - [Extending](https://lavallee.github.io/toucan/extending.html): extension commands, deployment notes, configuration, licences
 

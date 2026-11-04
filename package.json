@@ -1,6 +1,6 @@
 {
   "name": "toucan",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "An infinite canvas in the browser (tldraw or Excalidraw) that you edit by hand while agents edit it through a CLI and a built-in Codex chat.",
   "license": "MIT",
   "author": "Marc Lavallee <mlavallee@gmail.com>",
@@ -39,23 +39,32 @@
     "start": "node server/index.mjs",
     "typecheck": "tsc --noEmit -p .",
     "css:preflight": "node scripts/scope-preflight.mjs",
-    "test": "node scripts/tg-check.mjs && node scripts/trail-check.mjs && node scripts/versions-check.mjs && node scripts/routines-check.mjs && node scripts/brief-check.mjs && node scripts/threads-check.mjs && node scripts/layouts-check.mjs",
+    "test": "node scripts/tg-check.mjs && node scripts/trail-check.mjs && node scripts/versions-check.mjs && node scripts/routines-check.mjs && node scripts/brief-check.mjs && node scripts/threads-check.mjs && node scripts/layouts-check.mjs && node scripts/onboard-check.mjs",
     "test:headless": "node scripts/headless-e2e.mjs",
     "test:diagrams": "node scripts/eval-diagrams.mjs",
     "eval:agent": "node scripts/eval-agent.mjs",
     "check": "node scripts/check-repo.mjs",
-    "docs": "artoo build website"
+    "docs": "artoo build website",
+    "prepack": "npm run build",
+    "test:install": "node scripts/install-check.mjs"
   },
   "dependencies": {
+    "@tldraw/sync-core": "5.5.2",
+    "elkjs": "^0.12.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
     "@fontsource-variable/geist": "5.3.0",
     "@shadcn/react": "0.3.1",
     "@tailwindcss/vite": "4.3.3",
-    "@tldraw/sync": "^5.5.2",
-    "@tldraw/sync-core": "^5.5.2",
+    "@tldraw/sync": "5.5.2",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "class-variance-authority": "0.7.1",
     "cn": "0.4.0",
-    "elkjs": "^0.12.0",
     "lucide-react": "1.57.0",
     "radix-ui": "1.8.1",
     "react": "^19.3.0",
@@ -64,20 +73,26 @@
     "shiki": "4.5.0",
     "streamdown": "2.7.0",
     "tailwindcss": "4.3.3",
-    "tldraw": "^5.5.2",
+    "tldraw": "5.5.2",
     "tw-animate-css": "1.4.0",
-    "ws": "^8.22.0"
-  },
-  "devDependencies": {
-    "@types/node": "26.6.5",
-    "@types/react": "19.3.0",
-    "@types/react-dom": "19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
     "typescript": "7.0.2",
     "vite": "^8.3.4"
   },
   "private": true,
   "optionalDependencies": {
     "playwright-core": "^1.64.1"
-  }
+  },
+  "files": [
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "bin",
+    "dist",
+    "examples",
+    "install.sh",
+    "lib",
+    "routines",
+    "server",
+    "skills",
+    "templates"
+  ]
 }

@@ -3,7 +3,7 @@
 //
 //   node server/index.mjs [--host 0.0.0.0] [--port 8893] [--data DIR] [--dev] [--headless]
 //
-// Canvases live in --data / TOUCAN_DATA (default: canvases/ in this checkout).
+// Canvases live in --data / TOUCAN_DATA (default: the platform's data directory; see lib/paths.mjs).
 //
 // Every HTTP/WS request needs the token from ~/.config/toucan/server.json — the exec
 // relay runs arbitrary JS in the canvas and the chat drives an agent with a shell, so
@@ -11,8 +11,8 @@
 
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer } from 'node:http'
-import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, rmSync, chmodSync, renameSync, statSync } from 'node:fs'
-import { homedir, hostname } from 'node:os'
+import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, rmSync, renameSync, statSync } from 'node:fs'
+import { hostname } from 'node:os'
 import { dirname, join, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { WebSocketServer } from 'ws'
@@ -28,37 +28,31 @@ import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
 import { layOut } from '../lib/layouts.mjs'
 import { templateById, templateList } from '../templates/index.mjs'
 import { FORMATS, fromTldraw, fromExcalidraw, toExcalidrawElements } from '../lib/tg.mjs'
+import { CONFIG, ensureToken, readJson, resolveData, writeConfig } from '../lib/paths.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = join(ROOT, 'dist')
-const CONFIG = join(homedir(), '.config/toucan/server.json')
+const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version
 
 const args = Object.fromEntries(
 	process.argv.slice(2).map((a, i, all) => (a.startsWith('--') ? [a.slice(2), all[i + 1]?.startsWith('--') || all[i + 1] === undefined ? true : all[i + 1]] : null)).filter(Boolean),
 )
-const CANVASES = resolve(args.data ?? process.env.TOUCAN_DATA ?? join(ROOT, 'canvases'))
+const CANVASES = resolveData({ flag: args.data, root: ROOT }).dir
+mkdirSync(CANVASES, { recursive: true, mode: 0o700 }) // documents: a new directory is private to its owner
 const HOST = args.host ?? process.env.TOUCAN_HOST ?? '127.0.0.1'
 const PORT = Number(args.port ?? process.env.TOUCAN_PORT ?? 8893)
+const MANAGED = process.env.TOUCAN_MANAGED === '1' // started by `toucan start`, so `toucan stop` may stop it
+delete process.env.TOUCAN_MANAGED // nothing this server starts was started by toucan start
 const NAME = /^[a-z0-9][a-z0-9-_]{0,63}$/i
 // The host printed in links: a loopback-bound server is only reachable as itself.
 const PUBLIC_HOST = process.env.TOUCAN_PUBLIC_HOST || (HOST === '0.0.0.0' || HOST === '::' ? hostname() : HOST)
 
 // ---- token -----------------------------------------------------------------
-function loadToken() {
-	let cfg = {}
-	if (existsSync(CONFIG)) cfg = JSON.parse(readFileSync(CONFIG, 'utf8'))
-	if (!cfg.token) {
-		cfg.token = randomBytes(24).toString('base64url')
-		mkdirSync(dirname(CONFIG), { recursive: true })
-	}
-	cfg.port = PORT
-	cfg.url = `http://127.0.0.1:${PORT}`
-	cfg.public = `http://${PUBLIC_HOST}:${PORT}`
-	writeFileSync(CONFIG, JSON.stringify(cfg, null, 2) + '\n')
-	chmodSync(CONFIG, 0o600)
-	return cfg.token
+/** Say where this server is, once it has the port: until then another server may own the address. */
+function advertise() {
+	writeConfig({ ...readJson(CONFIG), port: PORT, url: `http://127.0.0.1:${PORT}`, public: `http://${PUBLIC_HOST}:${PORT}`, pid: process.pid, managed: MANAGED, data: CANVASES })
 }
-const TOKEN = loadToken()
+const TOKEN = ensureToken()
 const tokenOk = (t) => {
 	if (typeof t !== 'string') return false
 	const a = Buffer.from(t), b = Buffer.from(TOKEN)
@@ -73,6 +67,7 @@ const authed = (req, url) =>
 // crashed, stale build) is skipped for the next one. People's tabs always come first;
 // with --headless, the server's own headless page (server/headless.mjs) is the last resort.
 const tabs = new Map() // canvas -> [ws...] (most recently focused last)
+const unlanded = new Map() // canvas -> { sentAt, changes } of its last run that changed something, whose changes reach this server through sync
 const pending = new Map() // exec id -> {resolve, reject, timer, acked}
 let execSeq = 0
 const ACK_MS = 2500
@@ -86,12 +81,12 @@ function exec(canvas, code, timeoutMs = 30000, label) {
 	const before = pendingEdits && !pendingEdits.label ? currentDocument(canvas) : null
 	const live = [...(tabs.get(canvas) ?? [])].reverse().filter((w) => w.readyState === 1)
 	const candidates = [...live.filter((w) => !w.headless), ...live.filter((w) => w.headless)]
-	if (!candidates.length && !headless.enabled) return Promise.reject(new Error(`no browser tab has canvas "${canvas}" open — open ${publicUrl(canvas)}`))
+	if (!candidates.length && !headless.enabled) return Promise.reject(new Error(`no browser tab has canvas "${canvas}" open — open it with \`toucan open ${canvas}\`, or ask the person to open ${publicUrl(canvas)}`))
 	return new Promise((resolve, reject) => {
 		const send = (ws, next) => {
 			const id = ++execSeq
 			const done = (f) => (v) => (ws.headless && headless.touch(canvas, false), f(v))
-			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before }
+			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now() }
 			if (ws.headless) headless.touch(canvas, true)
 			p.timer = setTimeout(() => {
 				pending.delete(id)
@@ -124,6 +119,7 @@ function getRoom(canvas) {
 	}
 	const entry = { timer: null }
 	const persist = () => writeFileSync(docPath(canvas), JSON.stringify({ room: entry.room.getCurrentSnapshot() }))
+	entry.persist = persist
 	entry.room = new TLSocketRoom({
 		initialSnapshot,
 		onDataChange: () => {
@@ -399,6 +395,7 @@ const server = createServer(async (req, res) => {
 		if (!url.pathname.startsWith('/api/')) return serveStatic(url, res)
 		if (!authed(req, url)) return json(res, 401, { error: 'missing or bad token' })
 		const [, , route, canvas, sub, subName] = url.pathname.split('/')
+		if (route === 'health' && !canvas) return json(res, 200, { ok: true, version: VERSION, pid: process.pid, managed: MANAGED, data: CANVASES, headless: headless.enabled })
 		if (route === 'canvases' && !canvas && req.method === 'GET') {
 			const idx = readIndex()
 			return json(res, 200, { canvases: canvasNames().map((n) => describe(n, idx)) })
@@ -623,7 +620,7 @@ function serveStatic(url, res) {
 	if (!file.startsWith(DIST) || !existsSync(file)) file = join(DIST, 'index.html')
 	if (!existsSync(file)) {
 		res.writeHead(503, { 'content-type': 'text/plain' })
-		return res.end('app not built — run `npm run build` (or use `npm run dev`)\n')
+		return res.end('app not built: run `npm install && npm run build` in the toucan checkout (or use `npm run dev`)\n')
 	}
 	res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' })
 	res.end(readFileSync(file))
@@ -784,6 +781,7 @@ function onCanvas(ws, canvas, nonce) {
 			// Nobody watched a headless edit land, so it goes on the canvas's trail.
 			if (ws.headless) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
 			if (msg.changes && (msg.changes.added?.length || msg.changes.updated?.length || msg.changes.removed?.length)) {
+				unlanded.set(canvas, { sentAt: p.sentAt, changes: msg.changes })
 				if (p.before) saveBefore(canvas, p.before)
 				snapshotSoon(canvas, { label: p.label ?? 'Agent edit' })
 			}
@@ -812,11 +810,55 @@ wss.on('connection', (ws) => {
 	ws.on('pong', () => (ws.isAlive = true))
 })
 
+server.on('error', (e) => {
+	if (e.code !== 'EADDRINUSE') throw e
+	console.error(`toucan: port ${PORT} is already in use. Is a server already running? (\`toucan status\`) Choose another with --port N.`)
+	process.exit(1)
+})
 server.listen(PORT, HOST, () => {
-	console.log(`toucan listening on ${HOST}:${PORT}`)
-	console.log(`open: ${publicUrl()} — sign in once with \`node bin/toucan.mjs url\` (token stays out of logs)`)
+	advertise()
+	console.log(`toucan ${VERSION} listening on ${HOST}:${PORT}, canvases in ${CANVASES}`)
+	console.log(`open: ${publicUrl()} — \`toucan open\` opens it signed in (the token stays out of logs)`)
 	if (args.dev) console.log(`dev: vite serves the app on :5173 and proxies /api and /ws here`)
 	if (headless.enabled) console.log(`headless: on — exec with no tab open runs in headless Chromium (idle close ${headless.idleMs / 1000}s, at most ${headless.max} pages)`)
 })
-// Close Chromium with the server (it would follow anyway once its pipe closes, but not always promptly).
-if (headless.enabled) for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => (setTimeout(() => process.exit(0), 3000).unref(), headless.shutdown().finally(() => process.exit(0))))
+/** Write what's only in memory: saves wait a second for edits to pause, and a stop shouldn't lose that second. */
+function flushAll() {
+	for (const [n, entry] of rooms) {
+		clearTimeout(entry.timer)
+		entry.persist()
+		snapshotNow(n)
+	}
+	for (const [n, scene] of scenes) {
+		clearTimeout(scene.timer)
+		scene.persist()
+		snapshotNow(n)
+	}
+}
+/**
+ * A tab reports a run's result before its edits arrive through sync, so a run that just ended may still be on its way.
+ * What it added and removed can be checked by id. An update can't, so any change since the run has to do for those.
+ */
+function landed(n, { sentAt, changes }) {
+	const room = rooms.get(n), scene = scenes.get(n)
+	if (!room && !scene) return true // the last tab left, which saved it
+	const has = (id) => (room ? !!room.room.getRecord(id) : scene.elements.has(id) && !scene.elements.get(id).isDeleted)
+	if (!(changes.added ?? []).every((c) => has(c.id)) || (changes.removed ?? []).some((c) => has(c.id))) return false
+	return !changes.updated?.length || (room ?? scene).changed >= sentAt
+}
+const allLanded = () => [...unlanded].every(([n, run]) => Date.now() - run.sentAt > 30000 || landed(n, run))
+for (const sig of ['SIGINT', 'SIGTERM']) {
+	process.once(sig, async () => {
+		setTimeout(() => process.exit(0), 6000).unref()
+		for (let i = 0; i < 70 && !allLanded(); i++) await new Promise((r) => setTimeout(r, 50))
+		await new Promise((r) => setTimeout(r, 100)) // and whatever came just behind it
+		try {
+			flushAll()
+		} catch (e) {
+			console.error(`toucan: couldn't save on the way out: ${e.message}`)
+		}
+		// Close Chromium with the server (it would follow anyway once its pipe closes, but not always promptly).
+		if (headless.enabled) await headless.shutdown().catch(() => {})
+		process.exit(0)
+	})
+}

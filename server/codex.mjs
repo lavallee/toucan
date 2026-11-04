@@ -12,6 +12,7 @@ import readline from 'node:readline'
 // Codex's current default model unless set here, so they don't go stale as models change. Measured on real
 // requests, its low effort put correct edits on the canvas about 3x sooner; a lighter model was only a little
 // faster than that and drew worse.
+const VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
 const MODES = {
 	fast: { model: process.env.TOUCAN_CHAT_FAST_MODEL, effort: process.env.TOUCAN_CHAT_FAST_EFFORT ?? 'low' },
 	thorough: { model: process.env.TOUCAN_CHAT_THOROUGH_MODEL, effort: process.env.TOUCAN_CHAT_THOROUGH_EFFORT ?? 'medium' },
@@ -107,7 +108,7 @@ export class CodexChat {
 		this.proc.on('error', (e) => {
 			console.error(`[codex] couldn't start: ${e.message}`)
 			this.proc = null
-			for (const [, c] of this.calls) c.reject(new Error('Codex is not available: install the Codex CLI to use the chat.'))
+			for (const [, c] of this.calls) c.reject(new Error('The chat panel needs the Codex CLI (https://github.com/openai/codex), signed in with `codex login`. Everything else works without it, and any other agent can work here: run `toucan agents install` in a terminal.'))
 			this.calls.clear()
 		})
 		this.proc.on('exit', (code) => {
@@ -124,7 +125,7 @@ export class CodexChat {
 		})
 		readline.createInterface({ input: this.proc.stdout }).on('line', (line) => this.onLine(line))
 		this.ready = (async () => {
-			await this.call('initialize', { clientInfo: { name: 'toucan', title: 'toucan', version: '0.7.0' }, capabilities: null })
+			await this.call('initialize', { clientInfo: { name: 'toucan', title: 'toucan', version: VERSION }, capabilities: null })
 			this.notify('initialized', {})
 			// Without it, turns use the machine's own Codex config, which may name a different model.
 			const models = await this.call('model/list', {}).catch(() => null)

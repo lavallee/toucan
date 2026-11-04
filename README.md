@@ -13,7 +13,7 @@ Each canvas runs on [tldraw](https://tldraw.dev) or [Excalidraw](https://excalid
 server keeps every open tab in sync, a chat panel drives [Codex](https://github.com/openai/codex) on your
 own ChatGPT sign-in, and any terminal agent (Claude Code, Codex, pi, …) can do the same through the
 `toucan` CLI: read the canvas, send JavaScript to the live editor, take a screenshot, or merge in a
-Mermaid / JSON Canvas / Excalidraw file by key.
+Mermaid / JSON Canvas / Excalidraw file by key. Agents that can't run a CLI use the same commands over MCP.
 
 ```
  browser ──── http://HOST:8893/?canvas=NAME
@@ -29,29 +29,90 @@ Mermaid / JSON Canvas / Excalidraw file by key.
 
 ## Quick start
 
-Needs Node 22+, and the [Codex CLI](https://github.com/openai/codex) signed in (`codex login`) if you want
-the chat panel.
+You need [Node 22+](https://nodejs.org). Then one command installs toucan, starts it, connects the agents it finds and opens a first canvas:
+
+```sh
+curl -fsSL https://github.com/lavallee/toucan/releases/latest/download/install.sh | sh
+```
+
+Or, if you'd rather read it first: `npm install -g https://github.com/lavallee/toucan/releases/latest/download/toucan.tgz && toucan setup`.
+(Not `npm install toucan`: that name on the npm registry is an unrelated package.)
+
+Then, in any project, ask your agent:
+
+> Use toucan to draw how this repo fits together, and open it for me.
+
+Or do it by hand:
+
+```sh
+cd my-project
+toucan init --open     # this project's canvas; commands run anywhere in the project now use it
+toucan draw plan.json  # or: toucan import flow.mmd, toucan exec -e '…', or just draw in the browser
+```
+
+<img src="website/site/assets/toucan-index.png" alt="The index page, with previews of three canvases" width="720">
+
+You don't manage a server. A command that needs one starts it in the background, and `toucan stop` stops it. If you already run one yourself (with systemd, or `npm start`), toucan leaves it to you; `toucan start --take-over` hands it over. If anything seems off, `toucan doctor` checks the install and says what to do.
+
+The canvas works without any agent or account. The built-in chat panel needs the [Codex CLI](https://github.com/openai/codex), signed in with `codex login`; every other agent works through its own harness.
+
+### Where things live
+
+Canvases are your documents, so they live outside the install, and an upgrade or uninstall leaves them alone:
+
+| | |
+|---|---|
+| Linux | `~/.local/share/toucan/canvases` (or `$XDG_DATA_HOME/toucan/canvases`) |
+| macOS | `~/Library/Application Support/toucan/canvases` |
+| Windows | `%LOCALAPPDATA%\\toucan\\canvases` |
+
+Choose another with `toucan setup --data ~/Documents/toucan`, then `toucan restart`. (That's for the server toucan runs; for your own, pass `--data` or `TOUCAN_DATA`.) A project's canvas lives there too: `toucan init` remembers the link in `~/.config/toucan/projects.json` and adds nothing to your repository. To keep a diagram in the repo, export it: `toucan graph --format mermaid docs/architecture.mmd`.
+
+A checkout that already has canvases in `canvases/` keeps using them. To move them, stop the server, move the folder, and use `--data`.
+
+## Connect your agents
+
+`toucan setup` does this for the agents it finds. To do it again after installing one, or to choose:
+
+```sh
+toucan agents                  # what's here, and what's connected
+toucan agents install          # connect every agent found here
+toucan agents install codex    # or the ones you name
+toucan agents install --mcp    # add MCP as well as the skill
+toucan agents remove           # undo: only removes what toucan installed
+```
+
+| Agent | How it connects | |
+|---|---|---|
+| Claude Code, Gemini CLI, pi, Cursor, opencode | skill | teaches the agent the `toucan` CLI |
+| Codex | skill and MCP | its sandbox blocks the local network the CLI needs by default; MCP servers run outside it |
+| Claude Desktop | MCP | it has no shell |
+
+For anything else that speaks [MCP](https://modelcontextprotocol.io), add this server, which needs no other setup:
+
+```json
+{ "mcpServers": { "toucan": { "command": "toucan", "args": ["mcp"] } } }
+```
+
+An agent with no connection at all can still follow [AGENTS.md](AGENTS.md) (`toucan guide` prints it). In a container or on another machine, set `TOUCAN_URL` and `TOUCAN_TOKEN` to use a server elsewhere; the token is in `~/.config/toucan/server.json` on the server's machine.
+
+Claude Code and Codex can also use the plugin from the Lyra Forge marketplace, which stays up to date with the marketplace rather than with your install:
+
+```
+/plugin marketplace add lyra-forge/marketplace      # Claude Code
+/plugin install toucan@lyra-forge
+
+codex plugin marketplace add lyra-forge/marketplace # Codex
+codex plugin add toucan@lyra-forge
+```
+
+## Install from source
 
 ```sh
 git clone https://github.com/lavallee/toucan && cd toucan
 npm install
-npm run build
-npm start                          # http://127.0.0.1:8893
-node bin/toucan.mjs url            # prints the sign-in link (with its token); open it once per browser
+node bin/toucan.mjs setup      # builds the app, puts `toucan` on your PATH, and carries on as above
 ```
-
-Then make a canvas from the index page, or from the terminal:
-
-<img src="website/site/assets/toucan-index.png" alt="The index page, with previews of three canvases" width="720">
-
-```sh
-node bin/toucan.mjs new sketch --title "Sketch"
-node bin/toucan.mjs --canvas sketch summary
-node bin/toucan.mjs --canvas sketch exec -e 'toucan.node("hello", { x: 0, y: 0, text: "Hello" }); return toucan.summary()'
-```
-
-Put `bin/toucan.mjs` on your PATH as `toucan` (e.g. `ln -s "$PWD/bin/toucan.mjs" ~/.local/bin/toucan`) and
-point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works from.
 
 ## What it does
 
@@ -94,6 +155,17 @@ point your agent at [AGENTS.md](AGENTS.md); it is the guide every agent works fr
 ## CLI
 
 ```
+Getting going:
+  setup [--data DIR] [--browser] [--no-agents] [--no-open]   get this machine ready
+  init [NAME] [--title T] [--template ID] [--engine E] [--open]   the canvas for the project you're in
+  open [NAME]                 open a canvas (or the index) in your browser, signed in
+  agents [install [ID...] [--mcp] [--force] | remove [ID...]]   connect the agents on this machine
+  mcp                         run as an MCP server on stdio
+  guide                       the full guide for agents
+  status | doctor             is the server running; check the whole install
+  start [--port P] [--host H] [--data DIR] [--no-headless] [--take-over] | stop | restart   the background server
+  update                      install the latest release
+
 toucan [--canvas NAME] <command>
   url                         sign-in link for the browser
   canvases                    list canvases
@@ -119,13 +191,16 @@ toucan [--canvas NAME] <command>
   routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
 ```
 
-`--canvas` can also come from `TOUCAN_CANVAS`. `exec`, `summary`, `screenshot` and `import` run in a
-browser tab on the canvas; without one they fail, unless the server runs in headless mode.
+The canvas comes from `--canvas`, then `TOUCAN_CANVAS`, then the project you're in (`toucan init`). `exec`, `summary`,
+`screenshot` and `import` run in a browser tab on the canvas; with no tab they use headless mode, or fail if it's off.
 
 ## Headless mode
 
+A server started by toucan has this on: it costs nothing until an agent runs code with no tab open. It uses the Chrome, Chromium, Edge or Brave already on your machine. If there's none, `toucan setup --browser` downloads Chromium (about 150 MB). `toucan start --no-headless` turns it off.
+
+A server you run yourself has it off unless you ask:
+
 ```sh
-npx playwright-core install chromium   # once; playwright-core is an optional dependency
 npm start -- --headless                # or TOUCAN_HEADLESS=1 npm start
 ```
 
@@ -149,7 +224,7 @@ away" until you mark them seen (per browser).
   Node, use the same client the CLI does:
 
   ```js
-  import { connect } from 'toucan/client'   // or ../toucan/lib/client.mjs
+  import { connect } from 'toucan/client'   // or the path to toucan's lib/client.mjs
   const t = connect({ canvas: process.env.TOUCAN_CANVAS })
   await t.exec('return toucan.summary()')
   ```
@@ -171,33 +246,24 @@ toucan new odyssey --from examples/odyssey.tg.json --canvas-format story --title
 Open one, click a box to read it, and walk with ← and →. Then click **Comment**, drag around a cluster, and ask something: "what's the argument here?" or "where does he
 disagree with himself?". Every quotation was checked word for word against its source by `scripts/build-maps.mjs`.
 
-## Agent plugin
-
-The `toucan` skill teaches Claude Code and Codex to drive a canvas. Install it from the Lyra Forge marketplace:
-
-```
-/plugin marketplace add lyra-forge/marketplace      # Claude Code
-/plugin install toucan@lyra-forge
-
-codex plugin marketplace add lyra-forge/marketplace # Codex
-codex plugin add toucan@lyra-forge
-```
-
 ## Configuration
 
 | Setting | Default | |
 |---|---|---|
 | `--host` / `TOUCAN_HOST` | `127.0.0.1` | interface to listen on |
 | `--port` / `TOUCAN_PORT` | `8893` | |
-| `--data` / `TOUCAN_DATA` | `canvases/` in the checkout | where canvases, scripts and previews live |
-| `--headless` / `TOUCAN_HEADLESS=1` | off | run exec in headless Chromium when no tab has the canvas open |
+| `--data` / `TOUCAN_DATA` | see [Where things live](#where-things-live) | where canvases, scripts and previews live |
+| `--headless` / `TOUCAN_HEADLESS=1` | on with `toucan start`, off with `npm start` | run exec in headless Chromium when no tab has the canvas open |
 | `TOUCAN_CHAT_FAST_MODEL`, `TOUCAN_CHAT_THOROUGH_MODEL` | Codex's default | model for each chat speed |
 | `TOUCAN_CHAT_FAST_EFFORT`, `TOUCAN_CHAT_THOROUGH_EFFORT` | `low`, `medium` | reasoning effort for each chat speed |
 | `TOUCAN_HEADLESS_IDLE` | `120` | seconds a headless page stays open after its last exec |
 | `TOUCAN_HEADLESS_MAX` | `2` | headless pages open at once (the least recently used idle one makes room) |
 | `TOUCAN_PUBLIC_HOST` | `127.0.0.1`, or the hostname when bound to all interfaces | host used in printed links |
 | `TOUCAN_CANVAS` | — | default canvas for the CLI |
-| `TOUCAN_URL` | from `~/.config/toucan/server.json` | server the CLI talks to |
+| `TOUCAN_URL` | from `~/.config/toucan/server.json` | server the CLI talks to; it won't start one |
+| `TOUCAN_TOKEN` | from `~/.config/toucan/server.json` | with `TOUCAN_URL`: for a server on another machine or outside a container |
+| `TOUCAN_NO_AUTOSTART` | — | never start a server from a command |
+| `TOUCAN_BROWSER` | the system's | program `toucan open` launches |
 | `VITE_TLDRAW_LICENSE_KEY` | — | tldraw licence key, read at build time (see below) |
 
 ## Security
@@ -206,8 +272,16 @@ The exec relay runs arbitrary JavaScript in your browser tab, and the chat drive
 Every HTTP and WebSocket request therefore needs the token in `~/.config/toucan/server.json` (created
 on first start, mode 0600; delete its `token` field and restart to rotate). The server listens on
 loopback by default; only bind it wider (`--host 0.0.0.0`) on a network you trust, and put it behind
-HTTPS if it leaves your machine. Codex runs with `workspace-write` rooted at this checkout and
-`on-request` approval.
+HTTPS if it leaves your machine. Codex runs with `workspace-write` rooted at the install directory and
+`on-request` approval. `toucan open` passes the token to your browser in the link's fragment, which isn't sent to the
+server, but it is on the opener's command line while that runs; on a machine shared with people you don't trust, use `toucan url`.
+`toucan agents install` writes only the skill folders and MCP entries it reports, keeps a `.before-toucan`
+copy of any config file it changes, and `toucan agents remove` undoes them.
+
+**Connecting an agent gives it the canvas, including outside its sandbox.** MCP servers run outside an agent's sandbox, and
+`toucan_exec`, like `toucan exec`, runs JavaScript in your signed-in browser tab or the server's headless page, where it can reach
+the network and the toucan server. The MCP tools don't run other programs or take file paths, but treat them as trusting
+that agent with toucan, and check the chat's and your harness's approval settings accordingly.
 
 Headless mode adds no new way in: the headless page is a local Chromium the server starts itself. It
 gets the token through a script that puts it in the page's (in-memory, throwaway) local storage, never
@@ -218,7 +292,8 @@ in a URL, and then authenticates like any tab.
 toucan's own code is [MIT](LICENSE). It builds on **tldraw**, which is *not* MIT: the
 [tldraw licence](https://github.com/tldraw/tldraw/blob/main/LICENSE.md) allows development use freely,
 but production use (anything served over HTTPS) needs a licence key, including tldraw's free hobby
-licence for non-commercial projects. Put the key in `.env` as `VITE_TLDRAW_LICENSE_KEY=…` and rebuild.
+licence for non-commercial projects. The key is read at build time, so [install from source](#install-from-source), put it
+in `.env` as `VITE_TLDRAW_LICENSE_KEY=…` and rebuild. A release served from your own machine doesn't need one.
 Excalidraw canvases need no key (MIT).
 
 ## Develop
@@ -226,7 +301,8 @@ Excalidraw canvases need no key (MIT).
 ```sh
 npm run dev           # server + vite with hot reload
 npm run typecheck
-npm test              # round-trip checks for the graph converters, and the trail
+npm test              # round-trip checks for the graph converters, the trail, setup and connecting agents
+npm run test:install  # end to end: pack the release, install it in a throwaway home, use it through the CLI and MCP
 npm run test:headless # end to end: a headless server builds canvases on both engines with no tab open
 npm run css:preflight # regenerate app/preflight.css after upgrading tailwindcss
 ```

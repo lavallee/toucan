@@ -151,7 +151,9 @@ export function Index() {
 				{canvases === null ? (
 					<p className="text-sm text-muted-foreground">Loading…</p>
 				) : canvases.length === 0 ? (
-					<p className="text-sm text-muted-foreground">No canvases yet. Make one above.</p>
+					<p className="text-sm text-muted-foreground">
+						No canvases yet. Make one above, or ask your agent to, from your project: <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">toucan init</code>
+					</p>
 				) : (
 					<ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
 						{[...canvases].sort((a, b) => (b.updated ?? 0) - (a.updated ?? 0)).map((c) => (

@@ -1,0 +1,132 @@
+{
+  "groups": [],
+  "nodes": [
+    {
+      "key": "hint",
+      "text": "Click any box to read more",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "w": 300,
+        "h": 50
+      },
+      "style": {
+        "color": "grey",
+        "fill": "none",
+        "dash": "dotted"
+      }
+    },
+    {
+      "key": "you",
+      "text": "You draw here",
+      "box": {
+        "x": 0,
+        "y": 70,
+        "w": 300,
+        "h": 90
+      },
+      "style": {
+        "color": "blue",
+        "fill": "semi"
+      },
+      "meta": {
+        "detail": "This is a real tldraw canvas: draw, drag and type as usual. Your edits and your agents' edits land on the same document, and every open tab sees them live."
+      }
+    },
+    {
+      "key": "agent",
+      "text": "Your agent draws here too",
+      "box": {
+        "x": 360,
+        "y": 70,
+        "w": 300,
+        "h": 90
+      },
+      "style": {
+        "color": "violet",
+        "fill": "semi"
+      },
+      "meta": {
+        "detail": "Claude Code, Codex, Gemini CLI, pi, Cursor, opencode and Claude Desktop can all work here once connected. Run `toucan agents install` in a terminal. Their edits glow, and one Cmd-Z undoes a whole run."
+      }
+    },
+    {
+      "key": "answer",
+      "text": "Take it or leave it",
+      "box": {
+        "x": 720,
+        "y": 70,
+        "w": 300,
+        "h": 90
+      },
+      "style": {
+        "color": "green",
+        "fill": "semi"
+      },
+      "meta": {
+        "detail": "When you ask an agent for an opinion, it can answer with dashed proposals you accept or reject. Every canvas keeps its history, so nothing is lost: see the History panel."
+      }
+    },
+    {
+      "key": "try-project",
+      "text": "Try: draw my project",
+      "box": {
+        "x": 0,
+        "y": 250,
+        "w": 300,
+        "h": 90
+      },
+      "style": {
+        "color": "grey",
+        "fill": "none"
+      },
+      "meta": {
+        "detail": "In your project, ask your agent: \"Use toucan to draw how this repo fits together, and open it for me.\" The agent runs `toucan init`, which gives the project its own canvas without adding anything to the repo."
+      }
+    },
+    {
+      "key": "try-note",
+      "text": "Try: leave a sticky note",
+      "box": {
+        "x": 360,
+        "y": 250,
+        "w": 300,
+        "h": 90
+      },
+      "style": {
+        "color": "grey",
+        "fill": "none"
+      },
+      "meta": {
+        "detail": "On tldraw, every sticky note is a message to your agent, and where you put it is part of the message. Pin one on a box, then ask your agent to handle the notes."
+      }
+    },
+    {
+      "key": "try-comment",
+      "text": "Try: comment on a region",
+      "box": {
+        "x": 720,
+        "y": 250,
+        "w": 300,
+        "h": 90
+      },
+      "style": {
+        "color": "grey",
+        "fill": "none"
+      },
+      "meta": {
+        "detail": "Click Comment and drag around some shapes to start a thread about them. With the Codex CLI signed in, each thread and the chat panel can run their own agent."
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "you",
+      "to": "agent"
+    },
+    {
+      "from": "agent",
+      "to": "answer"
+    }
+  ]
+}

@@ -14,19 +14,21 @@ npm run dev        # server + vite with hot reload
 
 ## Make a change
 
-- Keep the agent path single: the chat agent and terminal agents both go through `bin/toucan.mjs`.
+- Keep the agent path single: the chat agent, terminal agents and the MCP server all go through `bin/toucan.mjs`.
   A new capability belongs in the CLI or the `toucan.*` helpers, then in `AGENTS.md`.
 - Never let an agent path delete or move a person's shapes by default. Imports are keyed upserts;
   removal and repositioning are explicit flags.
 - Domain-specific canvases belong in an extension command (`toucan-X` in its own repo), not here.
 - Update `AGENTS.md`, `website/content/` and `CHANGELOG.md` with any behaviour change.
+- The server needs only `dependencies` at runtime. What the app needs at build time goes in `devDependencies`, and a release
+  ships the built app, so installing one stays small.
 - Do not commit canvases, tokens, private hostnames or internal project names. `npm run check` catches
   the obvious ones.
 
 ## Before a pull request
 
 ```sh
-npm run check && npm test && npm run typecheck && npm run build
+npm run check && npm test && npm run typecheck && npm run test:install
 gitleaks git --redact .   # optional locally; CI runs it
 ```
 

@@ -28,3 +28,19 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
+
+  install:
+    # What people install, on the systems they use. The runners have Chrome, so this also covers finding the machine's browser.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:install

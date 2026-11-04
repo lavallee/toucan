@@ -84,6 +84,17 @@ console.log(`ok  layouts: ${TEMPLATES.length} templates`)
 	console.log('ok  layouts: where an import lands')
 }
 
+// A flow written loosely still draws, and one that can't be drawn says why.
+{
+	const loose = await layOut({ kind: 'flow', nodes: [{ key: 'a', label: 'A' }, { name: 'The B' }], edges: [{ source: 'a', target: 'the-b' }] })
+	assert.deepEqual(loose.nodes.map((n) => [n.key, n.text]), [['a', 'A'], ['the-b', 'The B']])
+	assert.equal(loose.edges.length, 1)
+	await assert.rejects(layOut({ kind: 'flow', nodes: [{ id: 'a', text: 'A' }], edges: [{ from: 'a', to: 'zzz' }] }), /no node has the id "zzz"/)
+	await assert.rejects(layOut({ kind: 'flow' }), /a flow needs nodes/)
+	await assert.rejects(layOut({ kind: 'tree' }), /templates show/)
+	console.log('ok  layouts: forgiving about form, clear about errors')
+}
+
 // Every picture the tour was given made it onto the page: a stray quote in a caption turns an image into text.
 {
 	const { readFileSync } = await import('node:fs')

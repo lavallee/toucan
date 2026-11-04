@@ -5,12 +5,32 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-11-04
+
 ### Added
 
+- **One-line install.** `curl … install.sh | sh` installs a prebuilt release (about 65 MB, no build), starts the server, connects your agents and opens a first canvas. Each release carries `toucan.tgz` and `install.sh`, and `toucan update` moves to the latest.
+- **`toucan setup`, `doctor`, `open`, `start`, `stop`, `restart`, `status`, `guide` and `--version`.** `setup` asks nothing, so an agent can run it. `doctor` says what's wrong and what to do about it.
+- **The server looks after itself.** A command that needs a server starts one in the background. One you run yourself (systemd, `npm start`) stays in charge: commands won't start a rival and `toucan stop` won't stop it, unless `toucan start --take-over` hands it over.
+- **A canvas per project: `toucan init`.** It finds or makes the canvas for the repository you're in, and commands run anywhere inside it use that canvas without `--canvas`. Nothing is added to the repository.
+- **`toucan agents`** connects Claude Code, Codex, Gemini CLI, pi, Cursor, opencode and Claude Desktop, and undoes it. Each gets the skill, or MCP where a skill can't work.
+- **`toucan mcp`**: an MCP server for agents that can't run the CLI, including Codex in its default sandbox. It speaks the stateless 2026-07-28 protocol and the earlier handshake.
+- A **welcome canvas** on first setup, which shows what to try.
+- `TOUCAN_TOKEN`, with `TOUCAN_URL`, for a server on another machine or outside a container.
 - The docs show how toucan works: **See it work**, screenshots of real runs and real agent turns, and **Explore**, real canvases you can click through with no server. `scripts/build-docs.mjs` makes them.
+
+### Changed
+
+- **Canvases live in your data directory** (`~/.local/share/toucan/canvases` on Linux, `~/Library/Application Support/toucan/canvases` on macOS), not in the checkout, so upgrades leave them alone. A checkout that already holds canvases keeps using them.
+- **Headless mode is on for a server toucan starts**, and uses the Chrome, Chromium, Edge or Brave already on the machine rather than requiring a download. A server you run yourself still opts in.
+- `tldraw` and `@tldraw/sync-core` are pinned to one version, since a release ships the built app and the server separately. What only the app's build needs moved to `devDependencies`.
 
 ### Fixed
 
+- Stopping a server saves what's still in memory, rather than losing edits from the last second.
+- Two commands starting a server at once always end up sharing one token, and a port already in use gets a plain message rather than a stack trace.
+- `toucan draw` accepts common spellings of a flow (`key`, `label`, `source`, `target`), and says what's wrong with one it can't draw.
+- `toucan screenshot` no longer writes into an install directory; outside a checkout it writes to a temporary directory and prints the path.
 - A flowchart with a loop back no longer reads backward: the way in stays first.
 - What an import adds lands below what it connects to, not off to the side, and the chat agent is told to connect its proposals.
 - Air out uses a short opening sentence as the box's name, rather than cutting the text mid-sentence.

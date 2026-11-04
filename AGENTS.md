@@ -6,11 +6,15 @@ before you change, keep edits small, and never wipe their work.
 
 ## CLI
 
+In the chat panel you run it as `node bin/toucan.mjs` from the install directory. Anywhere else it's `toucan`.
+
 ```
+node bin/toucan.mjs init [NAME] [--title T] [--template ID] [--engine E] [--open]   # find or make the canvas for the project you're in; later commands there use it
+node bin/toucan.mjs open [NAME]                            # open it in the person's browser, signed in
 node bin/toucan.mjs --canvas NAME summary [--within KEY]   # JSON of shapes (key, type, bounds, text, from/to)
 node bin/toucan.mjs --canvas NAME exec -e 'CODE'           # run JS in the editor; `return` a JSON value
 node bin/toucan.mjs --canvas NAME exec FILE.js             # same, from a file (use for anything > 1 line); --label names it in the history
-node bin/toucan.mjs --canvas NAME screenshot [OUT.png]     # look at it (default .toucan/NAME.png, <=1800px)
+node bin/toucan.mjs --canvas NAME screenshot [OUT.png]     # look at it (prints where it wrote; <=1800px)
 node bin/toucan.mjs --canvas NAME script list|put NAME FILE|rm NAME   # persistent canvas scripts
 node bin/toucan.mjs canvases                               # every canvas: title, description, shapes, open tabs
 node bin/toucan.mjs new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--canvas-format F]   # make a canvas
@@ -32,7 +36,9 @@ node bin/toucan.mjs --canvas NAME draw FILE|- [--update] [--move] [--label T]   
 node bin/toucan.mjs --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes   # comment threads
 ```
 
-There can be many canvases, each on one engine (tldraw or Excalidraw); name one with `--canvas` or `TOUCAN_CANVAS`. In the chat
+There can be many canvases, each on one engine (tldraw or Excalidraw); name one with `--canvas` or `TOUCAN_CANVAS`, or be inside a project
+that `init` has linked to one. From a terminal agent, start with `toucan init --open` and tell the person what you're drawing. `init` adds
+nothing to the repository; to keep a diagram there, write it out with `graph`. The server starts itself when a command needs it. In the chat
 panel, work on the canvas the chat belongs to unless the user names another. Never archive a canvas unless asked.
 
 Any other command `X` runs an extension, `toucan-X`, from PATH. A deployment can add its own agent notes as `AGENTS.md`
@@ -46,11 +52,11 @@ runs in headless mode.
 
 ## Headless mode
 
-If the server was started with `--headless`, `exec`, `summary`, `screenshot` and `import` still work
-when nobody has the canvas open: the server opens it in headless Chromium (the first call takes a
-second or two) and closes it when idle. A person's tab is always used first. `toucan canvases` shows
+A server started by toucan has this on; one a person runs themselves has it only if started with `--headless`. Then `exec`, `summary`, `screenshot` and `import` still work
+when nobody has the canvas open: the server opens it in headless Chromium, using the browser already on the machine (the first call takes a
+second or two), and closes it when idle. A person's tab is always used first. `toucan canvases` shows
 `open` (people's tabs) and `headless` (whether the server's page is up). Without headless mode, those
-commands fail with "no browser tab has canvas … open"; ask the person to open the link from
+commands fail with "no browser tab has canvas … open"; open it with `toucan open NAME`, or ask the person to open the link from
 `toucan url --canvas NAME`.
 
 Nobody watches a headless edit land, so each one goes on the canvas's trail, and the next person to
