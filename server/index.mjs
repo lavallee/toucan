@@ -71,6 +71,7 @@ const unlanded = new Map() // canvas -> { sentAt, changes } of its last run that
 const pending = new Map() // exec id -> {resolve, reject, timer, acked}
 let execSeq = 0
 const ACK_MS = 2500
+const HEADLESS_ACK_MS = 30000 // a page the server just opened is still loading, and on a slow machine that takes a while; a person's silent tab gets skipped quickly
 const headless = createHeadless({ enabled: !!(args.headless ?? /^(1|true|yes)$/i.test(process.env.TOUCAN_HEADLESS ?? '')), port: PORT, token: TOKEN })
 
 function exec(canvas, code, timeoutMs = 30000, label) {
@@ -91,7 +92,7 @@ function exec(canvas, code, timeoutMs = 30000, label) {
 			p.timer = setTimeout(() => {
 				pending.delete(id)
 				p.acked ? p.reject(new Error('exec timed out')) : (ws.headless && headless.touch(canvas, false), next())
-			}, ACK_MS)
+			}, ws.headless ? HEADLESS_ACK_MS : ACK_MS)
 			p.extend = () => {
 				clearTimeout(p.timer)
 				p.timer = setTimeout(() => (pending.delete(id), p.reject(new Error('exec timed out'))), timeoutMs)
