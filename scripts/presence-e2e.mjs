@@ -45,7 +45,8 @@ const LINGER = 8000
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const plan = join(data, 'plan.mmd')
-writeFileSync(plan, 'flowchart LR\n  web[Web app] --> sign_in[Sign-in]\n  web --> login_page[Login page]\n  web --> bookings[Bookings]\n')
+// In a frame: tldraw frames are opaque, so the overlay has to draw in front of them (check the --shots).
+writeFileSync(plan, 'flowchart LR\n  subgraph app[Django app]\n    sign_in[Sign-in]\n    login_page[Login page]\n    bookings[Bookings]\n  end\n  web[Web app] --> sign_in\n  web --> login_page\n  web --> bookings\n')
 const plan2 = join(data, 'plan2.mmd')
 writeFileSync(plan2, 'flowchart LR\n  web[Web app] --> sign_in[Sign-in]\n  web --> bookings[Bookings]\n  bookings --> db[Postgres]\n')
 

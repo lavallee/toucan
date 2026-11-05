@@ -31,7 +31,7 @@ const clean = getAppearance().lettering === 'clean'
 const assetUrls = clean ? { fonts: { tldraw_draw: geist, tldraw_draw_bold: geist, tldraw_draw_italic: geistItalic, tldraw_draw_italic_bold: geistItalic } } : undefined
 if (clean) DefaultDashStyle.setDefaultValue('solid')
 
-/** Halos on shapes an agent just changed, and the cursors of agents at work, drawn in page space on the canvas. */
+/** Halos on shapes an agent just changed, and the cursors of agents at work, drawn in front of the canvas. */
 function AgentPulses() {
 	const editor = useEditor()
 	const pulses = usePulses()
@@ -60,15 +60,19 @@ function AgentPulses() {
 			}),
 		[editor, pulses],
 	)
-	const zoom = useValue('zoom', () => editor.getZoomLevel(), [editor])
+	const { x, y, z } = useValue('camera', () => editor.getCamera(), [editor])
+	if (!groups.length && !cursors.length) return null
+	// In front of the canvas, so frames and filled shapes can't hide them; page space via the camera.
 	return (
-		<>
-			{groups.map(({ p, boxes, lines }) => <PulseBoxes key={p.key} pulse={p} boxes={boxes} lines={lines} scale={zoom} />)}
-			{cursors.map(({ a, box }) => <AgentCursor key={a.name} agent={a} box={box} scale={zoom} />)}
-		</>
+		<div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 2 }}>
+			<div style={{ position: 'absolute', left: 0, top: 0, transformOrigin: '0 0', transform: `scale(${z}) translate(${x}px, ${y}px)` }}>
+				{groups.map(({ p, boxes, lines }) => <PulseBoxes key={p.key} pulse={p} boxes={boxes} lines={lines} scale={z} />)}
+				{cursors.map(({ a, box }) => <AgentCursor key={a.name} agent={a} box={box} scale={z} />)}
+			</div>
+		</div>
 	)
 }
-const components: TLComponents = { OnTheCanvas: AgentPulses }
+const components: TLComponents = { InFrontOfTheCanvas: AgentPulses }
 
 /** A saved version, read-only: its own little store, stepped through without touching the live canvas. */
 function VersionPreview({ data }: { data: any }) {

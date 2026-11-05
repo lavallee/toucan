@@ -213,8 +213,9 @@ export function makeExcalidrawHelpers(api, ex) {
 
 	/** Make elements (ids or keys) glow for a moment in this tab, as agent edits do in every tab; the agent's cursor moves there. */
 	function pulse(idsOrKeys, via) {
-		const want = new Set([idsOrKeys].flat())
-		glow(shapes().filter((e) => want.has(e.id) || want.has(keyOf(e))).map((e) => e.id), via)
+		// In the order given (what a run added comes first), so the agent's cursor goes to the right one.
+		const els = shapes(), byKey = new Map(els.map((e) => [keyOf(e), e.id])), ids = new Set(els.map((e) => e.id))
+		glow([idsOrKeys].flat().map((k) => (ids.has(k) ? k : byKey.get(k))).filter(Boolean), via)
 	}
 
 	/**
