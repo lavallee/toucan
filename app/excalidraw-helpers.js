@@ -211,10 +211,10 @@ export function makeExcalidrawHelpers(api, ex) {
 		return btoa(s)
 	}
 
-	/** Make elements (ids or keys) glow for a moment in this tab, as agent edits do in every tab. */
-	function pulse(idsOrKeys) {
+	/** Make elements (ids or keys) glow for a moment in this tab, as agent edits do in every tab; the agent's cursor moves there. */
+	function pulse(idsOrKeys, via) {
 		const want = new Set([idsOrKeys].flat())
-		glow(shapes().filter((e) => want.has(e.id) || want.has(keyOf(e))).map((e) => e.id))
+		glow(shapes().filter((e) => want.has(e.id) || want.has(keyOf(e))).map((e) => e.id), via)
 	}
 
 	/**

@@ -24,6 +24,14 @@ with a history stopping point, so one Cmd-Z in the tab that ran it undoes the wh
 row are two steps. (Before, back-to-back runs merged into one undo step.) tldraw's undo is per tab, so
 other tabs can't undo it. On Excalidraw each `updateScene` call is an undo step, and an import makes one.
 
+The agent is visible while it works, not only once its edits land. The CLI sends each call with the
+agent's name (`--agent`, `TOUCAN_AGENT`) and a few words on what it does; the server tells every tab on the
+canvas when a call starts and ends, and when a chat or comment-thread turn starts and ends. Tabs show a status
+pill and a ring round the canvas while any call or turn runs, and for eight seconds after, so an agent
+thinking between calls doesn't flicker. The agent's cursor sits on the first shape its last edit added
+or changed. `toucan say TEXT --at KEYS` goes through the server to every tab without touching the
+document: the line replaces the call's description, and the cursor moves to those shapes.
+
 The cost is that `exec` needs a tab open on the canvas, unless the server runs in headless mode (below).
 Reads that don't, such as `graph`, use the server's copy, which can trail a tab's edit by a moment.
 

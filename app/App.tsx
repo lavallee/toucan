@@ -7,7 +7,7 @@ import { makeHelpers } from './helpers.js'
 import { wsUrl, headless } from './net'
 import { connectRelay, keepThumbnail, applySeed } from './relay'
 import { CanvasFrame } from './CanvasFrame'
-import { PulseBoxes, usePulses } from './pulses'
+import { AgentCursor, PulseBoxes, useAgents, usePulses } from './pulses'
 import { ProposalBar } from './ProposalBar'
 import { ThreadsLayer } from './Threads'
 import { DetailsCard } from './Details'
@@ -31,10 +31,23 @@ const clean = getAppearance().lettering === 'clean'
 const assetUrls = clean ? { fonts: { tldraw_draw: geist, tldraw_draw_bold: geist, tldraw_draw_italic: geistItalic, tldraw_draw_italic_bold: geistItalic } } : undefined
 if (clean) DefaultDashStyle.setDefaultValue('solid')
 
-/** Halos on shapes an agent just changed, drawn in page space on the canvas. */
+/** Halos on shapes an agent just changed, and the cursors of agents at work, drawn in page space on the canvas. */
 function AgentPulses() {
 	const editor = useEditor()
 	const pulses = usePulses()
+	const agents = useAgents()
+	const cursors = useValue(
+		'agent cursors',
+		() =>
+			agents.map((a) => {
+				// The first box it names or adds; an arrow only if it touched nothing else.
+				const shapes = a.target.map((id: any) => editor.getShape(id)).filter(Boolean)
+				const s = shapes.find((s) => s!.type !== 'arrow') ?? shapes[0]
+				const b = s && editor.getShapePageBounds(s)
+				return { a, box: b ? { x: b.x, y: b.y, w: b.w, h: b.h } : null }
+			}),
+		[editor, agents],
+	)
 	const groups = useValue(
 		'agent pulses',
 		() =>
@@ -48,7 +61,12 @@ function AgentPulses() {
 		[editor, pulses],
 	)
 	const zoom = useValue('zoom', () => editor.getZoomLevel(), [editor])
-	return groups.map(({ p, boxes, lines }) => <PulseBoxes key={p.key} pulse={p} boxes={boxes} lines={lines} scale={zoom} />)
+	return (
+		<>
+			{groups.map(({ p, boxes, lines }) => <PulseBoxes key={p.key} pulse={p} boxes={boxes} lines={lines} scale={zoom} />)}
+			{cursors.map(({ a, box }) => <AgentCursor key={a.name} agent={a} box={box} scale={zoom} />)}
+		</>
+	)
 }
 const components: TLComponents = { OnTheCanvas: AgentPulses }
 

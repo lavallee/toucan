@@ -42,8 +42,10 @@ Put any file you write, research or a helper script, only in \`${data}/${canvas}
 Leave closing the thread to people, unless they ask you to close it (\`threads close ${id}\`).`
 
 export class CodexChat {
-	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null, onThread = () => {} }) {
-		this.onThread = onThread // (canvas, id, event): what's happening in a comment thread's own conversation
+	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null, onThread = () => {}, onTurn = () => {} }) {
+		this.onThread = onThread
+		// (canvas, conversation key, active): a turn started or ended, so the canvas can show Codex at work.
+		this.onTurn = onTurn // (canvas, id, event): what's happening in a comment thread's own conversation
 		this.engineOf = engineOf
 		this.brief = brief // (canvas) => the canvas brief for a message
 		this.direct = direct // (canvas, text) => a reply, if this message needed no agent
@@ -90,6 +92,7 @@ export class CodexChat {
 	emit(canvas, event, keep = true) {
 		// A key like "name#3" is comment thread 3's conversation; a canvas name can't contain a #.
 		const [name, thread] = canvas.split('#')
+		if (event.type === 'turn') this.onTurn(name, canvas, event.status === 'inProgress')
 		if (thread) return this.onThread(name, Number(thread), event)
 		if (keep) {
 			const h = this.history.get(canvas) ?? []
@@ -102,7 +105,7 @@ export class CodexChat {
 	// ---- JSON-RPC over stdio -------------------------------------------------
 	start() {
 		if (this.proc) return this.ready
-		this.proc = spawn('codex', ['app-server'], { cwd: this.root, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env } })
+		this.proc = spawn('codex', ['app-server'], { cwd: this.root, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, TOUCAN_AGENT: 'Codex' } })
 		this.proc.stderr.on('data', (d) => process.stderr.write(`[codex] ${d}`))
 		// No codex here: the canvas still works, and the panel says why the chat doesn't.
 		this.proc.on('error', (e) => {

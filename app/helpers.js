@@ -583,9 +583,9 @@ export function makeHelpers(editor) {
 		return btoa(s)
 	}
 
-	/** Make shapes (ids or keys) glow for a moment in this tab, as agent edits do in every tab. */
-	function pulse(idsOrKeys) {
-		glow([idsOrKeys].flat().map((k) => (String(k).startsWith('shape:') ? k : idFor(k))))
+	/** Make shapes (ids or keys) glow for a moment in this tab, as agent edits do in every tab; the agent's cursor moves there. */
+	function pulse(idsOrKeys, via) {
+		glow([idsOrKeys].flat().map((k) => (String(k).startsWith('shape:') ? k : idFor(k))), via)
 	}
 
 	/**

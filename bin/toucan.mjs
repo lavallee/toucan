@@ -43,6 +43,9 @@
 //     files                       where this canvas keeps what agents write for it, and what's there
 //     routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
 //                                 chores banked once and run on any canvas (no --canvas needed to list, show, save or rm)
+//     say TEXT [--at KEY,KEY]     tell people what you're about to do; --at moves your cursor to those shapes
+//
+//   --agent NAME (or TOUCAN_AGENT) names you on the canvas: the status pill, your cursor, the glow's tag.
 //
 //   Any other command runs `toucan-<command>` from PATH with the same arguments and
 //   TOUCAN_CANVAS set, so extensions live in their own repos (see README, "Extending").
@@ -70,7 +73,8 @@ const flag = (name, fallback) => {
 }
 const named = flag('canvas', process.env.TOUCAN_CANVAS || undefined)
 const server = flag('server', process.env.TOUCAN_URL || undefined)
-for (const [name, value] of [['canvas', named], ['server', server]]) if (value === true) die(`--${name} needs a value`)
+const agent = flag('agent', process.env.TOUCAN_AGENT || undefined)
+for (const [name, value] of [['canvas', named], ['server', server], ['agent', agent]]) if (value === true) die(`--${name} needs a value`)
 // Inside a project with a canvas, that's the canvas. Not something anyone typed, so `url` can tell the difference.
 let here
 try {
@@ -87,7 +91,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -100,7 +104,7 @@ if (cmd && !BUILTIN.includes(cmd) && !LOCAL.includes(cmd)) {
 } else if (BUILTIN.includes(cmd)) {
 	try {
 		if (!server) await control.ensure()
-		client = connect({ canvas, server })
+		client = connect({ canvas, server, agent })
 	} catch (e) {
 		die(e.message)
 	}
@@ -187,7 +191,7 @@ switch (cmd) {
 		break
 	case 'summary': {
 		const within = flag('within')
-		print(await exec(`return toucan.summary(${JSON.stringify({ within: within || undefined })})`))
+		print(await exec(`return toucan.summary(${JSON.stringify({ within: within || undefined })})`, undefined, undefined, 'reading the canvas'))
 		break
 	}
 	case 'exec': {
@@ -196,14 +200,14 @@ switch (cmd) {
 		const i = args.findIndex((a) => a === '-e' || a === '--eval')
 		const src = i >= 0 ? args[i + 1] : args[0] === '-' || !args[0] ? readFileSync(0, 'utf8') : readFileSync(args[0], 'utf8')
 		if (src === undefined) die('usage: exec -e CODE | FILE | - [--label TEXT]')
-		print(await exec(src, 120000, typeof label === 'string' ? label : undefined))
+		print(await exec(src, 120000, typeof label === 'string' ? label : undefined, typeof label === 'string' ? label : 'editing the canvas'))
 		break
 	}
 	case 'screenshot': {
 		const keys = flag('keys')
 		const max = Number(flag('max', 1800))
 		const out = positional()[0] ?? join(screenshotDir(), `${canvas}.png`)
-		const b64 = await exec(`return toucan.screenshot(${JSON.stringify({ keys: keys ? String(keys).split(',') : null, max })})`)
+		const b64 = await exec(`return toucan.screenshot(${JSON.stringify({ keys: keys ? String(keys).split(',') : null, max })})`, undefined, undefined, 'looking at the canvas')
 		if (!b64) die('canvas is empty')
 		writeFileSync(out, Buffer.from(b64, 'base64'))
 		print(out)
@@ -254,27 +258,35 @@ switch (cmd) {
 		const opts = { move: !!flag('move'), prune: !!flag('prune'), propose: !!flag('propose') }
 		const named = flag('label')
 		const label = typeof named === 'string' ? named : ['import', file === '-' ? 'from stdin' : basename(file), opts.move && '--move', opts.prune && '--prune', opts.propose && '--propose'].filter(Boolean).join(' ')
-		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify(opts)})`, 120000, label))
+		print(await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify(opts)})`, 120000, label, typeof named === 'string' ? named : `${opts.propose ? 'proposing' : 'importing'} ${file === '-' ? 'a graph' : basename(file)}`))
 		break
 	}
 	case 'proposals': {
 		const [, sub, ...keys] = argv
-		if (!sub) print(await exec('return toucan.proposals()'))
-		else if (sub === 'accept' || sub === 'reject') print(await exec(`return toucan.${sub}(...${JSON.stringify(keys)})`))
+		if (!sub) print(await exec('return toucan.proposals()', undefined, undefined, 'reading the proposals'))
+		else if (sub === 'accept' || sub === 'reject') print(await exec(`return toucan.${sub}(...${JSON.stringify(keys)})`, undefined, undefined, `${sub === 'accept' ? 'accepting' : 'rejecting'} proposals`))
 		else die('usage: proposals [accept|reject [KEY...]]   (no keys: all of them)')
 		break
 	}
 	case 'selection':
-		print(await exec('return toucan.selection()'))
+		print(await exec('return toucan.selection()', undefined, undefined, 'looking at your selection'))
 		break
 	case 'notes': {
 		const all = argv.includes('--all') && (argv.splice(argv.indexOf('--all'), 1), true)
 		const reply = flag('reply')
 		const [, sub, key] = argv
 		const tldrawOnly = `if (toucan.engine !== 'tldraw') throw new Error('notes are a tldraw convention; this canvas runs ' + toucan.engine)\n`
-		if (sub === 'resolve' && key && typeof reply === 'string') print(await exec(`${tldrawOnly}return toucan.resolveNote(${JSON.stringify(key)}, ${JSON.stringify(reply)})`))
-		else if (!sub) print(await exec(`${tldrawOnly}return toucan.notes(${JSON.stringify({ all })})`))
+		if (sub === 'resolve' && key && typeof reply === 'string') print(await exec(`${tldrawOnly}return toucan.resolveNote(${JSON.stringify(key)}, ${JSON.stringify(reply)})`, undefined, undefined, 'answering a note'))
+		else if (!sub) print(await exec(`${tldrawOnly}return toucan.notes(${JSON.stringify({ all })})`, undefined, undefined, 'reading the notes'))
 		else die('usage: notes [--all] | notes resolve KEY --reply TEXT')
+		break
+	}
+	case 'say': {
+		const at = flag('at')
+		const text = positional().join(' ')
+		if (!text && typeof at !== 'string') die('usage: say TEXT [--at KEY,KEY]')
+		const r = await call(cpath('/say'), { method: 'POST', body: JSON.stringify({ agent, text, keys: typeof at === 'string' ? at.split(',') : [] }) })
+		if (!r.tabs) console.error('toucan: nobody has this canvas open, so nobody saw that')
 		break
 	}
 	case 'archive':
@@ -315,9 +327,9 @@ switch (cmd) {
 		const spec = JSON.parse(readFileSync(file === '-' ? 0 : file, 'utf8'))
 		const tg = await layOut(spec).catch((e) => die(e.message))
 		// A new drawing goes beside what's there, and never over it. --update means this is a new version of what's there.
-		const placed = update ? { prefix: null } : placeBeside(tg, await exec('const g = toucan.graph(); return { keys: [...g.nodes, ...g.groups].map((n) => n.key), boxes: [...g.nodes, ...g.groups].map((n) => n.box).filter(Boolean) }'))
+		const placed = update ? { prefix: null } : placeBeside(tg, await exec('const g = toucan.graph(); return { keys: [...g.nodes, ...g.groups].map((n) => n.key), boxes: [...g.nodes, ...g.groups].map((n) => n.box).filter(Boolean) }', undefined, undefined, 'finding room to draw'))
 		const named = typeof label === 'string' ? label : `draw ${spec.title ?? spec.kind}`
-		const out = await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move })})`, 120000, named)
+		const out = await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move })})`, 120000, named, typeof label === 'string' ? label : `drawing ${spec.title ?? spec.kind}`)
 		print(placed.prefix ? { ...out, keysPrefixed: placed.prefix } : out)
 		break
 	}

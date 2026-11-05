@@ -22,6 +22,7 @@ toucan --canvas NAME selection                  # what people selected: resolve 
 toucan --canvas NAME notes [--all]              # sticky notes left for you, with what they're on/near
 toucan --canvas NAME notes resolve KEY --reply TEXT   # mark one handled (green + reply)
 toucan --canvas NAME log [--since 2h]           # edits agents made while nobody had it open
+toucan --canvas NAME say TEXT [--at KEY,KEY]   # tell people what you're about to do; point at shapes
 toucan --canvas NAME versions [save LABEL | show N [--format F] | restore N]   # the canvas's history
 toucan routine list | show NAME | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME   # the routine bank
 toucan --canvas NAME routine run NAME [--args JSON]   # run a banked routine: one undo step, on the history
@@ -119,8 +120,18 @@ selected proposals, or all of them. Leave that choice to them: run `toucan propo
 
 - **New shapes come into view.** On tldraw, a run that adds shapes outside the view fits the canvas in view,
   unless the person is mid-gesture, so don't call `zoomTo` just to show your work.
-- **Your edits glow.** Shapes an exec adds or changes get a short violet halo, tagged "agent", in every
-  open tab (both engines). `toucan.pulse(keys)` does the same on demand, to point at something.
+- **People see you at work.** While you're busy on a canvas, every open tab shows it: a pill above the
+  canvas with your name and what your current call does ("reading the notes", "importing plan.mmd", or
+  your `--label`), a soft ring round the canvas, and your cursor on the shape you last changed or pointed
+  at. It stays up for a few seconds after your last call, so the gaps while you think don't flicker. Name
+  yourself with `--agent NAME` or `TOUCAN_AGENT` (the chat panel's agent is "Codex"; the default is "agent").
+- **Say what you're about to do.** Before a change of several steps, or one that touches something the
+  person is working on, run `toucan say "Merging Sign-in and Login page" --at sign_in,login_page`. Your
+  line replaces the call's description in the pill and on your cursor, and `--at` moves your cursor to
+  those shapes (and glows them), so the person sees the plan before the edit lands. Keep it short and
+  concrete, one line per step, not a running commentary.
+- **Your edits glow.** Shapes an exec adds or changes get a short violet halo, tagged with your name, in
+  every open tab (both engines). `toucan.pulse(keys)` does the same on demand, to point at something.
 - **One exec is one undo step** on tldraw: one Cmd-Z in the tab that ran it undoes the whole run, and it
   never merges with the person's previous action. So make one exec per idea (a feature, a fix) rather
   than many tiny ones, or one large one that mixes unrelated changes. Undo is per tab: another tab's

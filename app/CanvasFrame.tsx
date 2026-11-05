@@ -13,6 +13,7 @@ import { api, canvasName, headless } from './net'
 import { chooseFormat, loadFormats, useFormat, useFormatList } from './formats'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { AwayNotice } from './AwayNotice'
+import { AgentStatus } from './pulses'
 
 document.title = `${canvasName} · toucan`
 
@@ -102,6 +103,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 			<div ref={stage} className={cn('relative flex min-h-0 flex-1', chat.dock === 'left' ? 'flex-row-reverse' : chat.dock === 'bottom' ? 'flex-col' : 'flex-row')}>
 				<div className="relative min-h-0 min-w-0 flex-1">
 					{children}
+					{!headless && <AgentStatus top={engine === 'excalidraw' ? 84 : 52} />}
 					{historyOpen && !threadsOpen && <History Preview={preview} onClose={() => setHistoryOpen(false)} />}
 					{threadsOpen && <ThreadsPanel />}
 				</div>

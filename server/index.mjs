@@ -74,7 +74,18 @@ const ACK_MS = 2500
 const HEADLESS_ACK_MS = 30000 // a page the server just opened is still loading, and on a slow machine that takes a while; a person's silent tab gets skipped quickly
 const headless = createHeadless({ enabled: !!(args.headless ?? /^(1|true|yes)$/i.test(process.env.TOUCAN_HEADLESS ?? '')), port: PORT, token: TOKEN })
 
-function exec(canvas, code, timeoutMs = 30000, label) {
+/**
+ * Agent at work: tell every tab on the canvas that an agent's call started and when it ends, so people
+ * see who is busy and on what (app/pulses.tsx). `who` = { agent, doing } from the CLI.
+ */
+function exec(canvas, code, timeoutMs, label, who = {}) {
+	const agent = String(who.agent || 'agent').slice(0, 40)
+	broadcast(canvas, { type: 'agent-activity', phase: 'start', agent, doing: String(who.doing || label || 'working on the canvas').slice(0, 120) })
+	const end = () => broadcast(canvas, { type: 'agent-activity', phase: 'end', agent })
+	return run(canvas, code, timeoutMs, label, agent).finally(end)
+}
+
+function run(canvas, code, timeoutMs = 30000, label, agent) {
 	// So the person's edits and the agent's stay separate steps, note the unsaved state before a run; it's
 	// saved only if the run turns out to change something, so reads (summary, notes) cost nothing.
 	// (A previous run still reaching the server's copy waits its turn: quick runs share one version.)
@@ -87,7 +98,7 @@ function exec(canvas, code, timeoutMs = 30000, label) {
 		const send = (ws, next) => {
 			const id = ++execSeq
 			const done = (f) => (v) => (ws.headless && headless.touch(canvas, false), f(v))
-			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now() }
+			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now(), agent }
 			if (ws.headless) headless.touch(canvas, true)
 			p.timer = setTimeout(() => {
 				pending.delete(id)
@@ -98,7 +109,7 @@ function exec(canvas, code, timeoutMs = 30000, label) {
 				p.timer = setTimeout(() => (pending.delete(id), p.reject(new Error('exec timed out'))), timeoutMs)
 			}
 			pending.set(id, p)
-			ws.send(JSON.stringify({ type: 'exec', id, code }))
+			ws.send(JSON.stringify({ type: 'exec', id, code, agent }))
 		}
 		const tryTab = (i) => {
 			if (i < candidates.length) return send(candidates[i], () => tryTab(i + 1))
@@ -503,9 +514,9 @@ const server = createServer(async (req, res) => {
 			return existsSync(docPath(canvas)) ? json(res, 200, JSON.parse(readFileSync(docPath(canvas), 'utf8'))) : json(res, 404, { error: 'empty' })
 		}
 		if (sub === 'exec' && req.method === 'POST') {
-			const { code, timeoutMs, label } = JSON.parse(await body(req))
+			const { code, timeoutMs, label, agent, doing } = JSON.parse(await body(req))
 			try {
-				return json(res, 200, { ok: true, result: await exec(canvas, code, timeoutMs, label) })
+				return json(res, 200, { ok: true, result: await exec(canvas, code, timeoutMs, label, { agent, doing }) })
 			} catch (e) {
 				return json(res, 200, { ok: false, error: String(e.message ?? e) })
 			}
@@ -597,6 +608,12 @@ const server = createServer(async (req, res) => {
 		}
 		if (sub === 'files' && req.method === 'GET' && !canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` }) // it hands out a place to write
 		if (sub === 'files' && req.method === 'GET') return json(res, 200, { dir: filesDir(canvas), files: listFiles(canvas) })
+		// The agent says what it is about to do, and optionally points at shapes (keys): every tab shows it.
+		if (sub === 'say' && req.method === 'POST') {
+			const { agent, text = '', keys = [] } = JSON.parse(await body(req))
+			broadcast(canvas, { type: 'agent-say', agent: String(agent || 'agent').slice(0, 40), text: String(text).slice(0, 200), keys: [keys].flat().map(String).slice(0, 50) })
+			return json(res, 200, { ok: true, tabs: (tabs.get(canvas) ?? []).filter((w) => !w.headless).length })
+		}
 		if (sub === 'log' && req.method === 'GET') return json(res, 200, { entries: trail.read(CANVASES, canvas, url.searchParams.get('since')) })
 		if (sub === 'scripts' && req.method === 'GET') return json(res, 200, { scripts: listScripts(canvas) })
 		if (sub === 'scripts' && NAME.test(subName ?? '')) {
@@ -629,7 +646,7 @@ function serveStatic(url, res) {
 
 // ---- websockets --------------------------------------------------------------
 const wss = new WebSocketServer({ noServer: true })
-const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, onThread: onThreadEvent })
+const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, onThread: onThreadEvent, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: 'Codex', key, active }) })
 
 // ---- comment threads (server/threads.mjs) -------------------------------------------------------
 // What's in the file is the conversation. What an agent is doing right now isn't worth saving: it lives here, and
@@ -789,7 +806,7 @@ function onCanvas(ws, canvas, nonce) {
 			msg.ok ? p.resolve(msg.result) : p.reject(new Error(msg.error))
 			// Agent presence: the other tabs glow what this run added or changed (app/pulses.tsx).
 			const ids = msg.changes ? [...(msg.changes.added ?? []), ...(msg.changes.updated ?? [])].map((c) => c.id) : []
-			if (ids.length) for (const other of tabs.get(canvas) ?? []) if (other !== ws && other.readyState === 1) other.send(JSON.stringify({ type: 'agent-edit', ids }))
+			if (ids.length) for (const other of tabs.get(canvas) ?? []) if (other !== ws && other.readyState === 1) other.send(JSON.stringify({ type: 'agent-edit', ids, agent: p.agent }))
 		}
 	})
 	ws.on('close', () => tabs.set(canvas, (tabs.get(canvas) ?? []).filter((w) => w !== ws)))

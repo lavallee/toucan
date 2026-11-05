@@ -189,7 +189,12 @@ toucan [--canvas NAME] <command>
   draw FILE|- [--update]      lay out a diagram described as data onto the canvas
   files                       where this canvas keeps what agents write for it
   routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
+  say TEXT [--at KEY,KEY]     tell people what you're about to do; --at points your cursor at those shapes
 ```
+
+`--agent NAME` (or `TOUCAN_AGENT`) names the agent on the canvas. While an agent works, every open tab shows a
+status pill with its name and what it is doing, a ring round the canvas, and its cursor on the shape it last
+changed or pointed at.
 
 The canvas comes from `--canvas`, then `TOUCAN_CANVAS`, then the project you're in (`toucan init`). `exec`, `summary`,
 `screenshot` and `import` run in a browser tab on the canvas; with no tab they use headless mode, or fail if it's off.

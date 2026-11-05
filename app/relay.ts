@@ -6,6 +6,7 @@
 import { wsUrl, canvasName, token, headless } from './net'
 import { getThreads, setThreads } from './threads-store'
 import { setFormatId } from './formats'
+import { activity, say, turn, setRunning } from './pulses'
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 
@@ -44,15 +45,24 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 			if (msg.type === 'threads') return setThreads(msg.threads)
 			if (msg.type === 'format') return setFormatId(msg.format)
 			// Another tab ran agent code: glow what it added or changed (agent presence, app/pulses.tsx).
-			if (msg.type === 'agent-edit') return scope.toucan.pulse?.(msg.ids)
+			if (msg.type === 'agent-edit') return scope.toucan.pulse?.(msg.ids, msg.agent)
+			// An agent is at work on this canvas: what it is doing, saying, and pointing at.
+			if (msg.type === 'agent-activity') return activity(msg)
+			if (msg.type === 'agent-turn') return turn(msg)
+			if (msg.type === 'agent-say') {
+				say({ agent: msg.agent, text: msg.text })
+				return msg.keys?.length && scope.toucan.pulse?.(msg.keys, msg.agent)
+			}
 			if (msg.type !== 'exec') return
 			sock.send(JSON.stringify({ type: 'ack', id: msg.id }))
 			// One undo step per run, and a record of which shapes it added, changed or removed.
 			const done = scope.toucan._track?.()
+			setRunning(msg.agent)
 			const finish = () => {
 				const changes = done?.()
 				const ids = changes ? [...changes.added, ...changes.updated].map((c: any) => c.id) : []
-				if (ids.length) scope.toucan.pulse?.(ids)
+				if (ids.length) scope.toucan.pulse?.(ids, msg.agent)
+				setRunning()
 				// Don't move the canvas under someone reading or writing in a thread.
 				const { active, draft } = getThreads()
 				if (changes?.added.length && active === null && !draft) scope.toucan.reveal?.(changes.added.map((c: any) => c.id))
