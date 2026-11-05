@@ -359,7 +359,7 @@ switch (cmd) {
 		if (sub === 'list' || !sub) print((await call('/api/routines')).routines)
 		else if (sub === 'show' && name) print((await call(`/api/routines/${name}`)).code)
 		else if (sub === 'run' && name) {
-			const r = await call(cpath(`/routines/${name}/run`), { method: 'POST', body: JSON.stringify({ args: typeof args === 'string' ? JSON.parse(args) : undefined }) })
+			const r = await call(cpath(`/routines/${name}/run`), { method: 'POST', body: JSON.stringify({ args: typeof args === 'string' ? JSON.parse(args) : undefined, agent }) })
 			if (!r.ok) die(r.error)
 			print(r.result ?? 'done')
 		} else if (sub === 'save' && name && file) {

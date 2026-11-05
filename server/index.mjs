@@ -525,9 +525,10 @@ const server = createServer(async (req, res) => {
 			const routine = routines.get(subName)
 			if (!routine) return json(res, 404, { error: `no routine ${subName}` })
 			if (!routine.engines.includes(engineOf(canvas))) return json(res, 400, { error: `${routine.title} runs on ${routine.engines.join(', ')}; this canvas runs ${engineOf(canvas)}` })
-			const { args } = JSON.parse((await body(req)) || '{}')
+			// An agent running it names itself; from the Routines menu it's the person's own action, shown as "toucan".
+			const { args, agent } = JSON.parse((await body(req)) || '{}')
 			try {
-				return json(res, 200, { ok: true, result: await exec(canvas, routines.program(routine, args), 120000, `routine ${subName}`) })
+				return json(res, 200, { ok: true, result: await exec(canvas, routines.program(routine, args), 120000, `routine ${subName}`, { agent: agent || 'toucan', doing: `running ${routine.title}` }) })
 			} catch (e) {
 				return json(res, 200, { ok: false, error: String(e.message ?? e) })
 			}
@@ -734,7 +735,7 @@ async function chatBrief(canvas) {
 		return formatBrief(graphOf(canvas), null, openThreadLines(canvas), guideFor(canvas))
 	}
 	const asked = exec(canvas, `const s = toucan.summary({ limit: 0 }), sel = toucan.selection?.()
-return { page: toucan.engine === 'tldraw' ? editor.getCurrentPageId() : undefined, selected: s.selected ?? [], openNotes: s.openNotes, others: (sel?.others ?? []).map((o) => ({ user: o.user, shapes: o.shapes.map((x) => x.key) })) }`, 1000)
+return { page: toucan.engine === 'tldraw' ? editor.getCurrentPageId() : undefined, selected: s.selected ?? [], openNotes: s.openNotes, others: (sel?.others ?? []).map((o) => ({ user: o.user, shapes: o.shapes.map((x) => x.key) })) }`, 1000, undefined, { agent: 'Codex', doing: 'reading the canvas' })
 	const live = await Promise.race([asked, new Promise((r) => setTimeout(r, 800))]).catch(() => null)
 	// The brief describes the page the person is on, not just the first one.
 	const tg = graphOf(canvas, live?.page ? { page: live.page } : undefined)
@@ -750,10 +751,10 @@ async function chatDirect(canvas, text) {
 			const routine = routines.get(what.routine)
 			if (!routine) return null // not one of ours: perhaps the agent knows what was meant
 			if (!routine.engines.includes(engineOf(canvas))) return `${routine.title} doesn't run on ${engineOf(canvas)}.`
-			const result = await exec(canvas, routines.program(routine), 120000, `routine ${what.routine}`)
+			const result = await exec(canvas, routines.program(routine), 120000, `routine ${what.routine}`, { agent: 'toucan', doing: `running ${routine.title}` })
 			return `**${routine.title}:** ${result?.summary ?? 'done'}`
 		}
-		const r = await exec(canvas, `return await toucan.applyGraph(${JSON.stringify(what.graph)}, {})`, 120000, 'Mermaid from chat')
+		const r = await exec(canvas, `return await toucan.applyGraph(${JSON.stringify(what.graph)}, {})`, 120000, 'Mermaid from chat', { agent: 'toucan', doing: 'adding your Mermaid' })
 		return `Added ${r?.created ?? 0} and updated ${r?.updated ?? 0} on the canvas.`
 	} catch (e) {
 		return `Couldn't do that: ${e.message ?? e}`
