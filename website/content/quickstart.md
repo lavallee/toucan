@@ -108,5 +108,21 @@ The server listens on loopback by default. To reach it from other machines on a 
 TOUCAN_PUBLIC_HOST=myhost toucan start --host 0.0.0.0
 ```
 
+It answers to IP addresses, `localhost` and this machine's own name, including names under it like `myhost.local` or a
+Tailscale name like `myhost.example.ts.net`. Any other name gets a short refusal saying which setting lets it in, which also keeps
+a web page from reaching the server through a name of its own.
+
+### Under a name of your own
+
+If people reach toucan at a name you've given it, behind a reverse proxy or on your own DNS, tell it so:
+
+```sh
+TOUCAN_PUBLIC_URL=http://toucan.example toucan start --host 0.0.0.0
+```
+
+Links then use that address, so `toucan open` and `toucan url` sign people in where they'll browse. A browser keeps
+the sign-in for each address separately. To sign in from a browser `toucan open` can't reach, paste the link `toucan url`
+prints into the sign-in page. Add more names with `TOUCAN_HOSTS=toucan.example,.corp.example`.
+
 Over plain `http://`, tldraw runs in development mode. Behind HTTPS it needs a licence key; see
 [licences](extending.html#licences).

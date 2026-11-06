@@ -5,6 +5,16 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `TOUCAN_PUBLIC_URL` (`--public-url`): the address people reach the server at, such as a name behind a reverse proxy. Links, `toucan open` and `toucan url` use it, so signing in happens at the address people browse.
+- `TOUCAN_HOSTS` (`--allow-host`): more names the server answers to. `.example.com` covers every name under it.
+- The sign-in page takes a pasted sign-in link or token, checks it with the server, and keeps it for that address. You can now sign in from a browser `toucan open` can't reach.
+
+### Changed
+
+- The server answers only to IP addresses, `localhost`, its own machine's names, its public URL and `TOUCAN_HOSTS`. Any other `Host` header gets a 421 saying which setting lets it in. This closes DNS rebinding for a server bound to every interface. `TOUCAN_HOSTS=*` turns the check off.
+
 ## [0.10.0] — 2026-11-06
 
 Read what's behind a diagram without leaving it.

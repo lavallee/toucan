@@ -284,6 +284,8 @@ disagree with himself?". Every quotation was checked word for word against its s
 | `TOUCAN_HEADLESS_IDLE` | `120` | seconds a headless page stays open after its last exec |
 | `TOUCAN_HEADLESS_MAX` | `2` | headless pages open at once (the least recently used idle one makes room) |
 | `TOUCAN_PUBLIC_HOST` | `127.0.0.1`, or the hostname when bound to all interfaces | host used in printed links |
+| `--public-url` / `TOUCAN_PUBLIC_URL` | — | the address people reach the server at, like `http://toucan.example` behind a proxy; links, `toucan open` and `toucan url` use it, and the server answers to its name |
+| `--allow-host` / `TOUCAN_HOSTS` | — | more names the server answers to, comma-separated; `.example.com` allows every name under it, `*` turns the check off |
 | `TOUCAN_CANVAS` | — | default canvas for the CLI |
 | `TOUCAN_URL` | from `~/.config/toucan/server.json` | server the CLI talks to; it won't start one |
 | `TOUCAN_TOKEN` | from `~/.config/toucan/server.json` | with `TOUCAN_URL`: for a server on another machine or outside a container |
