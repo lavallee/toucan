@@ -48,6 +48,41 @@ After installing another agent, run `toucan agents install`. Add `--mcp` for MCP
 
 An agent with no connection can read the guide: `toucan guide`. It's also the [agent guide](agents.html) here.
 
+## Work with your own agent
+
+Point toucan at an agent you already have, and a canvas can be you and that agent working together: its chat panel and
+comment threads take on that agent's instructions and knowledge instead of toucan's general-purpose ones. All it needs is the
+folder the agent lives in, usually a repository with an `AGENTS.md` or `CLAUDE.md`:
+
+```sh
+toucan profiles add reviewer --workdir ~/Projects/reviewer    # starts from the folder's AGENTS.md or CLAUDE.md
+toucan --canvas plan meta --profile local/reviewer            # or pick it in the chat panel's header
+```
+
+From then on the chat panel on that canvas is that agent. It answers from what it knows, draws like any toucan agent, shows
+under its own name on the canvas, and picks up comment threads. Switch back with `--profile none`, or to another agent: each
+keeps its own conversation. To give it more to start from, name the files with `--context AGENTS.md,docs/strategy.md`, or
+edit the profile, a small JSON file in the data folder's `_profiles/`:
+
+```json
+{
+  "name": "Reviewer",
+  "description": "Reviews pull requests against our standards",
+  "workdir": "/home/me/Projects/reviewer",
+  "instructions": "Who the agent is and how it works, in a few lines.",
+  "context": ["AGENTS.md", "docs/standards.md"],
+  "skills": ["skills/review"],
+  "references": ["notes"]
+}
+```
+
+`context` is read at the start of each conversation; `skills` are `SKILL.md` files the agent opens when one applies;
+`references` are folders people can read in the [References](agents.html#references-what-people-read-beside-the-canvas) panel. Everything stays inside `workdir`, and nothing
+hidden is read. The agent writes only in the canvas's files folder, as toucan's own agent does.
+
+If your agents are listed somewhere already, a registry or a team directory, a short program can serve them all instead:
+see [profile sources](extending.html#profile-sources).
+
 ## The server
 
 You don't have to manage it: a command that needs a server starts one in the background, and `toucan stop` stops it.

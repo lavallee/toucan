@@ -124,6 +124,41 @@ codex plugin marketplace add lyra-forge/marketplace # Codex
 codex plugin add toucan@lyra-forge
 ```
 
+## Bring your own agent
+
+Point toucan at an agent you already have, and a canvas can be you and that agent working together: its chat panel and
+comment threads take on that agent's instructions and knowledge instead of toucan's general-purpose ones. All it needs is the
+folder the agent lives in, usually a repository with an `AGENTS.md` or `CLAUDE.md`:
+
+```sh
+toucan profiles add reviewer --workdir ~/Projects/reviewer    # starts from the folder's AGENTS.md or CLAUDE.md
+toucan --canvas plan meta --profile local/reviewer            # or pick it in the chat panel's header
+```
+
+From then on the chat panel on that canvas is that agent. It answers from what it knows, draws like any toucan agent, shows
+under its own name on the canvas, and picks up comment threads. Switch back with `--profile none`, or to another agent: each
+keeps its own conversation. To give it more to start from, name the files with `--context AGENTS.md,docs/strategy.md`, or
+edit the profile, a small JSON file in the data folder's `_profiles/`:
+
+```json
+{
+  "name": "Reviewer",
+  "description": "Reviews pull requests against our standards",
+  "workdir": "/home/me/Projects/reviewer",
+  "instructions": "Who the agent is and how it works, in a few lines.",
+  "context": ["AGENTS.md", "docs/standards.md"],
+  "skills": ["skills/review"],
+  "references": ["notes"]
+}
+```
+
+`context` is read at the start of each conversation; `skills` are `SKILL.md` files the agent opens when one applies;
+`references` are folders people can read in the [References](https://lavallee.github.io/toucan/agents.html#references-what-people-read-beside-the-canvas) panel. Everything stays inside `workdir`, and nothing
+hidden is read. The agent writes only in the canvas's files folder, as toucan's own agent does.
+
+If your agents are listed somewhere already, a registry or a team directory, a short program can serve them all instead:
+see [profile sources](https://lavallee.github.io/toucan/extending.html#profile-sources).
+
 ## Install from source
 
 ```sh
@@ -211,6 +246,7 @@ toucan [--canvas NAME] <command>
   references                  what people can read beside the canvas: its files, its project's, links on it
   show REF|PATH|URL           open it for people in the References panel
   profiles                    named agents a canvas can work with (<data>/_profiles/, toucan-profiles-* on PATH)
+  profiles add ID --workdir DIR   make one from an agent's folder, starting from its AGENTS.md or CLAUDE.md
   meta --profile SOURCE/ID    work on --canvas with one: its briefing, knowledge and skills (none: toucan's own)
   profile                     the agent --canvas works with, and what it reads
 ```

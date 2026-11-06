@@ -21,7 +21,7 @@
 
 import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { accessSync, constants, existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
+import { accessSync, constants, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
@@ -242,6 +242,26 @@ export function profileInstructions(p) {
 	const missing = p.context.filter((c) => c.missing)
 	if (missing.length) parts.push(`These were meant to be in your starting context but weren't found: ${missing.map((c) => c.label).join(', ')}.`)
 	return parts.join('\n\n')
+}
+
+/** Doctrine files a profile made from a folder starts with, the first ones found: what most agents' repos already have. */
+export const STARTERS = ['AGENTS.md', 'CLAUDE.md', 'CHARTER.md', 'README.md']
+
+/**
+ * A local profile from a folder, for `toucan profiles add`: its name, and as starting context the instructions files the folder
+ * already has. Checked like any other before it's kept, and written to <data>/_profiles/ID.json.
+ */
+export function makeLocalProfile({ data, id, workdir, name, description, instructions, context }) {
+	if (!ID.test(String(id))) throw new ProfileError(`a profile id is letters, digits, - and _: ${id}`)
+	if (typeof workdir !== 'string' || !isAbsolute(workdir)) throw new ProfileError('workdir: the agent\'s folder, as an absolute path')
+	const files = Array.isArray(context) && context.length ? context : STARTERS.filter((f) => existsSync(join(workdir, f))).slice(0, 2)
+	const raw = { name: name || id[0].toUpperCase() + id.slice(1), ...(description && { description }), workdir, ...(instructions && { instructions }), context: files }
+	const checked = checkProfile({ ...raw, id }, `local/${id}`)
+	const file = join(data, '_profiles', `${id}.json`)
+	if (existsSync(file)) throw new ProfileError(`local/${id} already exists: edit ${file}, or choose another name`)
+	mkdirSync(join(data, '_profiles'), { recursive: true })
+	writeFileSync(file, JSON.stringify(raw, null, 2) + '\n')
+	return { ...checked, file }
 }
 
 /** Lookups for the server: sources found once a minute, profiles kept for a short while. */

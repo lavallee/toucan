@@ -47,6 +47,40 @@ await t.exec(`
 Key every shape you generate, and let existing shapes keep their position (`toucan.node` does this
 unless you pass `move: true`). A regenerated canvas then keeps whatever people rearranged or annotated.
 
+## Profile sources
+
+A profile source serves agent profiles from somewhere you already keep them: a registry of your agents, a team directory, a
+folder of agent repositories. It's any program on PATH named `toucan-profiles-NAME`, and its profiles are `NAME/ID`. toucan
+asks it two things and expects JSON on stdout:
+
+```sh
+toucan-profiles-acme list       # {"profiles": [{"id": "reviewer", "name": "Reviewer", "description": "…"}]}
+toucan-profiles-acme get ID     # one profile: name, workdir, instructions, context, skills, references (see the agent guide)
+```
+
+A failure is a non-zero exit with the reason on stderr, which toucan shows. A minimal source, here serving every folder in
+`~/agents` that has an `AGENTS.md`:
+
+```js
+#!/usr/bin/env node
+// toucan-profiles-mine: every agent folder in ~/agents
+import { existsSync, readdirSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+
+const root = join(homedir(), 'agents')
+const ids = readdirSync(root).filter((d) => existsSync(join(root, d, 'AGENTS.md')))
+const [cmd, id] = process.argv.slice(2)
+if (cmd === 'list') console.log(JSON.stringify({ profiles: ids.map((id) => ({ id, name: id })) }))
+else if (cmd === 'get' && ids.includes(id)) console.log(JSON.stringify({ name: id, workdir: join(root, id), context: ['AGENTS.md'] }))
+else (console.error(`no agent ${id}`), process.exit(1))
+```
+
+toucan checks whatever a source returns: context and shared folders must be inside `workdir` and not hidden, `workdir` can't
+be a whole disk or a home folder, and a profile grants no writing. It looks for sources only in absolute PATH folders outside
+toucan's own folder and its data that nobody else can write to, because it runs them outside any agent's sandbox. Sources
+are found again each minute, and a profile is kept for a minute, with the last good one kept if a source falters.
+
 ## Deployment notes for agents
 
 An `AGENTS.md` placed in the data directory is handed to the chat agent as extra instructions. Use it

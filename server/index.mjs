@@ -25,7 +25,7 @@ import { createRoutines } from './routines.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
 import * as refs from './references.mjs'
-import { createProfiles, profileInstructions, ProfileError } from './profiles.mjs'
+import { createProfiles, makeLocalProfile, profileInstructions, ProfileError } from './profiles.mjs'
 import { hostCheck, parsePublicUrl, refusal } from '../lib/hosts.mjs'
 import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
 import { layOut } from '../lib/layouts.mjs'
@@ -444,6 +444,14 @@ const server = createServer(async (req, res) => {
 		}
 		if (route === 'formats') return json(res, 200, { formats: formatList() })
 		if (route === 'profiles' && !canvas && req.method === 'GET') return json(res, 200, await profiles.list())
+		if (route === 'profiles' && !canvas && req.method === 'POST') {
+			try {
+				const p = makeLocalProfile({ data: CANVASES, ...JSON.parse(await body(req)) })
+				return json(res, 200, { ref: p.ref, name: p.name, file: p.file, workdir: p.workdir, context: p.context.map(({ text, ...c }) => c), problems: p.problems })
+			} catch (e) {
+				return json(res, e instanceof ProfileError ? 400 : 500, { error: String(e.message ?? e) })
+			}
+		}
 		if (route === 'templates' && canvas) {
 			const spec = templateById(canvas)
 			return spec ? json(res, 200, spec) : json(res, 404, { error: `no template ${canvas}` })
