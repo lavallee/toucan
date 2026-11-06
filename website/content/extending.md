@@ -60,6 +60,8 @@ to describe your house canvases and extension commands without forking toucan.
 | `--port` / `TOUCAN_PORT` | `8893` | |
 | `--data` / `TOUCAN_DATA` | your data directory ([where things live](quickstart.html#where-things-live)) | where canvases, scripts and previews live |
 | `TOUCAN_PUBLIC_HOST` | `127.0.0.1`, or the hostname when bound to all interfaces | host used in printed links |
+| `--public-url` / `TOUCAN_PUBLIC_URL` | — | the address people reach the server at, like `http://toucan.example` behind a proxy; links, `toucan open` and `toucan url` use it, and the server answers to its name |
+| `--allow-host` / `TOUCAN_HOSTS` | — | more names the server answers to, comma-separated; `.example.com` allows every name under it, `*` turns the check off |
 | `TOUCAN_CANVAS` | none | default canvas for the CLI |
 | `TOUCAN_URL` | from `~/.config/toucan/server.json` | server the CLI talks to; it won't start one |
 | `TOUCAN_TOKEN` | from `~/.config/toucan/server.json` | with `TOUCAN_URL`: for a server on another machine or outside a container |

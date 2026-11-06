@@ -25,6 +25,7 @@ import { createRoutines } from './routines.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
 import * as refs from './references.mjs'
+import { hostCheck, parsePublicUrl, refusal } from '../lib/hosts.mjs'
 import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
 import { layOut } from '../lib/layouts.mjs'
 import { templateById, templateList } from '../templates/index.mjs'
@@ -47,11 +48,15 @@ delete process.env.TOUCAN_MANAGED // nothing this server starts was started by t
 const NAME = /^[a-z0-9][a-z0-9-_]{0,63}$/i
 // The host printed in links: a loopback-bound server is only reachable as itself.
 const PUBLIC_HOST = process.env.TOUCAN_PUBLIC_HOST || (HOST === '0.0.0.0' || HOST === '::' ? hostname() : HOST)
+// Where people reach it, if not that: a name behind a proxy (lib/hosts.mjs). Links and sign-in use it.
+const PUBLIC_URL = parsePublicUrl(args['public-url'] ?? process.env.TOUCAN_PUBLIC_URL) ?? `http://${PUBLIC_HOST}:${PORT}`
+const HOSTS = String(args['allow-host'] ?? process.env.TOUCAN_HOSTS ?? '').split(',')
+const hostOk = hostCheck({ hosts: HOSTS, publicUrl: PUBLIC_URL, publicHost: PUBLIC_HOST, machine: hostname() })
 
 // ---- token -----------------------------------------------------------------
 /** Say where this server is, once it has the port: until then another server may own the address. */
 function advertise() {
-	writeConfig({ ...readJson(CONFIG), port: PORT, url: `http://127.0.0.1:${PORT}`, public: `http://${PUBLIC_HOST}:${PORT}`, pid: process.pid, managed: MANAGED, data: CANVASES })
+	writeConfig({ ...readJson(CONFIG), port: PORT, url: `http://127.0.0.1:${PORT}`, public: PUBLIC_URL, pid: process.pid, managed: MANAGED, data: CANVASES })
 }
 const TOKEN = ensureToken()
 const tokenOk = (t) => {
@@ -385,7 +390,7 @@ const routineRow = ({ code, ...r }) => r
 
 // ---- http ------------------------------------------------------------------
 const MIME = { '.html': 'text/html', '.ttf': 'font/ttf', '.woff': 'font/woff', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.json': 'application/json' }
-const publicUrl = (canvas) => `http://${PUBLIC_HOST}:${PORT}/${canvas ? `?canvas=${canvas}` : ''}`
+const publicUrl = (canvas) => `${PUBLIC_URL}/${canvas ? `?canvas=${canvas}` : ''}`
 
 async function rawBody(req, limit = 8 << 20) {
 	const chunks = []
@@ -404,6 +409,10 @@ const json = (res, status, data) => {
 
 const server = createServer(async (req, res) => {
 	const url = new URL(req.url, 'http://x')
+	if (!hostOk(req.headers.host)) {
+		res.writeHead(421, { 'content-type': 'text/plain; charset=utf-8', 'x-content-type-options': 'nosniff' })
+		return res.end(refusal(req.headers.host))
+	}
 	try {
 		if (!url.pathname.startsWith('/api/')) return serveStatic(url, res)
 		if (!authed(req, url)) return json(res, 401, { error: 'missing or bad token' })
@@ -803,6 +812,7 @@ async function chatDirect(canvas, text) {
 
 server.on('upgrade', (req, socket, head) => {
 	const url = new URL(req.url, 'http://x')
+	if (!hostOk(req.headers.host)) return socket.end(`HTTP/1.1 421 Misdirected Request\r\ncontent-type: text/plain\r\nconnection: close\r\n\r\n${refusal(req.headers.host)}`)
 	if (!authed(req, url)) return socket.destroy()
 	wss.handleUpgrade(req, socket, head, (ws) => {
 		wss.emit('connection', ws, req)
