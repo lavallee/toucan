@@ -5,6 +5,10 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-11-06
+
+Work with your own agent on a canvas.
+
 ### Added
 
 - **Profiles: work with a named agent on a canvas.** Bind a canvas to an agent profile (`toucan meta --profile SOURCE/ID`, or the picker in the chat header). Its chat and comment threads then become that agent: its briefing and starting context are loaded, its skills are listed, people see its name on the canvas, and the folders it shares appear in References as `agent/…`. Switching starts a new conversation and keeps each agent's earlier one.
