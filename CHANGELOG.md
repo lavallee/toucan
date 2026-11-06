@@ -5,6 +5,10 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-11-06
+
+Reach toucan at a name of your own.
+
 ### Added
 
 - `TOUCAN_PUBLIC_URL` (`--public-url`): the address people reach the server at, such as a name behind a reverse proxy. Links, `toucan open` and `toucan url` use it, so signing in happens at the address people browse.
