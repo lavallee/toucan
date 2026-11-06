@@ -111,7 +111,7 @@ else { console.error('no such agent: ' + id); process.exit(1) }
 	assert.deepEqual([made.ref, made.name, made.context.map((c) => c.label)], ['local/reviewer', 'Reviewer', ['AGENTS.md']], 'named from its id, starting from its AGENTS.md')
 	assert.ok(JSON.parse(readFileSync(join(data, '_profiles/reviewer.json'), 'utf8')).workdir === own)
 	await assert.rejects(cli('profiles', 'add', 'reviewer', '--workdir', own), /already exists/)
-	await assert.rejects(cli('profiles', 'add', 'everything', '--workdir', homedir()), /too broad/)
+	await assert.rejects(cli('profiles', 'add', 'everything', '--workdir', home), /too broad/, "the server's own home folder is too broad")
 	assert.equal(JSON.parse(await cli('--canvas', 'board', 'meta', '--profile', 'local/reviewer')).profile.name, 'Reviewer')
 	console.log('ok  profiles: `profiles add` makes one from a folder, and a canvas can work with it at once')
 } catch (e) {
