@@ -1,11 +1,37 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeftIcon, ArrowRightIcon, MessageSquarePlusIcon, XIcon } from 'lucide-react'
+import { ArrowLeftIcon, ArrowRightIcon, BookOpenIcon, MessageSquarePlusIcon, XIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getFormat, useFormat } from './formats'
 import { getThreads, openThread, update as updateThreads, useThreads } from './threads-store'
+import { hostOf, isWeb, nameOf, openReference } from './references'
 
 type Step = { key: string; text: string }
+
+// Web addresses and references in a box's details open in the References panel; a modifier key opens a new tab instead.
+const LINK = /(https?:\/\/[^\s<>"'`)\]]+[^\s<>"'`)\].,;:!?]|\b(?:files|project)\/[^\s<>"'`)\]]+[^\s<>"'`)\].,;:!?])/g
+function linked(text: string) {
+	return text.split(LINK).map((part, i) =>
+		i % 2 ? (
+			<a
+				key={i}
+				href={isWeb(part) ? part : '#'}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="text-primary underline underline-offset-2"
+				onClick={(e) => {
+					if (isWeb(part) && (e.metaKey || e.ctrlKey || e.shiftKey)) return
+					e.preventDefault()
+					openReference(part)
+				}}
+			>
+				{part}
+			</a>
+		) : (
+			part
+		),
+	)
+}
 const CARD_W = 320
 
 /**
@@ -49,9 +75,10 @@ export function DetailsCard({ toucan, subscribe }: { toucan: any; subscribe: (on
 	const steps: { next: Step[]; prev: Step[] } = key && format ? toucan.neighbours(key, format.walk) : { next: [], prev: [] }
 	const walkTo = (to: string) => toucan.walkTo(to)
 	const see: (Step & { label?: string })[] = key ? toucan.seeAlsoOf(key) : []
+	const refs: { ref: string; label?: string }[] = key ? (toucan.refsOf?.(key) ?? []) : []
 
 	const onThis = key ? threads.filter((t) => t.status === 'open' && t.anchor.shapes?.includes(key)) : []
-	const nothingToShow = !detail && !format && !see.length
+	const nothingToShow = !detail && !format && !see.length && !refs.length
 	const showing = !!key && key !== dismissed && !nothingToShow && active === null && !draft && !placing
 
 	// ← and → walk the canvas while a card is open, instead of nudging the shape.
@@ -88,7 +115,20 @@ export function DetailsCard({ toucan, subscribe }: { toucan: any; subscribe: (on
 						<XIcon />
 					</Button>
 				</header>
-				{detail && <p className="min-h-0 flex-1 overflow-y-auto px-3 pb-2 break-words whitespace-pre-line text-muted-foreground">{detail}</p>}
+				{detail && <p className="min-h-0 flex-1 overflow-y-auto px-3 pb-2 break-words whitespace-pre-line text-muted-foreground">{linked(detail)}</p>}
+				{refs.length > 0 && (
+					<ul aria-label="References" className="border-t px-1.5 py-1 text-xs">
+						{refs.map((r) => (
+							<li key={r.ref}>
+								<button type="button" title={r.ref} className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left outline-none hover:bg-muted focus-visible:bg-muted" onClick={() => openReference(r.ref)}>
+									<BookOpenIcon className="size-3 shrink-0 text-muted-foreground" />
+									<span className="truncate font-medium">{r.label || nameOf(r.ref)}</span>
+									{r.label && <span className="truncate text-muted-foreground">{isWeb(r.ref) ? hostOf(r.ref) : r.ref}</span>}
+								</button>
+							</li>
+						))}
+					</ul>
+				)}
 				{onThis.length > 0 && (
 					<ul className="border-t px-1.5 py-1 text-xs">
 						{onThis.map((t) => (

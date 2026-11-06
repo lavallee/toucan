@@ -57,9 +57,25 @@ function MarkdownCode({ node, className, children, ...props }: React.ComponentPr
 
 const components = { code: MarkdownCode }
 
-export function Markdown({ children, streaming, className }: { children: string; streaming?: boolean; className?: string }) {
+// `components` replaces how some elements render (the References panel's links and images); `urlTransform` keeps
+// links it resolves itself, which Streamdown would otherwise drop as unsafe.
+export function Markdown({
+	children,
+	streaming,
+	className,
+	components: more,
+	urlTransform,
+	rehypePlugins,
+}: {
+	children: string
+	streaming?: boolean
+	className?: string
+	components?: Record<string, React.ComponentType<any>>
+	urlTransform?: (url: string) => string
+	rehypePlugins?: any[]
+}) {
 	return (
-		<Streamdown className={cn('text-sm leading-relaxed', className)} controls={false} components={components} isAnimating={streaming}>
+		<Streamdown className={cn('text-sm leading-relaxed', className)} controls={false} components={more ? { ...components, ...more } : components} isAnimating={streaming} {...(urlTransform && { urlTransform })} {...(rehypePlugins && { rehypePlugins })}>
 			{children}
 		</Streamdown>
 	)

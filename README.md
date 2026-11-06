@@ -208,6 +208,8 @@ toucan [--canvas NAME] <command>
   files                       where this canvas keeps what agents write for it
   routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
   say TEXT [--at KEY,KEY]     tell people what you're about to do; --at points your cursor at those shapes
+  references                  what people can read beside the canvas: its files, its project's, links on it
+  show REF|PATH|URL           open it for people in the References panel
 ```
 
 `--agent NAME` (or `TOUCAN_AGENT`) names the agent on the canvas. While an agent works, every open tab shows a

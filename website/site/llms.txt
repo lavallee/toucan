@@ -35,6 +35,7 @@ Tell the person what you're drawing. Commands run anywhere inside the project us
 - Comments are threads: `toucan threads`, and `toucan threads reply N "..."`.
 - Asked for an opinion, answer as a proposal (`import --propose`): it's drawn dashed, and the person accepts or rejects it.
 - `toucan say "what you're about to do" --at KEY` shows them, on the canvas, what you're working on.
+- Write research and notes for the canvas in its files folder (`toucan files`), then `toucan show files/NAME` opens it beside the canvas. `toucan show project/README.md` or `toucan show https://…` does the same for the project's files and the web.
 
 ## More
 

@@ -11,6 +11,7 @@ import { fromTldraw, layoutMissing } from '../lib/tg.mjs'
 import { pulse as glow } from './pulses'
 import { measureDiagram, scoreDiagram } from './measure'
 import { makeTidy } from './tidy'
+import { refsOfShape } from './reference-links'
 
 const elk = new ELK()
 
@@ -242,6 +243,14 @@ export function makeHelpers(editor) {
 			const detail = get(key)?.meta?.detail
 			return typeof detail === 'string' ? detail : ''
 		},
+		/** What a box points at to read: its meta.refs, and web addresses in its details and text. */
+		refsOf: (key) => {
+			const s = get(key)
+			return s ? refsOfShape({ meta: s.meta, text: text(s), link: s.props?.url }) : []
+		},
+		/** Everything on the page that points at something to read, with the shape it's on. */
+		referencesOnCanvas: () =>
+			editor.getCurrentPageShapes().flatMap((s) => refsOfShape({ meta: s.meta, text: text(s), link: s.props?.url }).map((r) => ({ ...r, key: keyOf(s), on: (text(s) || '').split('\n')[0].slice(0, 80) }))),
 		seeAlsoOf: (key) => {
 			const see = get(key)?.meta?.see
 			return (Array.isArray(see) ? see : []).filter((s) => typeof s?.key === 'string' && get(s.key)).map((s) => ({ key: s.key, ...(typeof s.label === 'string' && { label: s.label }), text: text(get(s.key)) || s.key }))
