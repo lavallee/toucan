@@ -58,9 +58,11 @@ export function projectsOf(canvas, links = readJson(PROJECTS)) {
 }
 
 /** The folders a canvas's references can come from, by the name a reference starts with. */
-export function rootsOf(canvas, { filesDir, links } = {}) {
+export function rootsOf(canvas, { filesDir, links, agent = [] } = {}) {
 	const roots = [{ id: 'files', label: "This canvas's files", dir: filesDir(canvas) }]
 	projectsOf(canvas, links).forEach((dir, i) => roots.push({ id: i ? `project-${i + 1}` : 'project', label: basename(dir), dir }))
+	// The folders a canvas's agent profile shares (server/profiles.mjs): its notebook, say.
+	agent.forEach((r, i) => roots.push({ id: i ? `agent-${i + 1}` : 'agent', label: r.label, dir: r.dir }))
 	return roots
 }
 

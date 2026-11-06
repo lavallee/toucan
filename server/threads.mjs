@@ -74,10 +74,10 @@ export const reply = (dir, canvas, id, { author, text }) =>
  * The thread's own agent finishing a turn. It may have been closed meanwhile, by a person or at their request, and
  * this doesn't undo that. Its own words count as seen by its conversation, if it had seen everything before them.
  */
-export const agentAnswered = (dir, canvas, id, text) =>
+export const agentAnswered = (dir, canvas, id, text, name) =>
 	change(dir, canvas, id, (t) => {
 		const upToDate = (t.seen ?? 0) === t.messages.length
-		t.messages.push(message({ kind: 'agent' }, text))
+		t.messages.push(message({ kind: 'agent', ...(name && { name }) }, text))
 		if (upToDate) t.seen = t.messages.length
 	})
 

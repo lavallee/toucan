@@ -9,7 +9,7 @@ import { hostOf, isWeb, nameOf, openReference } from './references-store'
 type Step = { key: string; text: string }
 
 // Web addresses and references in a box's details open in the References panel; a modifier key opens a new tab instead.
-const LINK = /(https?:\/\/[^\s<>"'`)\]]+[^\s<>"'`)\].,;:!?]|\b(?:files|project)\/[^\s<>"'`)\]]+[^\s<>"'`)\].,;:!?])/g
+const LINK = /(https?:\/\/[^\s<>"'`)\]]+[^\s<>"'`)\].,;:!?]|\b(?:files|project|agent)\/[^\s<>"'`)\]]+[^\s<>"'`)\].,;:!?])/g
 function linked(text: string) {
 	return text.split(LINK).map((part, i) =>
 		i % 2 ? (

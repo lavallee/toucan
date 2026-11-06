@@ -57,6 +57,7 @@ import {
 } from '@/lib/codex-messages'
 import { cn } from '@/lib/utils'
 import { api, wsUrl } from './net'
+import { AgentPicker, type Agent } from './AgentPicker'
 
 type Send = (msg: Record<string, unknown>) => void
 
@@ -68,6 +69,7 @@ export function Chat({ toolbar, onHeaderPointerDown, engine, draftRequest, onDra
 	const [online, setOnline] = React.useState(false)
 	const [pending, setPending] = React.useState(false) // sent, turn not started yet
 	const [draft, setDraft] = React.useState('')
+	const [agent, setAgent] = React.useState<Agent>(null) // toucan's own agent, or the named one this canvas works with
 	const ws = React.useRef<WebSocket | null>(null)
 	const formRef = React.useRef<HTMLFormElement>(null)
 	const inputRef = React.useRef<HTMLTextAreaElement>(null)
@@ -106,6 +108,7 @@ export function Chat({ toolbar, onHeaderPointerDown, engine, draftRequest, onDra
 			}
 			sock.onmessage = (ev) => {
 				const e: ServerEvent = JSON.parse(ev.data)
+				if ((e as any).type === 'agent') return setAgent((e as any).agent)
 				transcript.current.apply(e)
 				if (e.type === 'turn' || e.type === 'error' || e.type === 'history' || e.type === 'direct-done') setPending(false)
 				// Deltas arrive many times a second; render at most once per frame.
@@ -146,7 +149,9 @@ export function Chat({ toolbar, onHeaderPointerDown, engine, draftRequest, onDra
 			onPaste={(e) => e.stopPropagation()}
 		>
 			<header className="flex items-center gap-2 border-b py-1.5 pr-1.5 pl-4 md:cursor-grab md:active:cursor-grabbing" onPointerDown={onHeaderPointerDown}>
-				<span className="font-medium">Codex</span>
+				<span onPointerDown={(e) => e.stopPropagation()}>
+					<AgentPicker agent={agent} disabled={!online} />
+				</span>
 				<span
 					className={cn('size-2 rounded-full', online ? 'bg-emerald-500' : 'bg-destructive')}
 					role="status"
@@ -169,9 +174,9 @@ export function Chat({ toolbar, onHeaderPointerDown, engine, draftRequest, onDra
 								<EmptyMedia variant="icon">
 									<MessageCircleDashedIcon />
 								</EmptyMedia>
-								<EmptyTitle>What should change on the canvas?</EmptyTitle>
+								<EmptyTitle>{agent && 'name' in agent ? `Working with ${agent.name}` : 'What should change on the canvas?'}</EmptyTitle>
 								<EmptyDescription>
-									“Group these into a frame”, “colour anything unowned red”, “add a button that re-runs the layout”.
+									{agent && 'name' in agent ? `${agent.name} has their own knowledge loaded, and can draw on the canvas like any agent.` : (<>“Group these into a frame”, “colour anything unowned red”, “add a button that re-runs the layout”.</>)}
 								</EmptyDescription>
 							</EmptyHeader>
 						</Empty>
@@ -246,7 +251,7 @@ export function Chat({ toolbar, onHeaderPointerDown, engine, draftRequest, onDra
 							value={draft}
 							onChange={(event) => setDraft(event.target.value)}
 							ref={inputRef}
-							placeholder={!online ? 'Reconnecting…' : busy ? 'Add to what it’s doing…' : 'Tell it what to put on the canvas, or / for a routine'}
+							placeholder={!online ? 'Reconnecting…' : busy ? 'Add to what it’s doing…' : agent && 'name' in agent ? `Ask ${agent.name}, or / for a routine` : 'Tell it what to put on the canvas, or / for a routine'}
 							aria-label="Message"
 							className="max-h-48 min-h-14 p-3"
 							onKeyDown={(event) => {

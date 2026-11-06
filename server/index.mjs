@@ -25,6 +25,7 @@ import { createRoutines } from './routines.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
 import * as refs from './references.mjs'
+import { createProfiles, profileInstructions, ProfileError } from './profiles.mjs'
 import { hostCheck, parsePublicUrl, refusal } from '../lib/hosts.mjs'
 import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
 import { layOut } from '../lib/layouts.mjs'
@@ -85,7 +86,7 @@ const headless = createHeadless({ enabled: !!(args.headless ?? /^(1|true|yes)$/i
  * see who is busy and on what (app/pulses.tsx). `who` = { agent, doing } from the CLI.
  */
 function exec(canvas, code, timeoutMs, label, who = {}) {
-	const agent = String(who.agent || 'agent').slice(0, 40)
+	const agent = speaker(canvas, who.agent)
 	broadcast(canvas, { type: 'agent-activity', phase: 'start', agent, doing: String(who.doing || label || 'working on the canvas').slice(0, 120) })
 	const end = () => broadcast(canvas, { type: 'agent-activity', phase: 'end', agent })
 	return run(canvas, code, timeoutMs, label, agent).finally(end)
@@ -268,6 +269,7 @@ function describe(n, idx) {
 		scripts: listScripts(n).map((s) => s.name),
 		openThreads: threads.list(CANVASES, n).filter((t) => t.status === 'open').length,
 		format: idx[n]?.format ?? null,
+		profile: idx[n]?.profile ? { ref: idx[n].profile, name: bound.get(n)?.name ?? idx[n].profile.split('/')[1] } : null,
 		open: (tabs.get(n) ?? []).filter((w) => !w.headless).length,
 		headless: headless.has(n),
 		thumb: existsSync(thumbPath(n)) ? Math.round(mtime(thumbPath(n))) : null,
@@ -441,6 +443,7 @@ const server = createServer(async (req, res) => {
 			return json(res, 201, describe(name, idx))
 		}
 		if (route === 'formats') return json(res, 200, { formats: formatList() })
+		if (route === 'profiles' && !canvas && req.method === 'GET') return json(res, 200, await profiles.list())
 		if (route === 'templates' && canvas) {
 			const spec = templateById(canvas)
 			return spec ? json(res, 200, spec) : json(res, 404, { error: `no template ${canvas}` })
@@ -488,6 +491,24 @@ const server = createServer(async (req, res) => {
 				if (patch.format) cur.format = patch.format
 				else delete cur.format
 				broadcast(canvas, { type: 'format', format: cur.format ?? null })
+			}
+			if (typeof patch.profile === 'string') {
+				// Checked before it's kept: a profile that can't load would leave the canvas with no agent at all.
+				let loaded = null
+				if (patch.profile) {
+					try {
+						loaded = await profiles.get(patch.profile, { fresh: true })
+					} catch (e) {
+						return json(res, 400, { error: String(e.message ?? e) })
+					}
+				}
+				if ((cur.profile ?? '') !== patch.profile) {
+					if (loaded) (cur.profile = loaded.ref), bound.set(canvas, loaded)
+					else delete cur.profile, bound.delete(canvas)
+					idx[canvas] = cur
+					writeIndex(idx)
+					await chat.rebind(canvas, loaded)
+				}
 			}
 			idx[canvas] = cur
 			writeIndex(idx)
@@ -619,9 +640,22 @@ const server = createServer(async (req, res) => {
 		}
 		if (sub === 'files' && req.method === 'GET' && !canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` }) // it hands out a place to write
 		if (sub === 'files' && req.method === 'GET') return json(res, 200, { dir: filesDir(canvas), files: listFiles(canvas) })
+		// The agent this canvas works with (server/profiles.mjs).
+		if (sub === 'profile' && req.method === 'GET') {
+			const ref = readIndex()[canvas]?.profile
+			if (!ref) return json(res, 200, { profile: null })
+			try {
+				const p = await profileOf(canvas)
+				return json(res, 200, { profile: { ...profileCard(p), workdir: p.workdir, context: p.context.map(({ text, ...c }) => c), skills: p.skills, references: p.references, problems: p.problems } })
+			} catch (e) {
+				return json(res, 200, { profile: { ref, error: String(e.message ?? e) } })
+			}
+		}
+		// A canvas's agent may share folders in References, and this server may not have loaded it since it started.
+		if ((sub === 'references' || sub === 'reference' || sub === 'show') && readIndex()[canvas]?.profile && !bound.has(canvas)) await profileOf(canvas).catch(() => null)
 		// References: files and pages people read beside the canvas (server/references.mjs).
 		if ((sub === 'references' || sub === 'reference' || sub === 'show') && !canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` })
-		if (sub === 'references' && req.method === 'GET') return json(res, 200, await refs.listRefsCached(canvas, refs.rootsOf(canvas, { filesDir })))
+		if (sub === 'references' && req.method === 'GET') return json(res, 200, await refs.listRefsCached(canvas, refs.rootsOf(canvas, { filesDir, agent: bound.get(canvas)?.references ?? [] })))
 		if (sub === 'reference' && req.method === 'GET') {
 			const ref = url.searchParams.get('ref') ?? ''
 			if (/^https?:\/\//i.test(ref)) {
@@ -635,14 +669,14 @@ const server = createServer(async (req, res) => {
 				res.writeHead(200, { 'content-type': page.type, 'content-length': page.body.length, 'x-toucan-kind': kind, 'x-toucan-url': encodeURI(page.url), 'x-toucan-status': String(page.status), ...refs.SAFE_HEADERS })
 				return res.end(page.body)
 			}
-			const file = refs.resolveRef(ref, refs.rootsOf(canvas, { filesDir }))
+			const file = refs.resolveRef(ref, refs.rootsOf(canvas, { filesDir, agent: bound.get(canvas)?.references ?? [] }))
 			if (file.error) return json(res, 404, { error: file.error })
 			return refs.sendFile(res, file)
 		}
 		// An agent puts something in front of people: every open tab opens it in the References panel.
 		if (sub === 'show' && req.method === 'POST') {
 			const { ref: asked = '', path, agent } = JSON.parse(await body(req))
-			const roots = refs.rootsOf(canvas, { filesDir })
+			const roots = refs.rootsOf(canvas, { filesDir, agent: bound.get(canvas)?.references ?? [] })
 			const ref = path ? refs.refForPath(path, roots) : String(asked)
 			if (!ref) return json(res, 400, { error: `${path} isn't in this canvas's files or its project, so people can't open it. Put it in ${filesDir(canvas)}.` })
 			if (!/^https?:\/\//i.test(ref)) {
@@ -655,13 +689,13 @@ const server = createServer(async (req, res) => {
 					return json(res, 400, { error: `not a web address: ${ref}` })
 				}
 			}
-			broadcast(canvas, { type: 'show', ref, agent: String(agent || 'agent').slice(0, 40) })
+			broadcast(canvas, { type: 'show', ref, agent: speaker(canvas, agent) })
 			return json(res, 200, { ok: true, ref, tabs: (tabs.get(canvas) ?? []).filter((w) => !w.headless).length })
 		}
 		// The agent says what it is about to do, and optionally points at shapes (keys): every tab shows it.
 		if (sub === 'say' && req.method === 'POST') {
 			const { agent, text = '', keys = [] } = JSON.parse(await body(req))
-			broadcast(canvas, { type: 'agent-say', agent: String(agent || 'agent').slice(0, 40), text: String(text).slice(0, 200), keys: [keys].flat().map(String).slice(0, 50) })
+			broadcast(canvas, { type: 'agent-say', agent: speaker(canvas, agent), text: String(text).slice(0, 200), keys: [keys].flat().map(String).slice(0, 50) })
 			return json(res, 200, { ok: true, tabs: (tabs.get(canvas) ?? []).filter((w) => !w.headless).length })
 		}
 		if (sub === 'log' && req.method === 'GET') return json(res, 200, { entries: trail.read(CANVASES, canvas, url.searchParams.get('since')) })
@@ -696,7 +730,36 @@ function serveStatic(url, res) {
 
 // ---- websockets --------------------------------------------------------------
 const wss = new WebSocketServer({ noServer: true })
-const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, onThread: onThreadEvent, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: 'Codex', key, active }) })
+// ---- agent profiles (server/profiles.mjs) ------------------------------------------------------------
+// A canvas can be bound to a named agent: its chat and comment threads become that agent, with its knowledge loaded.
+const profiles = createProfiles({ data: CANVASES, exclude: [ROOT] })
+const bound = new Map() // canvas -> its loaded profile, kept so names and folders are at hand without a lookup
+async function profileOf(canvas) {
+	const ref = readIndex()[canvas]?.profile
+	if (!ref) return bound.delete(canvas), null
+	const p = await profiles.get(ref)
+	bound.set(canvas, p)
+	return p
+}
+// A turn ends under the name it started with, even if the canvas has changed agents since: otherwise its pill never goes out.
+const turnNames = new Map()
+function turnAgent(canvas, key, active) {
+	if (active) return turnNames.set(key, speaker(canvas, 'Codex')).get(key)
+	const name = turnNames.get(key) ?? speaker(canvas, 'Codex')
+	turnNames.delete(key)
+	return name
+}
+const profileCard = (p) => ({ ref: p.ref, name: p.name, description: p.description, ...(p.color && { color: p.color }) })
+// The chat panel's agent runs the CLI as "Codex"; on a canvas bound to a profile, people see that agent's name instead.
+// Commands it runs inside Codex's sandbox may not carry that name at all, so a nameless call while one of its turns is
+// running on the canvas is taken to be it.
+function speaker(canvas, agent) {
+	const name = String(agent || 'agent').slice(0, 40)
+	const chatting = [...chat.turns.keys()].some((k) => k === canvas || k.startsWith(`${canvas}#`))
+	if (name !== 'Codex' && !(name === 'agent' && chatting)) return name
+	return bound.get(canvas)?.name ?? 'Codex'
+}
+const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, profileOf, profileInstructions, onThread: onThreadEvent, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: turnAgent(canvas, key, active), key, active }) })
 
 // ---- comment threads (server/threads.mjs) -------------------------------------------------------
 // What's in the file is the conversation. What an agent is doing right now isn't worth saving: it lives here, and
@@ -716,7 +779,7 @@ const announceThreads = (canvas) => broadcast(canvas, { type: 'threads', threads
 
 function onThreadEvent(canvas, id, e) {
 	const work = workOf(canvas, id)
-	const say = (text) => threads.agentAnswered(CANVASES, canvas, id, text)
+	const say = (text) => threads.agentAnswered(CANVASES, canvas, id, text, bound.get(canvas)?.name)
 	try {
 		if (e.type === 'item' && e.phase === 'completed' && e.item?.type === 'agentMessage' && e.item.text) work.last = e.item.text
 		else if (e.type === 'approval') (work.approvals ??= []).push({ key: e.key, command: Array.isArray(e.command) ? e.command.join(' ') : e.command, reason: e.reason, kind: e.kind })

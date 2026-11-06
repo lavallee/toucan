@@ -39,7 +39,7 @@
     "start": "node server/index.mjs",
     "typecheck": "tsc --noEmit -p .",
     "css:preflight": "node scripts/scope-preflight.mjs",
-    "test": "node scripts/tg-check.mjs && node scripts/trail-check.mjs && node scripts/versions-check.mjs && node scripts/routines-check.mjs && node scripts/brief-check.mjs && node scripts/threads-check.mjs && node scripts/layouts-check.mjs && node scripts/references-check.mjs && node scripts/hosts-check.mjs && node scripts/onboard-check.mjs",
+    "test": "node scripts/tg-check.mjs && node scripts/trail-check.mjs && node scripts/versions-check.mjs && node scripts/routines-check.mjs && node scripts/brief-check.mjs && node scripts/threads-check.mjs && node scripts/layouts-check.mjs && node scripts/references-check.mjs && node scripts/hosts-check.mjs && node scripts/profiles-check.mjs && node scripts/onboard-check.mjs",
     "test:headless": "node scripts/headless-e2e.mjs",
     "test:diagrams": "node scripts/eval-diagrams.mjs",
     "eval:agent": "node scripts/eval-agent.mjs",

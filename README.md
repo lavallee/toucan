@@ -210,6 +210,9 @@ toucan [--canvas NAME] <command>
   say TEXT [--at KEY,KEY]     tell people what you're about to do; --at points your cursor at those shapes
   references                  what people can read beside the canvas: its files, its project's, links on it
   show REF|PATH|URL           open it for people in the References panel
+  profiles                    named agents a canvas can work with (<data>/_profiles/, toucan-profiles-* on PATH)
+  meta --profile SOURCE/ID    work on --canvas with one: its briefing, knowledge and skills (none: toucan's own)
+  profile                     the agent --canvas works with, and what it reads
 ```
 
 `--agent NAME` (or `TOUCAN_AGENT`) names the agent on the canvas. While an agent works, every open tab shows a
