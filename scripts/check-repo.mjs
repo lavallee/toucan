@@ -12,6 +12,21 @@ assert.match(readFileSync('CHANGELOG.md', 'utf8'), new RegExp(`## \\[${version.r
 assert.match(readFileSync('skills/toucan/SKILL.md', 'utf8'), /^---\nname: toucan\ndescription: .+\n---\n/, 'SKILL.md frontmatter')
 console.log(`ok  version ${version} in package.json, both plugin manifests and CHANGELOG`)
 
+// Two tracked files whose names differ only in case are one file on macOS and Windows, and the build there breaks.
+{
+	const tracked = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean)
+	const seen = new Map()
+	const clashes = tracked.flatMap((f) => {
+		const k = f.toLowerCase()
+		const other = seen.get(k)
+		seen.set(k, f)
+		return other ? [`${other} and ${f}`] : []
+	})
+	assert.deepEqual(clashes, [], 'files whose names differ only in case')
+	// An import that only matches a file's name in another case works on Linux and nowhere else.
+	console.log('ok  no file names that differ only in case')
+}
+
 // Hostnames, services and projects from the deployment toucan grew up in. Keep it current.
 // (George Long, the translator of the Meditations demo, is a different George.)
 const INTERNAL = /\b(lisbon|dash-main|lyra\.internal|harbor|george(?! long\b)|delphi|weaver|estate|tailnet)\b|\b100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+\b/i

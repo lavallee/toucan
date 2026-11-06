@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getFormat, useFormat } from './formats'
 import { getThreads, openThread, update as updateThreads, useThreads } from './threads-store'
-import { hostOf, isWeb, nameOf, openReference } from './references'
+import { hostOf, isWeb, nameOf, openReference } from './references-store'
 
 type Step = { key: string; text: string }
 

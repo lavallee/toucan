@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { AwayNotice } from './AwayNotice'
 import { AgentStatus } from './pulses'
 import { ReferencesButton, ReferencesPanel } from './References'
-import { close as closeReferences, openReference, toggle as toggleReferences, useReferences } from './references'
+import { close as closeReferences, openReference, toggle as toggleReferences, useReferences } from './references-store'
 
 document.title = `${canvasName} · toucan`
 

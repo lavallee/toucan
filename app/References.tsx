@@ -7,7 +7,7 @@ import { Markdown } from '@/components/markdown'
 import { defaultRehypePlugins } from 'streamdown'
 import { useHighlightedCode } from '@/hooks/use-highlighted-code'
 import { cn } from '@/lib/utils'
-import { back, close, isWeb, listReferences, loadReference, nameOf, openReference, resolveLink, setWide, showList, useReferences, type Listing, type Loaded } from './references'
+import { back, close, isWeb, listReferences, loadReference, nameOf, openReference, resolveLink, setWide, showList, useReferences, type Listing, type Loaded } from './references-store'
 
 /**
  * Reference material beside the canvas: the canvas's own files, its project's, and pages on the web, read without leaving.
