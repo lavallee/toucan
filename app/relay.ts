@@ -6,6 +6,7 @@
 import { wsUrl, canvasName, token, headless } from './net'
 import { getThreads, setThreads } from './threads-store'
 import { setFormatId } from './formats'
+import { openReference } from './references'
 import { activity, say, turn, setRunning } from './pulses'
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
@@ -44,6 +45,8 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 			if (msg.type === 'scripts') return runScripts(msg.scripts)
 			if (msg.type === 'threads') return setThreads(msg.threads)
 			if (msg.type === 'format') return setFormatId(msg.format)
+			// An agent ran `toucan show`: open it for people to read.
+			if (msg.type === 'show') return headless ? undefined : openReference(msg.ref, msg.agent)
 			// Another tab ran agent code: glow what it added or changed (agent presence, app/pulses.tsx).
 			if (msg.type === 'agent-edit') return scope.toucan.pulse?.(msg.ids, msg.agent)
 			// An agent is at work on this canvas: what it is doing, saying, and pointing at.

@@ -14,6 +14,8 @@ import { chooseFormat, loadFormats, useFormat, useFormatList } from './formats'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { AwayNotice } from './AwayNotice'
 import { AgentStatus } from './pulses'
+import { ReferencesButton, ReferencesPanel } from './References'
+import { close as closeReferences, openReference, toggle as toggleReferences, useReferences } from './references'
 
 document.title = `${canvasName} · toucan`
 
@@ -26,6 +28,32 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 	const formats = useFormatList()
 	const [chatOpen, setChatOpen] = useState(() => !headless && localStorage.getItem('toucan.chat') !== 'closed')
 	const [historyOpen, setHistoryOpen] = useState(false)
+	const { open: referencesOpen } = useReferences()
+	// One panel on the right at a time: opening References (or an agent showing something) puts the others away, and they it.
+	useEffect(() => {
+		if (!referencesOpen) return
+		setHistoryOpen(false)
+		updateThreads({ panel: false })
+	}, [referencesOpen])
+	useEffect(() => {
+		if (threadsOpen || historyOpen) closeReferences()
+	}, [threadsOpen, historyOpen])
+	// A link on the canvas (a pasted bookmark, an element's link) opens beside it rather than in a new tab. A modifier key
+	// still opens a tab, as people expect.
+	useEffect(() => {
+		const el = stage.current
+		if (!el) return
+		const onClick = (e: MouseEvent) => {
+			if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+			const a = (e.target as HTMLElement).closest?.('a[href]') as HTMLAnchorElement | null
+			if (!a || a.closest('.toucan-ui') || !/^https?:\/\//i.test(a.href) || a.origin === location.origin) return
+			e.preventDefault()
+			e.stopPropagation()
+			openReference(a.href)
+		}
+		el.addEventListener('click', onClick, true)
+		return () => el.removeEventListener('click', onClick, true)
+	}, [])
 	const [title, setTitle] = useState(canvasName)
 	const [draftRequest, setDraftRequest] = useState<{ text: string } | null>(null)
 	const takeDraft = useCallback(() => setDraftRequest(null), [])
@@ -81,6 +109,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 						<p className="border-t px-2 pt-1.5 pb-1 text-xs text-muted-foreground">Choosing a format moves nothing. To give an existing diagram room, run Air out from Routines.</p>
 					</PopoverContent>
 				</Popover>
+				<ReferencesButton open={referencesOpen} onToggle={toggleReferences} />
 				<CommentButton onComment={onComment} />
 				<ThreadsButton />
 				<Button variant="ghost" size="sm" onClick={() => (setHistoryOpen((o) => !o), updateThreads({ panel: false }))} aria-expanded={historyOpen} aria-label="History" title="History" className={cn(historyOpen && 'bg-muted')}>
@@ -106,6 +135,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 					{!headless && <AgentStatus top={engine === 'excalidraw' ? 84 : 52} />}
 					{historyOpen && !threadsOpen && <History Preview={preview} onClose={() => setHistoryOpen(false)} />}
 					{threadsOpen && <ThreadsPanel />}
+					{referencesOpen && !threadsOpen && !historyOpen && <ReferencesPanel />}
 				</div>
 				{chatOpen && (
 					<ChatDock chat={chat} stage={stage}>

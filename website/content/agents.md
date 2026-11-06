@@ -27,6 +27,8 @@ toucan --canvas NAME versions [save LABEL | show N [--format F] | restore N]   #
 toucan routine list | show NAME | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME   # the routine bank
 toucan --canvas NAME routine run NAME [--args JSON]   # run a banked routine: one undo step, on the history
 toucan --canvas NAME files                     # where this canvas keeps what agents write for it
+toucan --canvas NAME references                # what people can read beside the canvas: its files, its project's, links on it
+toucan --canvas NAME show REF|PATH|URL           # open it for people in the References panel
 toucan templates                                  # diagrams to start from; `new NAME --template ID` makes one
 toucan templates show ID                          # a template's description, to copy the form of
 toucan --canvas NAME draw FILE|- [--update] [--move] [--label T]   # lay out a diagram described as data onto a canvas
@@ -215,6 +217,20 @@ converts a dense diagram: long text moves to `meta.detail`, names get larger, an
 Research, notes and helper scripts for a canvas go in `<data>/<name>.files/` (`toucan --canvas NAME files` gives the
 path and what's there). Chat and thread agents can write there and not elsewhere in the data directory. Name the file in your reply so people can find it. The folder is
 archived with the canvas.
+
+## References: what people read beside the canvas
+
+The **References** panel shows reference material without leaving the canvas: what you've written for it, the project it belongs to, and
+pages on the web. A reference is `files/PATH` (this canvas's files folder), `project/PATH` (the project `init` linked the canvas to), or
+`https://…`. Markdown renders, with its relative links and images working; so do PDFs, images, CSV tables, code and text. A web page is
+fetched by the server and shown without running its scripts. Hidden files, build folders and anything outside those two folders can't be
+read, and the server won't fetch pages on this machine or a private network.
+
+- `toucan --canvas NAME show files/research.md` (or a path inside either folder, or a URL) opens it for everyone looking at the canvas. Do
+  this after you write research or notes, or to put a source in front of someone. `toucan references` lists what can be shown.
+- Point a box at what's behind it with `meta.refs`: `toucan.node(key, {meta: {refs: [{ref: 'project/docs/auth.md', label: 'How sign-in works'}]}})`.
+  The box's details card lists them, and web addresses in `meta.detail` open in the panel too. People can also paste links onto the
+  canvas: clicking one opens it beside the canvas.
 
 ## Versions: the evolution of a canvas
 

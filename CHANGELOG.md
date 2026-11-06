@@ -7,6 +7,10 @@ All notable changes to toucan are recorded here. The format follows
 
 ### Added
 
+- **References.** A panel beside the canvas for reading reference material without leaving: the canvas's own files, the project's, and pages on the web. Markdown renders with its relative links and images working, alongside PDFs, images, tables, code and text. Web pages are fetched by the server and shown without running their scripts. Hidden files, build folders and anything outside the canvas's files and its project can't be read, and pages on this machine or a private network aren't fetched (`TOUCAN_FETCH_PRIVATE=1` allows them).
+- `toucan show REF|PATH|URL` opens something for everyone looking at the canvas, and `toucan references` lists what can be shown. Agents are told to show what they write. Over MCP it's `toucan_show`.
+- A box's `meta.refs` lists what's behind it in its details card, and web addresses in its details open in the panel. A link pasted onto the canvas opens beside it too.
+- `npm run test:references`, an end-to-end check of the panel on both engines.
 - A callout for agents at the top of the README and the docs, and `llms.txt`: what toucan is for, and how an agent installs and starts it.
 
 ## [0.9.0] — 2026-11-06

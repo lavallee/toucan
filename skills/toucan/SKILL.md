@@ -80,7 +80,9 @@ ones with what each is attached to, and `threads reply N "…"` answers. Leave c
 **Formats.** Keep boxes short and put the rest in `meta.detail`, which opens on click. `toucan --canvas NAME meta --canvas-format story|ideas|system` sets how a canvas is walked and what's expected of you there; follow the guide in the brief, or see AGENTS.md.
 
 **Files.** Research, notes and helper scripts for a canvas go in its folder: `toucan --canvas NAME files` gives the
-path. It is archived with the canvas.
+path. It is archived with the canvas. Open what you write for the person with `toucan show files/NAME`: it appears in the References panel
+beside the canvas, which also shows project files (`project/PATH`) and web pages (`toucan show https://…`). Link a box to what's behind it
+with `meta.refs: [{ref, label}]`.
 
 **Routines.** Before doing a chore by hand, check `toucan routine list` and `toucan --canvas NAME routine run
 NAME`. When the person says "bank that", write it as a routine and `toucan routine save NAME FILE --title T

@@ -24,6 +24,7 @@ import * as versions from './versions.mjs'
 import { createRoutines } from './routines.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
+import * as refs from './references.mjs'
 import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
 import { layOut } from '../lib/layouts.mjs'
 import { templateById, templateList } from '../templates/index.mjs'
@@ -609,6 +610,45 @@ const server = createServer(async (req, res) => {
 		}
 		if (sub === 'files' && req.method === 'GET' && !canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` }) // it hands out a place to write
 		if (sub === 'files' && req.method === 'GET') return json(res, 200, { dir: filesDir(canvas), files: listFiles(canvas) })
+		// References: files and pages people read beside the canvas (server/references.mjs).
+		if ((sub === 'references' || sub === 'reference' || sub === 'show') && !canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` })
+		if (sub === 'references' && req.method === 'GET') return json(res, 200, await refs.listRefsCached(canvas, refs.rootsOf(canvas, { filesDir })))
+		if (sub === 'reference' && req.method === 'GET') {
+			const ref = url.searchParams.get('ref') ?? ''
+			if (/^https?:\/\//i.test(ref)) {
+				let page
+				try {
+					page = await refs.fetchExternal(ref)
+				} catch (e) {
+					return json(res, 502, { error: String(e.message ?? e) })
+				}
+				const kind = refs.kindOfType(page.type, page.url)
+				res.writeHead(200, { 'content-type': page.type, 'content-length': page.body.length, 'x-toucan-kind': kind, 'x-toucan-url': encodeURI(page.url), 'x-toucan-status': String(page.status), ...refs.SAFE_HEADERS })
+				return res.end(page.body)
+			}
+			const file = refs.resolveRef(ref, refs.rootsOf(canvas, { filesDir }))
+			if (file.error) return json(res, 404, { error: file.error })
+			return refs.sendFile(res, file)
+		}
+		// An agent puts something in front of people: every open tab opens it in the References panel.
+		if (sub === 'show' && req.method === 'POST') {
+			const { ref: asked = '', path, agent } = JSON.parse(await body(req))
+			const roots = refs.rootsOf(canvas, { filesDir })
+			const ref = path ? refs.refForPath(path, roots) : String(asked)
+			if (!ref) return json(res, 400, { error: `${path} isn't in this canvas's files or its project, so people can't open it. Put it in ${filesDir(canvas)}.` })
+			if (!/^https?:\/\//i.test(ref)) {
+				const file = refs.resolveRef(ref, roots)
+				if (file.error) return json(res, 400, { error: file.error })
+			} else {
+				try {
+					new URL(ref)
+				} catch {
+					return json(res, 400, { error: `not a web address: ${ref}` })
+				}
+			}
+			broadcast(canvas, { type: 'show', ref, agent: String(agent || 'agent').slice(0, 40) })
+			return json(res, 200, { ok: true, ref, tabs: (tabs.get(canvas) ?? []).filter((w) => !w.headless).length })
+		}
 		// The agent says what it is about to do, and optionally points at shapes (keys): every tab shows it.
 		if (sub === 'say' && req.method === 'POST') {
 			const { agent, text = '', keys = [] } = JSON.parse(await body(req))

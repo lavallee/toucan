@@ -8,6 +8,7 @@
 import ELK from 'elkjs/lib/elk.bundled.js'
 import { fromExcalidraw, toExcalidrawElements, wrap, layoutMissing } from '../lib/tg.mjs'
 import { pulse as glow } from './pulses'
+import { refsOfShape } from './reference-links'
 
 const elk = new ELK()
 
@@ -296,6 +297,12 @@ export function makeExcalidrawHelpers(api, ex) {
 			const detail = get(key)?.customData?.meta?.detail
 			return typeof detail === 'string' ? detail : ''
 		},
+		refsOf: (key) => {
+			const e = get(key)
+			return e ? refsOfShape({ meta: e.customData?.meta, text: text(e), link: e.link }) : []
+		},
+		referencesOnCanvas: () =>
+			shapes().flatMap((e) => refsOfShape({ meta: e.customData?.meta, text: text(e), link: e.link }).map((r) => ({ ...r, key: keyOf(e), on: (text(e) || '').split('\n')[0].slice(0, 80) }))),
 		seeAlsoOf: (key) => {
 			const see = get(key)?.customData?.meta?.see
 			return (Array.isArray(see) ? see : []).filter((s) => typeof s?.key === 'string' && get(s.key)).map((s) => ({ key: s.key, ...(typeof s.label === 'string' && { label: s.label }), text: text(get(s.key)) || s.key }))

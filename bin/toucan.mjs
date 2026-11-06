@@ -44,6 +44,8 @@
 //     routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
 //                                 chores banked once and run on any canvas (no --canvas needed to list, show, save or rm)
 //     say TEXT [--at KEY,KEY]     tell people what you're about to do; --at moves your cursor to those shapes
+//     references                  what people can read beside this canvas: its files, its project's, links on it
+//     show REF|PATH|URL           open it for people, in the References panel beside the canvas
 //
 //   --agent NAME (or TOUCAN_AGENT) names you on the canvas: the status pill, your cursor, the glow's tag.
 //
@@ -91,7 +93,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -287,6 +289,21 @@ switch (cmd) {
 		if (!text && typeof at !== 'string') die('usage: say TEXT [--at KEY,KEY]')
 		const r = await call(cpath('/say'), { method: 'POST', body: JSON.stringify({ agent, text, keys: typeof at === 'string' ? at.split(',') : [] }) })
 		if (!r.tabs) console.error('toucan: nobody has this canvas open, so nobody saw that')
+		break
+	}
+	case 'references': {
+		const r = await call(cpath('/references'))
+		print({ roots: r.roots, files: r.files.map((f) => f.ref), ...(r.cut && { cut: true }) })
+		break
+	}
+	case 'show': {
+		const [what] = positional()
+		if (!what) die('usage: show REF|PATH|URL   (files/notes.md, project/README.md, a path inside either, or https://…)')
+		// A reference as people would write one, or a path on disk that the server turns into one.
+		const asRef = /^https?:\/\//i.test(what) || /^(files|project(-\d+)?)\//.test(what)
+		const r = await call(cpath('/show'), { method: 'POST', body: JSON.stringify({ agent, ...(asRef ? { ref: what } : { path: resolve(what) }) }) })
+		if (!r.tabs) console.error('toucan: nobody has this canvas open, so nobody saw it')
+		print({ shown: r.ref, tabs: r.tabs })
 		break
 	}
 	case 'archive':
