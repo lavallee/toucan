@@ -6,7 +6,7 @@
 import { wsUrl, canvasName, token, headless } from './net'
 import { getThreads, setThreads } from './threads-store'
 import { setFormatId } from './formats'
-import { openReference } from './references'
+import { openReference } from './references-store'
 import { activity, say, turn, setRunning } from './pulses'
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
