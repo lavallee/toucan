@@ -1,7 +1,7 @@
 {
   "name": "toucan",
   "version": "0.9.0",
-  "description": "Read and change a live tldraw or Excalidraw canvas through the toucan CLI while a person edits it by hand.",
+  "description": "Draw diagrams on a live tldraw or Excalidraw canvas through the toucan CLI while a person watches and edits by hand.",
   "author": {
     "name": "Marc Lavallee",
     "url": "https://github.com/lavallee"
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "toucan",
     "shortDescription": "A canvas you and your agents share.",
-    "longDescription": "Drive a live tldraw or Excalidraw canvas through the toucan CLI: inspect it, draw and lay out diagrams, merge in Mermaid or JSON Canvas by key, and add canvas scripts, while a person keeps editing by hand.",
+    "longDescription": "Draw diagrams of code, systems and plans on a live tldraw or Excalidraw canvas through the toucan CLI while a person watches and edits by hand: start from templates or describe a diagram as data, act on sticky notes and comment threads, and propose changes to accept or reject. Needs toucan installed: curl -fsSL https://github.com/lavallee/toucan/releases/latest/download/install.sh | sh",
     "developerName": "Marc Lavallee",
     "category": "Productivity",
     "capabilities": [
@@ -31,9 +31,9 @@
     "websiteURL": "https://lavallee.github.io/toucan/",
     "brandColor": "#F28C28",
     "defaultPrompt": [
-      "Show me what's on the canvas and suggest a cleaner layout.",
-      "Draw this system as a diagram on my toucan canvas.",
-      "Add a button to this canvas that highlights shapes changed today."
+      "Use toucan to draw how this repo fits together, and open it for me.",
+      "Handle the sticky notes I left on the canvas.",
+      "What's missing from this diagram? Answer as a proposal."
     ]
   }
 }
