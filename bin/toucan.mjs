@@ -29,6 +29,7 @@
 //     meta [--title T] [--description D] [--canvas-format story|ideas|system|none]   retitle, describe or set --canvas's format
 //     meta --profile SOURCE/ID|none   work on --canvas with a named agent: its knowledge, briefing and skills (see profiles)
 //     profiles                    the named agents canvases can work with, from <data>/_profiles/ and toucan-profiles-* sources
+//     profiles add ID --workdir DIR [--name N] [--context FILE,FILE]   an agent of your own, from its folder (starts with its AGENTS.md)
 //     profile                     the agent --canvas works with: what it reads at the start, and its skills
 //     archive                     move --canvas aside to canvases/.archive/ (no tabs may have it open)
 //     summary [--within KEY]      compact JSON of shapes on the page
@@ -245,9 +246,20 @@ switch (cmd) {
 		print(await call(cpath(`/meta`), { method: 'PATCH', body: JSON.stringify({ title, description, ...(canvasFormat && { format: canvasFormat === 'none' ? '' : canvasFormat }), ...(typeof profile === 'string' && { profile: profile === 'none' ? '' : profile }) }) }))
 		break
 	}
-	case 'profiles':
-		print(await call('/api/profiles'))
+	case 'profiles': {
+		const [, sub, id] = argv
+		if (sub === 'add') {
+			// An agent of your own, from its folder: what most people need, with no registry.
+			const workdir = flag('workdir')
+			if (!id || typeof workdir !== 'string') die('usage: profiles add ID --workdir DIR [--name N] [--description D] [--instructions TEXT] [--context FILE,FILE]')
+			const context = flag('context'), name = flag('name'), description = flag('description'), instructions = flag('instructions')
+			const made = await call('/api/profiles', { method: 'POST', body: JSON.stringify({ id, workdir: resolve(workdir), ...(typeof name === 'string' && { name }), ...(typeof description === 'string' && { description }), ...(typeof instructions === 'string' && { instructions }), ...(typeof context === 'string' && { context: context.split(',') }) }) })
+			print(made)
+			console.error(`toucan: work with ${made.name} on a canvas with \`toucan --canvas NAME meta --profile ${made.ref}\`, or pick it in the chat panel`)
+		} else if (!sub) print(await call('/api/profiles'))
+		else die('usage: profiles [add ID --workdir DIR]')
 		break
+	}
 	case 'profile':
 		print((await call(cpath('/profile'))).profile)
 		break

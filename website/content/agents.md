@@ -30,6 +30,7 @@ toucan --canvas NAME files                     # where this canvas keeps what ag
 toucan --canvas NAME references                # what people can read beside the canvas: its files, its project's, links on it
 toucan --canvas NAME show REF|PATH|URL           # open it for people in the References panel
 toucan profiles                                   # the named agents a canvas can work with, from every source
+toucan profiles add ID --workdir DIR [--context F,F]   # a profile of your own, from the agent's folder (starts from its AGENTS.md)
 toucan --canvas NAME meta --profile SOURCE/ID|none   # work on the canvas with one: its knowledge, briefing and skills
 toucan --canvas NAME profile                     # the agent the canvas works with: what it reads at the start, and its skills
 toucan templates                                  # diagrams to start from; `new NAME --template ID` makes one
@@ -244,7 +245,9 @@ or the picker in the chat panel's header, and the canvas's chat and comment thre
 context are loaded, people see its name on the canvas, and its shared folders appear in References as `agent/…`. Switching starts a new
 conversation; each agent's earlier one is kept. `--profile none` goes back to toucan's own agent.
 
-Profiles come from sources. `<data>/_profiles/ID.json` is `local/ID`. Any program on PATH named `toucan-profiles-NAME` is a source too:
+The quickest profile is one made from the agent's folder: `toucan profiles add ID --workdir DIR` writes `<data>/_profiles/ID.json`
+(`local/ID`), starting from the folder's `AGENTS.md` or `CLAUDE.md`, and checks it first. Profiles come from sources:
+`<data>/_profiles/ID.json` is `local/ID`. Any program on PATH named `toucan-profiles-NAME` is a source too:
 it answers `list` with `{"profiles": [{"id", "name", "description"}]}` and `get ID` with a profile, so a registry of agents plugs in
 without toucan knowing about it. A profile (`toucan.profile/1`):
 

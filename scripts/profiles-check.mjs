@@ -102,6 +102,18 @@ else { console.error('no such agent: ' + id); process.exit(1) }
 	await cli('--canvas', 'board', 'meta', '--profile', 'none')
 	assert.equal(JSON.parse(await cli('--canvas', 'board', 'profile')), null)
 	console.log("ok  profiles: a canvas binds to one, shares its folders, and lets go of it")
+
+	// An agent of your own, from its folder: no registry, no JSON by hand.
+	const own = join(tmp, 'my-agent')
+	mkdirSync(own)
+	writeFileSync(join(own, 'AGENTS.md'), '# My agent\n\nYou review pull requests.\n')
+	const made = JSON.parse(await cli('profiles', 'add', 'reviewer', '--workdir', own))
+	assert.deepEqual([made.ref, made.name, made.context.map((c) => c.label)], ['local/reviewer', 'Reviewer', ['AGENTS.md']], 'named from its id, starting from its AGENTS.md')
+	assert.ok(JSON.parse(readFileSync(join(data, '_profiles/reviewer.json'), 'utf8')).workdir === own)
+	await assert.rejects(cli('profiles', 'add', 'reviewer', '--workdir', own), /already exists/)
+	await assert.rejects(cli('profiles', 'add', 'everything', '--workdir', homedir()), /too broad/)
+	assert.equal(JSON.parse(await cli('--canvas', 'board', 'meta', '--profile', 'local/reviewer')).profile.name, 'Reviewer')
+	console.log('ok  profiles: `profiles add` makes one from a folder, and a canvas can work with it at once')
 } catch (e) {
 	throw e
 } finally {

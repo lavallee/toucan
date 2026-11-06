@@ -84,6 +84,9 @@ path. It is archived with the canvas. Open what you write for the person with `t
 beside the canvas, which also shows project files (`project/PATH`) and web pages (`toucan show https://…`). Link a box to what's behind it
 with `meta.refs: [{ref, label}]`.
 
+**Profiles.** A canvas can work with a named agent instead of the chat panel's own: `toucan profiles` lists them, `toucan profiles
+add ID --workdir DIR` makes one from an agent's folder, and `toucan --canvas NAME meta --profile local/ID` binds it (only when asked).
+
 **Routines.** Before doing a chore by hand, check `toucan routine list` and `toucan --canvas NAME routine run
 NAME`. When the person says "bank that", write it as a routine and `toucan routine save NAME FILE --title T
 --description D --engines E`; it joins their Routines menu on every canvas.
