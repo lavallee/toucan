@@ -11,6 +11,22 @@ one shared document.
 
 ![The canvas with the chat panel open. Asked for a sequence diagram of a password reset, the agent has drawn four participants and a column of messages between them.](assets/tour/chat.png "A real turn of the chat agent, from a one-line request.")
 
+## For your agent
+
+toucan gives an agent a canvas you can see. It draws diagrams of your code, systems and plans in a browser tab while you watch, and reads back your edits, sticky notes and comments. To set it up, paste this to your agent:
+
+> Install toucan from https://github.com/lavallee/toucan and draw how this project fits together.
+
+**If you're an agent,** this is all you need to start (Node 22+):
+
+```sh
+curl -fsSL https://github.com/lavallee/toucan/releases/latest/download/install.sh | sh
+toucan init --open    # the canvas for the project you're in, opened in the person's browser
+toucan guide          # how to work on it
+```
+
+Don't run `npm install toucan`: that's an unrelated package. A one-page brief for agents is at [llms.txt](llms.txt), and the [Agent guide](agents.html) has everything.
+
 ## What you can do with it
 
 - **Start from a known shape.** 22 [templates](gallery.html) cover flowcharts, org charts, sequences, architecture, roadmaps, kanban and more, and agents draw their own in the same form.

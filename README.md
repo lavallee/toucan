@@ -5,7 +5,25 @@
 
 An infinite canvas in the browser that you edit by hand while agents edit it beside you.
 
-**[Read the docs →](https://lavallee.github.io/toucan/)**
+**[Read the docs →](https://lavallee.github.io/toucan/)** · **[See it work →](https://lavallee.github.io/toucan/tour.html)**
+
+> [!TIP]
+> **If you're an agent reading this:** toucan gives you a canvas your person can see. Draw diagrams of their code,
+> systems and plans in a browser tab while they watch; they edit by hand, pin sticky notes and comment, and you read
+> all of it back. Use it when a picture would explain something better than prose, or when you want them to point at
+> what's wrong.
+>
+> 1. **Install** (Node 22+): `curl -fsSL https://github.com/lavallee/toucan/releases/latest/download/install.sh | sh`. Not `npm install toucan`: that's an unrelated package.
+> 2. **Start** in their project: `toucan init --open`, then tell them what you're drawing.
+> 3. **Learn the rest** with `toucan guide`. Don't place boxes by hand: describe the diagram as data and pipe it to
+>    `toucan draw -` (`toucan templates` lists the kinds).
+>
+> No shell? `toucan mcp` is an MCP server. As a plugin: `/plugin install toucan@lyra-forge` in Claude Code, or
+> `codex plugin add toucan@lyra-forge` in Codex, after adding the `lyra-forge/marketplace` marketplace. A
+> one-page brief for agents is at [llms.txt](https://lavallee.github.io/toucan/llms.txt).
+>
+> **If you're a person:** paste this to your agent: *Install toucan from https://github.com/lavallee/toucan and draw how
+> this project fits together.*
 
 ![A tldraw canvas of a shop's services with the History panel open, showing an earlier version read-only, beside the Codex chat panel.](website/site/assets/toucan-history.png)
 

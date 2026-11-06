@@ -5,6 +5,10 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A callout for agents at the top of the README and the docs, and `llms.txt`: what toucan is for, and how an agent installs and starts it.
+
 ## [0.9.0] — 2026-11-06
 
 See who's working on a canvas, and what they're about to do.

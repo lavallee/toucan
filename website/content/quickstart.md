@@ -24,6 +24,8 @@ The canvas works without an agent or an account. The chat panel needs the
 
 ## Use it from your agent
 
+An agent can do the install itself: paste *Install toucan from https://github.com/lavallee/toucan and draw how this project fits together.* Agents that read the docs first can start from [llms.txt](llms.txt).
+
 `setup` connected the agents it found (`toucan agents` shows them). In any project, ask:
 
 > Use toucan to draw how this repo fits together, and open it for me.
