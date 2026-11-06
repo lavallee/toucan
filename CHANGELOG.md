@@ -5,12 +5,20 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-11-06
+
+See who's working on a canvas, and what they're about to do.
+
 ### Added
 
 - **Agent at work.** While an agent is busy on a canvas (a CLI call running, a chat or thread turn in progress, or a few seconds after its last call), every open tab shows a status pill with its name and what it is doing, a soft ring round the canvas, and the agent's cursor on the shape it last changed or pointed at. Both engines.
 - `toucan say TEXT [--at KEY,KEY]`: the agent says what it is about to do, in the pill and on its cursor; `--at` moves its cursor to those shapes and glows them. `say()` in `toucan/client`.
 - `--agent NAME` / `TOUCAN_AGENT` names the agent on the canvas, and the glow's tag carries the name. The chat panel's agent is "Codex".
 - `npm run test:presence`, an end-to-end check of the above on both engines.
+
+### Fixed
+
+- `toucan guide` no longer opens with a line about the chat panel that, rewritten for the terminal, made no sense.
 
 ## [0.8.0] — 2026-11-04
 

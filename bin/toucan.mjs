@@ -371,7 +371,8 @@ switch (cmd) {
 	}
 	case 'guide':
 		// Written for the chat agent, which runs from the checkout. Everyone else has `toucan`.
-		print(readFileSync(join(ROOT, 'AGENTS.md'), 'utf8').replaceAll('node bin/toucan.mjs', 'toucan'))
+		// Its note on how the chat panel runs the CLI only makes sense there.
+		print(readFileSync(join(ROOT, 'AGENTS.md'), 'utf8').replace(/^In the chat panel you run it as .*\n\n?/m, '').replaceAll('node bin/toucan.mjs', 'toucan'))
 		break
 	case 'mcp':
 		(await import('../lib/mcp.mjs')).serve()
