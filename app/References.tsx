@@ -72,7 +72,7 @@ function List() {
 	const open = (e: React.FormEvent) => {
 		e.preventDefault()
 		const v = q.trim()
-		if (isWeb(v) || /^(files|project(-\d+)?)\//.test(v)) openReference(v)
+		if (isWeb(v) || /^(files|(project|agent)(-\d+)?)\//.test(v)) openReference(v)
 	}
 	// Documents first; in a code repository the source files would bury them, so they wait behind a toggle.
 	const groups =

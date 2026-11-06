@@ -27,6 +27,9 @@
 //     import FILE|- [--format F] [--move] [--prune] [--propose] [--label T]   keyed upsert of a graph file into the open canvas
 //                                 (--propose: what it adds arrives dashed, as a proposal)
 //     meta [--title T] [--description D] [--canvas-format story|ideas|system|none]   retitle, describe or set --canvas's format
+//     meta --profile SOURCE/ID|none   work on --canvas with a named agent: its knowledge, briefing and skills (see profiles)
+//     profiles                    the named agents canvases can work with, from <data>/_profiles/ and toucan-profiles-* sources
+//     profile                     the agent --canvas works with: what it reads at the start, and its skills
 //     archive                     move --canvas aside to canvases/.archive/ (no tabs may have it open)
 //     summary [--within KEY]      compact JSON of shapes on the page
 //     exec -e CODE | FILE | - [--label TEXT]   run JS in the live editor; `return` a JSON value (--label names it in the history)
@@ -93,7 +96,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -237,10 +240,17 @@ switch (cmd) {
 		break
 	}
 	case 'meta': {
-		const title = flag('title'), description = flag('description'), canvasFormat = flag('canvas-format')
-		print(await call(cpath(`/meta`), { method: 'PATCH', body: JSON.stringify({ title, description, ...(canvasFormat && { format: canvasFormat === 'none' ? '' : canvasFormat }) }) }))
+		const title = flag('title'), description = flag('description'), canvasFormat = flag('canvas-format'), profile = flag('profile')
+		if (profile === true) die('usage: meta --profile SOURCE/ID|none   (see `toucan profiles`)')
+		print(await call(cpath(`/meta`), { method: 'PATCH', body: JSON.stringify({ title, description, ...(canvasFormat && { format: canvasFormat === 'none' ? '' : canvasFormat }), ...(typeof profile === 'string' && { profile: profile === 'none' ? '' : profile }) }) }))
 		break
 	}
+	case 'profiles':
+		print(await call('/api/profiles'))
+		break
+	case 'profile':
+		print((await call(cpath('/profile'))).profile)
+		break
 	case 'graph': {
 		const format = flag('format', 'tg')
 		if (!FORMATS[format]?.export) die(`--format: one of ${Object.keys(FORMATS).filter((f) => FORMATS[f].export).join(', ')}`)
@@ -300,7 +310,7 @@ switch (cmd) {
 		const [what] = positional()
 		if (!what) die('usage: show REF|PATH|URL   (files/notes.md, project/README.md, a path inside either, or https://…)')
 		// A reference as people would write one, or a path on disk that the server turns into one.
-		const asRef = /^https?:\/\//i.test(what) || /^(files|project(-\d+)?)\//.test(what)
+		const asRef = /^https?:\/\//i.test(what) || /^(files|(project|agent)(-\d+)?)\//.test(what)
 		const r = await call(cpath('/show'), { method: 'POST', body: JSON.stringify({ agent, ...(asRef ? { ref: what } : { path: resolve(what) }) }) })
 		if (!r.tabs) console.error('toucan: nobody has this canvas open, so nobody saw it')
 		print({ shown: r.ref, tabs: r.tabs })

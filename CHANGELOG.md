@@ -5,6 +5,11 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Profiles: work with a named agent on a canvas.** Bind a canvas to an agent profile (`toucan meta --profile SOURCE/ID`, or the picker in the chat header). Its chat and comment threads then become that agent: its briefing and starting context are loaded, its skills are listed, people see its name on the canvas, and the folders it shares appear in References as `agent/…`. Switching starts a new conversation and keeps each agent's earlier one.
+- Profiles come from `<data>/_profiles/ID.json`, or from any `toucan-profiles-NAME` program on PATH answering `list` and `get ID`, so a registry of agents plugs in without toucan knowing about it. What a profile reads and shares must be inside the agent's own folder and not hidden, and a profile grants no writing: the agent writes in the canvas's files folder like any chat agent. Sources are only found in PATH folders an agent can't write to. `toucan profiles` lists them, and `toucan profile` shows what a canvas's agent reads.
+
 ## [0.11.0] — 2026-11-06
 
 Reach toucan at a name of your own.

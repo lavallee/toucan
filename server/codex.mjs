@@ -42,12 +42,17 @@ Put any file you write, research or a helper script, only in \`${data}/${canvas}
 Leave closing the thread to people, unless they ask you to close it (\`threads close ${id}\`).`
 
 export class CodexChat {
-	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null, onThread = () => {}, onTurn = () => {} }) {
+	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null, profileOf = async () => null, profileInstructions = () => '', onThread = () => {}, onTurn = () => {} }) {
 		this.onThread = onThread
 		// (canvas, conversation key, active): a turn started or ended, so the canvas can show Codex at work.
 		this.onTurn = onTurn // (canvas, id, event): what's happening in a comment thread's own conversation
 		this.engineOf = engineOf
 		this.brief = brief // (canvas) => the canvas brief for a message
+		// (canvas) => the agent profile the canvas is bound to, or null for toucan's own agent (server/profiles.mjs)
+		this.profileOf = profileOf
+		this.profileInstructions = profileInstructions
+		this.bound = new Map() // conversation key -> { ref, profile } it was started with
+		this.generation = new Map() // canvas -> how many times its agent has changed, so a send that straddles a change starts over
 		this.direct = direct // (canvas, text) => a reply, if this message needed no agent
 		this.sending = new Map() // canvas -> the message being handed over, so they go in order
 		// Deployment-specific instructions for the chat agent (extensions, house canvases): <data>/AGENTS.md.
@@ -73,6 +78,11 @@ export class CodexChat {
 		if (!this.sockets.has(canvas)) this.sockets.set(canvas, new Set())
 		this.sockets.get(canvas).add(ws)
 		ws.send(JSON.stringify({ type: 'history', events: this.history.get(canvas) ?? [] }))
+		// Who this panel is talking to: toucan's own agent, or the one the canvas is bound to.
+		this.profileOf(canvas).then(
+			(p) => ws.send(JSON.stringify({ type: 'agent', agent: p ? { ref: p.ref, name: p.name, ...(p.color && { color: p.color }) } : null })),
+			(e) => ws.send(JSON.stringify({ type: 'agent', agent: { error: String(e.message ?? e) } })),
+		)
 		ws.on('close', () => this.sockets.get(canvas).delete(ws))
 		// Warm up now, so the first message doesn't wait for Codex to start.
 		this.start().catch(() => {})
@@ -225,16 +235,30 @@ export class CodexChat {
 	}
 
 	// ---- threads ---------------------------------------------------------------
+	/** Where a conversation is saved: by canvas, and by the profile it was had with, so switching agents and back resumes each. */
+	savedKey(canvas, ref = this.bound.get(canvas)?.ref) {
+		return ref ? `${canvas}@${ref}` : canvas
+	}
+
 	async thread(canvas) {
 		await this.start()
-		if (this.threads.has(canvas)) return this.threads.get(canvas)
 		const [name, comment] = canvas.split('#')
-		const developerInstructions = comment ? threadInstructions(name, comment, this.engineOf(name), this.data) : instructions(name, this.engineOf(name), existsSync(this.notes) ? this.notes : null, this.data)
+		// A message that only steers the turn in progress goes to that conversation, whatever its agent's source is doing.
+		if (this.threads.has(canvas) && this.turns.has(canvas)) return this.threads.get(canvas)
+		// A profile that won't load is an error to show, not a reason to quietly become someone else.
+		const profile = await this.profileOf(name)
+		const ref = profile?.ref ?? ''
+		if (this.threads.has(canvas) && (this.bound.get(canvas)?.ref ?? '') === ref) return this.threads.get(canvas)
+		this.threads.delete(canvas)
+		this.bound.set(canvas, { ref, profile })
+		const base = comment ? threadInstructions(name, comment, this.engineOf(name), this.data) : instructions(name, this.engineOf(name), existsSync(this.notes) ? this.notes : null, this.data)
+		const developerInstructions = profile ? `${base}\n\n${this.profileInstructions(profile)}` : base
 		const opts = { cwd: this.root, approvalPolicy: 'on-request', developerInstructions, serviceName: 'toucan' }
 		let res
-		if (this.saved[canvas]) {
+		const key = this.savedKey(canvas, ref)
+		if (this.saved[key]) {
 			try {
-				res = await this.call('thread/resume', { threadId: this.saved[canvas], ...opts })
+				res = await this.call('thread/resume', { threadId: this.saved[key], ...opts })
 			} catch {
 				res = null
 			}
@@ -242,7 +266,7 @@ export class CodexChat {
 		res ??= await this.call('thread/start', { ...opts, sandbox: 'workspace-write' })
 		const id = res.thread.id
 		this.threads.set(canvas, id)
-		this.saved[canvas] = id
+		this.saved[key] = id
 		mkdirSync(join(this.root, '.toucan'), { recursive: true })
 		writeFileSync(this.state, JSON.stringify(this.saved, null, 2))
 		return id
@@ -286,7 +310,10 @@ export class CodexChat {
 		// Agents may write to their canvas's folder and no other part of the data directory: not AGENTS.md, routines or other canvases.
 		const folder = join(this.data, `${canvas.split('#')[0]}.files`)
 		mkdirSync(folder, { recursive: true })
+		const generation = this.generation.get(canvas.split('#')[0]) ?? 0
 		const threadId = await this.thread(canvas)
+		// The agent changed while this conversation was being found: find the new one instead.
+		if ((this.generation.get(canvas.split('#')[0]) ?? 0) !== generation) return this.send(canvas, text, mode)
 		const message = { type: 'text', text, text_elements: [] }
 		// Mid-turn, a message adjusts the work in progress rather than waiting for it to finish.
 		const running = this.turns.get(canvas)
@@ -298,7 +325,10 @@ export class CodexChat {
 			}
 		}
 		const brief = await this.brief(canvas.split('#')[0]).catch(() => null)
-		const { model = this.defaultModel, effort } = MODES[mode] ?? MODES.fast
+		const chosen = MODES[mode] ?? MODES.fast
+		const profile = this.bound.get(canvas)?.profile
+		// A profile's model is the agent's own; the speed the person picked sets the effort.
+		const model = profile?.model ?? chosen.model ?? this.defaultModel, effort = chosen.effort
 		const started = await this.call('turn/start', {
 			threadId,
 			input: [...(brief ? [{ type: 'text', text: brief, text_elements: [] }] : []), message],
@@ -319,10 +349,34 @@ export class CodexChat {
 	}
 
 	async reset(canvas) {
+		// Which conversation to forget is the one with the canvas's agent now, which this server may not have met yet.
+		const ref = this.bound.get(canvas)?.ref ?? (await this.profileOf(canvas.split('#')[0]).catch(() => null))?.ref
 		this.threads.delete(canvas)
-		delete this.saved[canvas]
+		this.bound.delete(canvas)
+		delete this.saved[this.savedKey(canvas, ref)]
 		this.history.set(canvas, [])
 		this.emit(canvas, { type: 'history', events: [] }, false)
+	}
+
+	/**
+	 * The canvas now works with a different agent. Whatever is running stops, the panel clears, and the next message
+	 * starts (or resumes) a conversation with the new one, in the chat and in every comment thread.
+	 */
+	async rebind(canvas, profile) {
+		this.generation.set(canvas, (this.generation.get(canvas) ?? 0) + 1)
+		const mine = (k) => k === canvas || k.startsWith(`${canvas}#`)
+		for (const key of [...this.turns.keys()].filter(mine)) {
+			await this.interrupt(key).catch(() => {})
+			// Its completion can't be routed once the conversation is let go, so end it here: the pill goes out and a
+			// comment thread stops working, and nothing the old agent says next is posted under the new one's name.
+			this.turns.delete(key)
+			this.emit(key, { type: 'turn', status: 'interrupted' }, false)
+		}
+		for (const key of [...this.threads.keys()].filter(mine)) this.threads.delete(key)
+		for (const key of [...this.bound.keys()].filter(mine)) this.bound.delete(key)
+		this.history.set(canvas, [])
+		this.emit(canvas, { type: 'history', events: [] }, false)
+		this.emit(canvas, { type: 'agent', agent: profile ? { ref: profile.ref, name: profile.name, ...(profile.color && { color: profile.color }) } : null })
 	}
 }
 

@@ -33,6 +33,9 @@ node bin/toucan.mjs --canvas NAME routine run NAME [--args JSON]   # run a banke
 node bin/toucan.mjs --canvas NAME files                     # where this canvas keeps what agents write for it
 node bin/toucan.mjs --canvas NAME references                # what people can read beside the canvas: its files, its project's, links on it
 node bin/toucan.mjs --canvas NAME show REF|PATH|URL           # open it for people in the References panel
+node bin/toucan.mjs profiles                                   # the named agents a canvas can work with, from every source
+node bin/toucan.mjs --canvas NAME meta --profile SOURCE/ID|none   # work on the canvas with one: its knowledge, briefing and skills
+node bin/toucan.mjs --canvas NAME profile                     # the agent the canvas works with: what it reads at the start, and its skills
 node bin/toucan.mjs templates                                  # diagrams to start from; `new NAME --template ID` makes one
 node bin/toucan.mjs templates show ID                          # a template's description, to copy the form of
 node bin/toucan.mjs --canvas NAME draw FILE|- [--update] [--move] [--label T]   # lay out a diagram described as data onto a canvas
@@ -252,6 +255,33 @@ read, and the server won't fetch pages on this machine or a private network.
 - Point a box at what's behind it with `meta.refs`: `toucan.node(key, {meta: {refs: [{ref: 'project/docs/auth.md', label: 'How sign-in works'}]}})`.
   The box's details card lists them, and web addresses in `meta.detail` open in the panel too. People can also paste links onto the
   canvas: clicking one opens it beside the canvas.
+
+## Profiles: working with a named agent
+
+A canvas can work with a particular agent rather than toucan's general-purpose one: a CEO agent with its charter, a researcher with
+its notebook. That agent is a **profile**: who it is, its own folder, what it reads at the start of a conversation, its skills, and the
+folders people may read beside the canvas. Bind a canvas to one with `toucan meta --profile SOURCE/ID`
+or the picker in the chat panel's header, and the canvas's chat and comment threads become that agent: its briefing and starting
+context are loaded, people see its name on the canvas, and its shared folders appear in References as `agent/…`. Switching starts a new
+conversation; each agent's earlier one is kept. `--profile none` goes back to toucan's own agent.
+
+Profiles come from sources. `<data>/_profiles/ID.json` is `local/ID`. Any program on PATH named `toucan-profiles-NAME` is a source too:
+it answers `list` with `{"profiles": [{"id", "name", "description"}]}` and `get ID` with a profile, so a registry of agents plugs in
+without toucan knowing about it. A profile (`toucan.profile/1`):
+
+```json
+{ "name": "Kiefer", "description": "Foundation strategy research", "workdir": "/home/me/Projects/kiefer",
+  "instructions": "Who you are, how you work, and what you may and may not do.",
+  "context": [{ "path": "AGENTS.md" }, { "path": "notebooks/strategy/CHARTER.md", "label": "Charter" }],
+  "skills": [{ "path": "skills/board-brief" }],
+  "references": ["notebooks/strategy/questions"],
+  "budget": 24000 }
+```
+
+Paths are relative to `workdir`. Context and shared folders must be inside it and not hidden, and context is read within `budget`
+characters, with anything missing reported. A profile grants no writing: the agent writes in the canvas's files folder like any chat
+agent, since anyone who can reach the server can bind a profile. Sources are only looked for in PATH folders an agent can't write to.
+`toucan profiles` lists every source's profiles, and `toucan --canvas NAME profile` shows what the bound one reads and its skills.
 
 ## Versions: the evolution of a canvas
 
