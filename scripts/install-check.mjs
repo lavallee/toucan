@@ -3,7 +3,8 @@
 //   node scripts/install-check.mjs [TARBALL]   (default: runs `npm pack`, which builds the app)
 import assert from 'node:assert/strict'
 import { execFile, spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync } from 'node:fs'
+import { createServer as createHttpServer } from 'node:http'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -26,7 +27,11 @@ let tarball = process.argv[2] && resolve(process.argv[2])
 if (!tarball) {
 	const r = spawnSync('npm', ['pack', '--json', '--pack-destination', base], { cwd: ROOT, encoding: 'utf8' })
 	assert.equal(r.status, 0, r.stderr)
-	tarball = join(base, JSON.parse(r.stdout.slice(r.stdout.indexOf('[\n'))).at(-1).filename)
+	// The pack step prints the build log first; the JSON starts a line on its own: an array up to npm 11, an object
+	// keyed by package name from npm 12.
+	const at = Math.max(r.stdout.lastIndexOf('\n[\n'), r.stdout.lastIndexOf('\n{\n')) + 1
+	const packed = JSON.parse(r.stdout.slice(at))
+	tarball = join(base, (Array.isArray(packed) ? packed : Object.values(packed)).at(-1).filename)
 }
 ok(`tarball: ${(statSync(tarball).size / 1e6).toFixed(1)} MB`)
 
@@ -34,7 +39,14 @@ const prefix = join(base, 'prefix')
 const bin = join(prefix, 'bin')
 mkdirSync(prefix)
 const browsers = process.env.PLAYWRIGHT_BROWSERS_PATH
-const env = { PATH: `${bin}:${dirname(process.execPath)}:/usr/bin:/bin`, HOME: home, TOUCAN_PORT: String(port), npm_config_prefix: prefix, TOUCAN_TARBALL: tarball, ...(browsers && { PLAYWRIGHT_BROWSERS_PATH: browsers }) }
+// Served over HTTP, as the release is, so install.sh's download path runs: npm 12 refuses to install from a URL
+// itself (allow-remote=none), which a local-file install never shows.
+const served = await new Promise((r) => {
+	const s = createHttpServer((req, res) => { res.setHeader('content-type', 'application/octet-stream'); res.end(readFileSync(tarball)) })
+	s.listen(0, '127.0.0.1', () => r(s))
+})
+const tarballUrl = `http://127.0.0.1:${served.address().port}/toucan.tgz`
+const env = { PATH: `${bin}:${dirname(process.execPath)}:/usr/bin:/bin`, HOME: home, TOUCAN_PORT: String(port), npm_config_prefix: prefix, TOUCAN_TARBALL: tarballUrl, ...(browsers && { PLAYWRIGHT_BROWSERS_PATH: browsers }) }
 const run = promisify(execFile)
 const toucan = (args, opts = {}) => run(join(bin, 'toucan'), args, { env, maxBuffer: 64 << 20, ...opts }).then((r) => r.stdout.trim())
 
@@ -115,6 +127,7 @@ try {
 
 	assert.match(await toucan(['stop']), /stopped/)
 } finally {
+	served.close()
 	await toucan(['stop']).catch(() => {})
 	rmSync(base, { recursive: true, force: true })
 }
