@@ -343,6 +343,10 @@ export function makeHelpers(editor) {
 
 	/** Create or update a frame (a titled container). An existing frame changes only in what you pass. */
 	function frame(key, { x, y, w, h, name, color, meta = {}, move = false } = {}) {
+		// tldraw rejects a frame with no width or height, and the error takes the person's tab down: never write one.
+		const positive = (v) => Number.isFinite(v) && v > 0
+		if (!positive(w)) w = undefined
+		if (!positive(h)) h = undefined
 		const id = idFor(key)
 		const existing = editor.getShape(id)
 		const passed = Object.fromEntries(Object.entries({ name, color }).filter(([, v]) => v !== undefined))
@@ -417,7 +421,7 @@ export function makeHelpers(editor) {
 		const updates = res.children.map((c) => ({ id: c.id, type: editor.getShape(c.id).type, x: origin.x + c.x, y: origin.y + c.y }))
 		if (animate && updates.length < 300) editor.animateShapes(updates, { animation: { duration: 300 } })
 		else editor.updateShapes(updates)
-		if (within) editor.updateShape({ id: idFor(within), type: 'frame', props: { w: res.width, h: res.height } })
+		if (within && res.width > 0 && res.height > 0) editor.updateShape({ id: idFor(within), type: 'frame', props: { w: res.width, h: res.height } })
 		return { nodes: updates.length, edges: edges.length, width: Math.round(res.width), height: Math.round(res.height) }
 	}
 
