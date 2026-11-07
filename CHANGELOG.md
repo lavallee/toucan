@@ -5,6 +5,8 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.12.1] — 2026-11-07
+
 ### Added
 
 - **Features** on the docs site: everything toucan does in one list, grouped, with where to find each one in the app

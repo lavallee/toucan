@@ -1,7 +1,7 @@
 {
   "name": "toucan",
   "displayName": "toucan — a canvas you and your agents share",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Draw diagrams of code, systems and plans on a live tldraw or Excalidraw canvas through the toucan CLI while a person watches and edits by hand: start from templates or describe a diagram as data, act on sticky notes and comment threads, and propose changes to accept or reject.",
   "author": {
     "name": "Marc Lavallee"
