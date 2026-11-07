@@ -1,4 +1,4 @@
-/* artoo-kit helpers: theme toggle, mobile nav, optional mermaid boot.
+/* artoo-kit helpers: theme toggle, mobile nav, legacy mermaid.js boot.
    No dependencies; safe to include on every page. */
 (function () {
   "use strict";
@@ -35,9 +35,18 @@
     }
   });
 
-  // Mermaid: if a vendored mermaid.min.js is loaded, render .mermaid blocks
-  // with theme-aware colors.
-  if (window.mermaid) {
+  // Loops (.article-loop): silent, autoplaying figures. Readers who ask for less
+  // motion get them paused with controls; a click toggles play for everyone.
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  Array.prototype.forEach.call(document.querySelectorAll("video.article-loop"), function (v) {
+    if (reduce) { v.removeAttribute("autoplay"); v.autoplay = false; v.pause(); v.controls = true; }
+    v.addEventListener("click", function () { if (v.controls) return; v.paused ? v.play() : v.pause(); });
+  });
+
+  // Mermaid: artifacts that opted into mermaid.js (artoo-mermaid) still render
+  // .mermaid blocks here. artoo-diagrams renders the same blocks with Pele;
+  // when both are loaded, Pele owns them so nothing is drawn twice.
+  if (window.mermaid && !window.pele) {
     window.mermaid.initialize({
       startOnLoad: true,
       theme: currentTheme() === "dark" ? "dark" : "neutral",

@@ -117,6 +117,11 @@ table {
   font-size: var(--text-sm);
 }
 
+/* Long inline code (a command, an env var) wraps instead of widening the page on a phone. */
+:not(pre) > code {
+  overflow-wrap: anywhere;
+}
+
 th, td {
   text-align: left;
   padding: var(--sp-2) var(--sp-3);

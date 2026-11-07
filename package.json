@@ -46,7 +46,7 @@
     "test:presence": "node scripts/presence-e2e.mjs",
     "test:references": "node scripts/references-e2e.mjs",
     "check": "node scripts/check-repo.mjs",
-    "docs": "artoo build website",
+    "docs": "node scripts/build-features.mjs && artoo build website",
     "prepack": "npm run build",
     "test:install": "node scripts/install-check.mjs"
   },

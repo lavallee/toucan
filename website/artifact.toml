@@ -6,11 +6,11 @@ kind = "explainer"
 form = "collection"
 status = "live"
 created = "2026-10-27"
-updated = "2026-11-06"
+updated = "2026-11-07"
 
 [content]
 pages = "content"
-order = ["index.md", "tour.md", "explore.md", "gallery.md", "quickstart.md", "agents.md", "how-it-works.md", "extending.md", "habits.md"]
+order = ["index.md", "tour.md", "features.md", "explore.md", "gallery.md", "quickstart.md", "agents.md", "how-it-works.md", "extending.md", "habits.md"]
 
 [deploy]
 target = "github-pages"
@@ -24,5 +24,5 @@ subpath = ""
 
 [[libraries]]
 name = "artoo-kit"
-version = "0.5.0"
-sha256 = "f1fcd69b7343ecc60d21eec765705b74be168f3d8ba3143423f1300e07a93b4a"
+version = "0.7.2"
+sha256 = "eeeed9e13070d2e21ff1dc9ca5bf43898ab21f7ca5d06482c4c9ef88f322d20d"

@@ -5,6 +5,16 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Features** on the docs site: everything toucan does in one list, grouped, with where to find each one in the app
+  or as a command and the release it arrived in. The source is `website/work/features.json`, which other tools can
+  read; `scripts/build-features.mjs` renders it, and `npm run docs` runs both.
+
+### Changed
+
+- The docs site builds with artoo 0.9.3 (Markdown tables, video figures, page front matter).
+
 ## [0.12.0] — 2026-11-06
 
 Work with your own agent on a canvas.

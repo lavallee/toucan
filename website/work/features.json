@@ -1,0 +1,616 @@
+{
+ "product": "toucan",
+ "version": "0.12.0",
+ "updated": "2026-11-07",
+ "note": "The full feature list. scripts/build-features.mjs renders it to website/content/features.md; keep it in step with CHANGELOG.md.",
+ "groups": [
+  {
+   "id": "canvas",
+   "name": "The canvas"
+  },
+  {
+   "id": "chat",
+   "name": "Chat with an agent"
+  },
+  {
+   "id": "together",
+   "name": "Working together"
+  },
+  {
+   "id": "reading",
+   "name": "Reading a diagram"
+  },
+  {
+   "id": "tidy",
+   "name": "Tidying and checking"
+  },
+  {
+   "id": "history",
+   "name": "History and safety"
+  },
+  {
+   "id": "agents",
+   "name": "For agents: CLI and MCP"
+  },
+  {
+   "id": "formats",
+   "name": "Formats in and out"
+  },
+  {
+   "id": "running",
+   "name": "Installing and running"
+  }
+ ],
+ "features": [
+  {
+   "id": "canvas",
+   "group": "canvas",
+   "name": "Canvas",
+   "summary": "A whiteboard in a browser tab that you edit by hand while agents edit it beside you, synced live across tabs.",
+   "app": "The canvas",
+   "since": "0.1.0",
+   "docs": "index.html",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "engines",
+   "group": "canvas",
+   "name": "Two engines",
+   "summary": "Each canvas runs on tldraw or Excalidraw, and converts between them with keys, text, frames and arrows intact.",
+   "app": "New canvas",
+   "cli": "new NAME --engine tldraw|excalidraw",
+   "since": "0.1.0",
+   "docs": "tour.html#tldraw-or-excalidraw",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "index",
+   "group": "canvas",
+   "name": "Canvas index",
+   "summary": "Every canvas on the server in one page, with thumbnails, to open or start one.",
+   "app": "Index",
+   "cli": "canvases",
+   "since": "0.1.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "templates",
+   "group": "canvas",
+   "name": "Templates",
+   "summary": "22 diagrams to start from: flowchart, swimlane, org chart, sequence, service map, state machine, roadmap, timeline, kanban, journey and more.",
+   "app": "New canvas",
+   "cli": "templates [show ID] · new NAME --template ID",
+   "since": "0.7.0",
+   "docs": "gallery.html",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "welcome",
+   "group": "canvas",
+   "name": "Welcome canvas",
+   "summary": "A first canvas on setup that shows what to try.",
+   "cli": "setup",
+   "since": "0.8.0",
+   "docs": "quickstart.html",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "appearance",
+   "group": "canvas",
+   "name": "Appearance and your name",
+   "summary": "System, light or dark per browser, and the name shown on your comments.",
+   "app": "Appearance",
+   "since": "0.3.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "examples",
+   "group": "canvas",
+   "name": "Example maps",
+   "summary": "The Odyssey as a story map and Meditations as a map of ideas, with every quotation checked against its source.",
+   "app": "Explore",
+   "since": "0.6.0",
+   "docs": "explore.html",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "chat",
+   "group": "chat",
+   "name": "Chat panel",
+   "summary": "Ask in plain words and the agent draws, edits and checks its work on the canvas, using Codex on your own ChatGPT sign-in.",
+   "app": "Chat",
+   "since": "0.1.0",
+   "docs": "tour.html#ask-and-it-draws",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "fast-thorough",
+   "group": "chat",
+   "name": "Fast and Thorough",
+   "summary": "Pick a quick default model or a slower, more careful one for the chat, per browser.",
+   "app": "Chat: Fast / Thorough",
+   "since": "0.4.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "steer",
+   "group": "chat",
+   "name": "Steer a turn in progress",
+   "summary": "Send a message while the agent works and it adjusts the turn instead of waiting for it to end.",
+   "app": "Chat",
+   "since": "0.4.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "slash",
+   "group": "chat",
+   "name": "Slash commands and Mermaid shortcut",
+   "summary": "Type / to run a routine instantly, or paste a Mermaid flowchart and it lands without a model call.",
+   "app": "Chat: /",
+   "since": "0.4.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "new-chat",
+   "group": "chat",
+   "name": "New chat",
+   "summary": "Start a fresh conversation with the agent on the same canvas.",
+   "app": "Chat: New chat",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "dock",
+   "group": "chat",
+   "name": "Dock or float the chat",
+   "summary": "Dock the chat left, right or along the bottom, or float it over the canvas, and resize it.",
+   "app": "Chat header",
+   "since": "0.3.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "approvals",
+   "group": "chat",
+   "name": "Sandbox approvals",
+   "summary": "When the agent wants to go outside its sandbox, it asks you in the chat to accept or decline.",
+   "app": "Chat",
+   "since": "0.1.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "profiles",
+   "group": "chat",
+   "name": "Named agents (profiles)",
+   "summary": "Work with a specific agent on a canvas: its briefing, context and skills load, and people see its name.",
+   "app": "Chat: agent picker",
+   "cli": "meta --profile SOURCE/ID · profiles add ID --workdir DIR",
+   "since": "0.12.0",
+   "docs": "agents.html#profiles-working-with-a-named-agent",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "notes",
+   "group": "together",
+   "name": "Sticky notes for the agent",
+   "summary": "Pin a note where the problem is; the agent acts on each and turns it green with a one-line reply. Notes are never deleted.",
+   "app": "Note tool (N)",
+   "cli": "notes · notes resolve KEY --reply TEXT",
+   "since": "0.2.0",
+   "docs": "tour.html#leave-a-sticky-note",
+   "engines": "tldraw",
+   "who": "person"
+  },
+  {
+   "id": "threads",
+   "group": "together",
+   "name": "Comment threads",
+   "summary": "Comment on a shape, several shapes or a region and go back and forth until someone closes it. Each thread has its own agent, so several are worked at once.",
+   "app": "Comment · Threads",
+   "cli": "threads new TEXT --on KEY --ask · threads reply N TEXT",
+   "since": "0.5.0",
+   "docs": "tour.html#comment-and-have-it-answered",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "adopt-notes",
+   "group": "together",
+   "name": "Notes into threads",
+   "summary": "Bring sticky notes into threads, keeping their replies and resolutions.",
+   "app": "Threads panel",
+   "cli": "threads adopt-notes",
+   "since": "0.5.0",
+   "docs": "agents.html#threads-comments-on-shapes-and-regions",
+   "engines": "tldraw",
+   "who": "person"
+  },
+  {
+   "id": "proposals",
+   "group": "together",
+   "name": "Proposals",
+   "summary": "An agent's suggestion arrives dashed, with Accept and Reject above the canvas. Nothing is final until you say so.",
+   "app": "Proposal bar: Accept all / Reject all",
+   "cli": "import --propose · proposals accept|reject",
+   "since": "0.2.0",
+   "docs": "tour.html#take-it-or-leave-it",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "presence",
+   "group": "together",
+   "name": "Agent at work",
+   "summary": "While an agent works, every tab shows a status pill with what it's doing, a soft ring round the canvas, and its cursor on the shape it touched.",
+   "app": "On the canvas",
+   "cli": "say TEXT [--at KEY,KEY] · --agent NAME",
+   "since": "0.9.0",
+   "docs": "agents.html#what-people-see-presence-and-undo",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "selection",
+   "group": "together",
+   "name": "\"This\": selection awareness",
+   "summary": "Agents can see what you've selected, so \"make this bigger\" means this.",
+   "app": "Select",
+   "cli": "selection",
+   "since": "0.2.0",
+   "docs": "agents.html#this-what-people-have-selected",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "glow",
+   "group": "together",
+   "name": "Edits glow",
+   "summary": "Shapes an agent adds or changes glow briefly, tagged with its name, in every open tab.",
+   "app": "On the canvas",
+   "since": "0.2.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "details",
+   "group": "reading",
+   "name": "Details cards",
+   "summary": "Boxes stay short; select one and a card opens with what's behind it, its open threads, and jumps to related boxes.",
+   "app": "Select a box",
+   "since": "0.7.0",
+   "docs": "tour.html#short-boxes-with-the-rest-a-click-away",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "formats",
+   "group": "reading",
+   "name": "Formats: story, ideas, system",
+   "summary": "Give a canvas a format and ← and → walk it from the card, along arrows or a frame.",
+   "app": "Format menu",
+   "cli": "meta --canvas-format story|ideas|system",
+   "since": "0.7.0",
+   "docs": "tour.html#short-boxes-with-the-rest-a-click-away",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "overview",
+   "group": "reading",
+   "name": "Zoomed-out system view",
+   "summary": "Zoom out on a system diagram to see its frames, how many parts each holds, and the connections between them.",
+   "app": "Zoom out",
+   "since": "0.7.0",
+   "docs": "tour.html#zoom-out-on-a-system",
+   "engines": "tldraw",
+   "who": "person"
+  },
+  {
+   "id": "references",
+   "group": "reading",
+   "name": "References panel",
+   "summary": "Read files, the project's docs and web pages beside the canvas without leaving it; agents can show you what they wrote.",
+   "app": "References",
+   "cli": "references · show REF|PATH|URL",
+   "since": "0.10.0",
+   "docs": "agents.html#references-what-people-read-beside-the-canvas",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "routines",
+   "group": "tidy",
+   "name": "Routines",
+   "summary": "Chores banked once and run from a menu, the chat (/name) or the CLI, each one undoable in a single step.",
+   "app": "Routines menu",
+   "cli": "routine list · routine run NAME",
+   "since": "0.3.0",
+   "docs": "tour.html#tidy-it-up",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "clean-up",
+   "group": "tidy",
+   "name": "Clean up and the tidying set",
+   "summary": "Clean up, Lay it out again, Line things up, Even out the gaps, Match box sizes, Fix overlaps, Fit frames, Neat arrows, Colour by frame, Tidy arrows.",
+   "app": "Routines menu",
+   "cli": "routine run clean-up",
+   "since": "0.7.0",
+   "docs": "tour.html#tidy-it-up",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "air-out",
+   "group": "tidy",
+   "name": "Air out",
+   "summary": "Moves long text from crowded boxes into their details, enlarges names and spreads things a little.",
+   "app": "Routines menu",
+   "cli": "routine run air-out",
+   "since": "0.7.0",
+   "docs": "tour.html#air-out-a-dense-diagram",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "check",
+   "group": "tidy",
+   "name": "Check this diagram",
+   "summary": "Scores what's drawn out of 100 and names the shapes at fault, so an agent can fix what it finds.",
+   "app": "Routines menu",
+   "cli": "routine run check-diagram",
+   "since": "0.7.0",
+   "docs": "tour.html#tidy-it-up",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "bank-routine",
+   "group": "tidy",
+   "name": "Bank your own routine",
+   "summary": "Ask the chat to make a chore a routine, paste code, or save one from the CLI; it appears in the menu for every canvas.",
+   "app": "Chat · Routines menu",
+   "cli": "routine save NAME FILE",
+   "since": "0.3.0",
+   "docs": "agents.html#routines-chores-worth-keeping",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "scripts",
+   "group": "tidy",
+   "name": "Canvas scripts",
+   "summary": "Persistent behaviour stored with a canvas, such as a button that re-routes arrows.",
+   "cli": "script list|put|rm",
+   "since": "0.1.0",
+   "docs": "agents.html#canvas-scripts-growing-features",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "timeline-aware",
+   "group": "tidy",
+   "name": "Timeline-aware tidying",
+   "summary": "On a timeline, tidying keeps dates where they are: positions and widths are dates.",
+   "since": "0.7.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "versions",
+   "group": "history",
+   "name": "History and restore",
+   "summary": "Every canvas keeps versions, whoever made the change. Step through them read-only over the live canvas and restore one; a restore can be undone.",
+   "app": "History",
+   "cli": "versions · versions save LABEL · versions restore N",
+   "since": "0.3.0",
+   "docs": "tour.html#go-back",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "undo",
+   "group": "history",
+   "name": "One undo per agent action",
+   "summary": "An agent's run, a routine or an accepted proposal is a single undo step.",
+   "app": "⌘Z",
+   "since": "0.2.0",
+   "docs": "agents.html#what-people-see-presence-and-undo",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "trail",
+   "group": "history",
+   "name": "While you were away",
+   "summary": "Edits agents made with no tab open are logged and announced when you come back.",
+   "app": "Banner",
+   "cli": "log [--since T]",
+   "since": "0.2.0",
+   "docs": "agents.html#headless-mode",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "files",
+   "group": "history",
+   "name": "A folder per canvas",
+   "summary": "What agents write for a canvas goes in its own folder, archived with it, and nowhere else in the data directory.",
+   "cli": "files",
+   "since": "0.6.0",
+   "docs": "agents.html#files-what-you-write-for-a-canvas",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "cli",
+   "group": "agents",
+   "name": "The toucan CLI",
+   "summary": "Read a canvas, run JavaScript in the live editor, screenshot it, and merge diagrams in by key, from any terminal agent.",
+   "cli": "summary · exec · screenshot · import · graph",
+   "since": "0.1.0",
+   "docs": "agents.html#the-cli",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "draw",
+   "group": "agents",
+   "name": "Describe it as data",
+   "summary": "An agent describes a diagram and a layout engine places it, which is why drawing takes seconds.",
+   "cli": "draw FILE [--update]",
+   "since": "0.7.0",
+   "docs": "tour.html#describe-it-as-data",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "connect",
+   "group": "agents",
+   "name": "Connect your agents",
+   "summary": "Teaches Claude Code, Codex, Gemini CLI, pi, Cursor, opencode and Claude Desktop to use toucan, by skill or MCP.",
+   "cli": "agents [install|remove]",
+   "since": "0.8.0",
+   "docs": "quickstart.html",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "mcp",
+   "group": "agents",
+   "name": "MCP server",
+   "summary": "For agents that can't run the CLI, including Codex in its default sandbox.",
+   "cli": "mcp",
+   "since": "0.8.0",
+   "docs": "quickstart.html",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "init",
+   "group": "agents",
+   "name": "A canvas per project",
+   "summary": "toucan init finds or makes the canvas for the repository you're in; commands there use it without --canvas.",
+   "cli": "init [NAME] --open",
+   "since": "0.8.0",
+   "docs": "quickstart.html",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "headless",
+   "group": "agents",
+   "name": "Headless mode",
+   "summary": "With no tab open, agents still read and edit: the server runs the canvas in its own headless page.",
+   "cli": "start --headless",
+   "since": "0.2.0",
+   "docs": "agents.html#headless-mode",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "client",
+   "group": "agents",
+   "name": "Node client and extensions",
+   "summary": "A Node client for scripts, and toucan X runs toucan-X so extensions live in their own repos.",
+   "cli": "toucan-X",
+   "since": "0.1.0",
+   "docs": "extending.html",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "mermaid",
+   "group": "formats",
+   "name": "Mermaid in and out",
+   "summary": "Paste or import Mermaid: on a blank canvas it looks like a template, and on a full one it merges by key.",
+   "app": "Chat: paste",
+   "cli": "import FILE --format mermaid · graph --format mermaid",
+   "since": "0.1.0",
+   "docs": "tour.html#or-as-mermaid",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "interop",
+   "group": "formats",
+   "name": "JSON Canvas, Excalidraw, DOT",
+   "summary": "Import and export JSON Canvas (Obsidian) and .excalidraw; export DOT.",
+   "cli": "import · graph --format jsoncanvas|excalidraw|dot",
+   "since": "0.1.0",
+   "docs": "tour.html#or-as-mermaid",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "tg",
+   "group": "formats",
+   "name": "Toucan graph",
+   "summary": "An engine-neutral graph format, with keyed upsert import and automatic layout.",
+   "cli": "graph · import --format tg",
+   "since": "0.1.0",
+   "docs": "agents.html#graphs-the-engine-neutral-path",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "install",
+   "group": "running",
+   "name": "One-line install",
+   "summary": "Installs a prebuilt release, starts the server, connects your agents and opens a first canvas.",
+   "cli": "curl … install.sh | sh · update",
+   "since": "0.8.0",
+   "docs": "quickstart.html",
+   "engines": "both",
+   "who": "operator"
+  },
+  {
+   "id": "setup",
+   "group": "running",
+   "name": "Setup and doctor",
+   "summary": "setup asks nothing, so an agent can run it; doctor says what's wrong and what to do.",
+   "cli": "setup · doctor · status · open · guide",
+   "since": "0.8.0",
+   "docs": "quickstart.html",
+   "engines": "both",
+   "who": "operator"
+  },
+  {
+   "id": "server",
+   "group": "running",
+   "name": "A server that looks after itself",
+   "summary": "Commands start a background server when needed, and never fight one you run yourself.",
+   "cli": "start · stop · restart · start --take-over",
+   "since": "0.8.0",
+   "docs": "how-it-works.html",
+   "engines": "both",
+   "who": "operator"
+  },
+  {
+   "id": "remote",
+   "group": "running",
+   "name": "Remote and behind a proxy",
+   "summary": "Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to.",
+   "app": "Sign-in page",
+   "cli": "--public-url · --allow-host · TOUCAN_URL · TOUCAN_TOKEN",
+   "since": "0.11.0",
+   "docs": "how-it-works.html",
+   "engines": "both",
+   "who": "operator"
+  }
+ ]
+}
