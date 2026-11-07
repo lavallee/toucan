@@ -5,6 +5,8 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.12.2] — 2026-11-07
+
 ### Fixed
 
 - The one-line install, and `toucan update`, work with npm 12. npm 12 refuses to install a package from a URL by
