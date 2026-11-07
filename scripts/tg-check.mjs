@@ -50,5 +50,19 @@ const laid = await T.layoutMissing(m, { existing: { groups: [], nodes: [{ key: '
 assert.ok([...laid.groups, ...laid.nodes].every((i) => i.box && i.box.x >= 300), 'new items placed right of existing content')
 console.log('ok  layoutMissing')
 
+// A new group whose only member is already on the canvas used to come back 0x0 from ELK; as a frame that fails
+// tldraw's validation and crashes the tab (an agent's "give it its own lane" import did exactly this).
+{
+	const lane = T.fromMermaid('flowchart LR\n  subgraph lane[Waitlist]\n    waitlist[Waitlist]\n  end\n  bookings --> waitlist')
+	const existing = { groups: [], nodes: [{ key: 'waitlist', box: { x: 500, y: 300, w: 160, h: 60 } }, { key: 'bookings', box: { x: 100, y: 300, w: 160, h: 60 } }] }
+	const out = await T.layoutMissing(lane, { existing, elk: new ELK() })
+	const g = out.groups.find((x) => x.key === 'lane')
+	assert.ok(g.box.w > 0 && g.box.h > 0, 'a group of existing members gets a size')
+	assert.ok(g.box.x < 500 && g.box.x + g.box.w > 660 && g.box.y < 300 && g.box.y + g.box.h > 360, 'and wraps them where they are')
+	const empty = await T.layoutMissing({ groups: [{ key: 'nothing', label: 'Empty' }], nodes: [], edges: [] }, { existing, elk: new ELK() })
+	assert.ok(empty.groups[0].box.w > 0 && empty.groups[0].box.h > 0, 'an empty group gets a default size')
+}
+console.log('ok  layoutMissing: a group with no new members still has a size')
+
 // Every format carries a laid-out graph through.
 roundTrip('sample', laid)

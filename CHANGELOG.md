@@ -15,6 +15,13 @@ All notable changes to toucan are recorded here. The format follows
 
 - The docs site builds with artoo 0.9.3 (Markdown tables, video figures, page front matter).
 
+### Fixed
+
+- Importing a group whose members are already on the canvas (Mermaid `subgraph lane … end` around an existing box,
+  which is how an agent "gives a box its own lane") no longer creates a zero-width frame. tldraw rejects one, the
+  import timed out, and in an open tab the canvas crashed to "Something went wrong". The group now wraps its members
+  where they are, an empty one gets a default size, and `frame()` and `layout(within)` never write a zero size.
+
 ## [0.12.0] — 2026-11-06
 
 Work with your own agent on a canvas.
