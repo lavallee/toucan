@@ -7,7 +7,7 @@ canvas, send JavaScript to the live editor, look at a screenshot, or merge a Mer
 Excalidraw file in by key. You keep drawing the whole time, and every edit, yours or theirs, lands on
 one shared document.
 
-[See it work →](tour.html) · [Click through a canvas →](explore.html) · [Get started →](quickstart.html) · [Source on GitHub ↗](https://github.com/lavallee/toucan)
+[See it work →](tour.html) · [Every feature →](features.html) · [Click through a canvas →](explore.html) · [Get started →](quickstart.html) · [Source on GitHub ↗](https://github.com/lavallee/toucan)
 
 ![The canvas with the chat panel open. Asked for a sequence diagram of a password reset, the agent has drawn four participants and a column of messages between them.](assets/tour/chat.png "A real turn of the chat agent, from a one-line request.")
 

@@ -12,6 +12,7 @@ directory if you omit it.
 | manifest health, firewall report, library drift | `artoo status .` |
 | refresh inputs, verify, stamp `updated` | `artoo build .` |
 | static and optional browser checks | `artoo verify .` |
+| private finding or resolution tied to this render | `artoo review . "…" --page index.html` |
 | build or interrogate a repository graph | `artoo map --help` |
 | publish (firewall-staged) | `artoo deploy .` |
 | the layout vocabulary, in full | `artoo docs <library>` |
@@ -37,7 +38,7 @@ you and invisible to the world with no configuration. Put working material in
 
 ## Layout vocabulary
 
-### artoo-kit 0.5.0
+### artoo-kit 0.7.2
 
 Long-form article layout, evidence regions, and the provenance panel.
 
@@ -57,6 +58,9 @@ Vendored at `site/lib/artoo-kit/`. Read the stylesheets there if you need the ex
 | `article-byline` | publication line; wrap the date in `<time datetime=…>` |
 | `article-lede` | opening paragraph, set larger |
 | `article-figure` | figure wrapper for a table or chart; put vintage, denominator, and source in the `figcaption` |
+| `article-table` | scroll region around a table (Markdown pipe tables get one): wide tables scroll sideways inside it instead of widening the page |
+| `article-loop` | a silent looping video inside an `article-figure` (Markdown: an image whose src is a video); named by `aria-label`, paused with controls for reduced motion, click toggles |
+| `article-toggle` | figure variant: one of 2–4 images or loops shown at a time, switched by labelled radios; `__bar` holds the labels, `__panels` the media (Markdown: a ```` ```toggle ```` fence) |
 | `article-marginnote` | right-gutter note, inline on mobile; `--def`, `--source`, `--callout` variants, `.term` for the term defined |
 | `article-pullquote` | breakout-width quote; attribute it with `<cite>` |
 | `article-pullnumber` | breakout-width figure; `.num` is the value, `.label` its caption |
@@ -71,7 +75,7 @@ Vendored at `site/lib/artoo-kit/`. Read the stylesheets there if you need the ex
 | `stat-row` | row of figures |
 | `stat` | one figure; `.value` then `.label` |
 | `toc` | table of contents, as an ordered list |
-| `diagram` | wrapper for an inline SVG or a mermaid block |
+| `diagram` | wrapper for an inline SVG or an artoo-diagrams Mermaid block |
 | `colophon` | build and provenance footer |
 | `collection-pager` | previous and next navigation at the foot of a collection page |
 | `numeric` | tabular figures, so columns of numbers align |
@@ -96,6 +100,8 @@ Full prose contract: `artoo docs artoo-kit`.
    never resolves — SVG presentation attributes are not CSS. Give the shape a
    class and set `fill` in a `<style>` block, which also lets the chart follow
    the theme instead of baking one that only reads in light mode.
+   Diagrams of structure are Mermaid rendered by `artoo-diagrams`; give nodes
+   roles (`:::accent`, `:::warn`, `:::muted`) instead of `style` colors.
 4. **A figure earns its place by enabling a valid comparison.** Vintages,
    denominators, and a source note belong in the `figcaption`.
 
