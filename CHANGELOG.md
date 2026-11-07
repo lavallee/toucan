@@ -5,6 +5,13 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The one-line install, and `toucan update`, work with npm 12. npm 12 refuses to install a package from a URL by
+  default (`allow-remote=none`), so `install.sh` stopped with `EALLOWREMOTE`. Both now download the release first and
+  install the local file, which every npm version accepts. `npm run test:install` serves the tarball over HTTP, so CI
+  runs the same download path people do, and it reads npm 12's new `npm pack --json` shape.
+
 ## [0.12.1] — 2026-11-07
 
 ### Added

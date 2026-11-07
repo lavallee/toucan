@@ -33,7 +33,19 @@ else
 fi
 
 printf 'Installing toucan…\n'
-npm install --global --prefix "$prefix" --no-audit --no-fund --loglevel=error "$TARBALL"
+# npm 12 refuses to install from a URL by default (allow-remote=none), so a release is downloaded first and installed
+# as a local file, which every npm accepts.
+case "$TARBALL" in
+http://* | https://*)
+	tmp=$(mktemp -d)
+	trap 'rm -rf -- "${tmp:?}"' EXIT
+	command -v curl >/dev/null 2>&1 || fail "curl is needed to download the release."
+	curl -fsSL "$TARBALL" -o "$tmp/toucan.tgz" || fail "couldn't download $TARBALL"
+	pkg="$tmp/toucan.tgz"
+	;;
+*) pkg="$TARBALL" ;;
+esac
+npm install --global --prefix "$prefix" --no-audit --no-fund --loglevel=error "$pkg"
 
 case ":$PATH:" in
 *":$bin:"*) ;;
