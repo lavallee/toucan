@@ -1,6 +1,6 @@
 // routine: Fit frames
 // description: Each frame fits what is in it, with even padding, so nothing is cut off. Nothing inside moves on the page.
-// engines: tldraw
+// engines: tldraw, excalidraw
 
 const n = toucan.tidy.fitFrames(args)
 const apart = n ? toucan.tidy.fixOverlaps({ gap: 40, framesOnly: true }) : 0

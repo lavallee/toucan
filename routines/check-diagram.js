@@ -1,6 +1,6 @@
 // routine: Check this diagram
 // description: Measures the diagram as drawn, scores it, and points at what is wrong. Changes nothing.
-// engines: tldraw
+// engines: tldraw, excalidraw
 
 const m = toucan.measure()
 const kinds = {}

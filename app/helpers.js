@@ -11,6 +11,7 @@ import { fromTldraw, layoutMissing } from '../lib/tg.mjs'
 import { pulse as glow } from './pulses'
 import { measureDiagram, scoreDiagram } from './measure'
 import { makeTidy } from './tidy'
+import { tldrawScene } from './scene'
 import { refsOfShape } from './reference-links'
 
 const elk = new ELK()
@@ -452,6 +453,8 @@ export function makeHelpers(editor) {
 	 */
 	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction } = {}) {
 		editor.markHistoryStoppingPoint('apply graph')
+		// A graph may leave out what it has none of.
+		tg = { ...tg, groups: tg?.groups ?? [], nodes: tg?.nodes ?? [], edges: tg?.edges ?? [] }
 		tg = await layoutMissing(tg, { existing: graph(), elk, direction })
 		const raw = tg.extra?.tldraw ?? {}
 		const out = { created: [], updated: 0, pruned: 0, skippedEdges: [] }
@@ -629,9 +632,11 @@ export function makeHelpers(editor) {
 		}
 	}
 
-	const api = { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, measure: () => {
-		const m = measureDiagram(editor, api)
+	// The canvas as the tidying and the diagram check see it, the same on both engines (app/scene.js).
+	const scene = tldrawScene(editor, { keyOf, text, toRichText })
+	const api = { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
+		const m = measureDiagram(scene)
 		return { ...m, score: scoreDiagram(m) }
-	}, tidy: makeTidy(editor, keyOf) }
+	}, tidy: makeTidy(scene) }
 	return api
 }

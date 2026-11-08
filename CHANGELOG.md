@@ -5,6 +5,35 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Every shipped routine runs on Excalidraw canvases too, and the Routines menu offers them there: Clean up, Lay it out
+  again, Line things up, Even out the gaps, Match box sizes, Fix overlaps, Fit frames, Neat arrows, Tidy arrows, Colour by
+  frame, Air out and Check this diagram. `toucan.measure()` and `toucan.tidy` exist on both engines and behave the same,
+  because they read and change the canvas through one engine-neutral scene (`toucan.scene`, app/scene.js). On Excalidraw
+  a run lands in one `updateScene`, so one undo reverses it; a box that moves takes its label along, and the arrows bound
+  to it are drawn again.
+- Lay it out again takes `within` (one frame's contents, inside that frame), `direction`, `spacing` and `layerSpacing`,
+  and keeps arrows someone curved or routed by hand.
+- The diagram eval (`scripts/eval-diagrams.mjs`) knocks the same fixtures about on Excalidraw, runs every routine there,
+  and checks what each claims, that nothing is lost, that arrows stay bound and labels stay in their boxes, and that a
+  run is one `updateScene` that one undo reverses. It scores the templates as Excalidraw draws them, too, and takes
+  `--engine tldraw|excalidraw`.
+
+### Changed
+
+- Clean up never leaves a diagram scoring lower than it found it: if tidying would, it changes nothing and says so.
+- Check this diagram doesn't report "text too small to read with the whole diagram in view", or take points for it, on a
+  canvas of more than 25 boxes or three or more frames, which is read by zooming in. It's still measured (`textAtFit`).
+- Fix overlaps also keeps frames clear of the boxes on the page beside them, and Even out the gaps runs until nothing
+  moves, so a second run changes nothing.
+
+### Fixed
+
+- `applyGraph` on Excalidraw accepts a graph without `groups`, `nodes` or `edges` (it threw "Cannot read properties of
+  undefined"), and draws an arrow to an existing shape the graph doesn't list, as tldraw does, reporting arrows whose
+  end is nowhere in `skippedEdges`.
+
 ## [0.12.2] — 2026-11-07
 
 ### Fixed
