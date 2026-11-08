@@ -9,10 +9,20 @@ import ELK from 'elkjs/lib/elk.bundled.js'
 import { fromExcalidraw, toExcalidrawElements, wrap, layoutMissing } from '../lib/tg.mjs'
 import { pulse as glow } from './pulses'
 import { refsOfShape } from './reference-links'
+import { excalidrawScene } from './scene'
+import { measureDiagram, scoreDiagram } from './measure'
+import { makeTidy } from './tidy'
 
 const elk = new ELK()
 
 export function makeExcalidrawHelpers(api, ex) {
+	// The scene the tidying and the diagram check work on (app/scene.js). Its changes wait in a working copy until the run ends, so
+	// anything else that reads or writes the elements first makes them land: nobody sees, or overwrites, a scene that's out of date.
+	const scene = excalidrawScene(api, ex)
+	for (const name of ['getSceneElements', 'getSceneElementsIncludingDeleted', 'updateScene']) {
+		const own = api[name]
+		api[name] = (...a) => (scene.flush(), own(...a))
+	}
 	const all = () => api.getSceneElementsIncludingDeleted()
 	const live = () => api.getSceneElements()
 	// A duplicated element keeps its original's customData.key, and the key belongs to the first.
@@ -117,6 +127,8 @@ export function makeExcalidrawHelpers(api, ex) {
 	 * `prune` deletes keyed elements the graph doesn't mention.
 	 */
 	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction } = {}) {
+		// A graph may leave out what it has none of.
+		tg = { ...tg, groups: tg?.groups ?? [], nodes: tg?.nodes ?? [], edges: tg?.edges ?? [] }
 		tg = await layoutMissing(tg, { existing: graph(), elk, direction })
 		const current = all()
 		const byKey = new Map(shapes().map((e) => [keyOf(e), e]))
@@ -124,17 +136,26 @@ export function makeExcalidrawHelpers(api, ex) {
 		const box = (e) => ({ x: e.x, y: e.y, w: e.width, h: e.height })
 		// Existing geometry wins unless `move`, so new arrows are drawn between where things really are.
 		const keep = (item) => (byKey.has(item.key) && (!move || !item.box) ? { ...item, box: box(byKey.get(item.key)) } : item)
-		const placed = { ...tg, groups: tg.groups.map(keep), nodes: tg.nodes.map(keep), edges: tg.edges.map((e) => ({ ...e, key: edgeKey(e) })) }
+		// An arrow may join something already on the canvas that the graph doesn't list: it's drawn to it as it is, and it's left
+		// alone. One whose end is nowhere is skipped, and reported, as on tldraw.
+		const listed = new Set([...tg.groups, ...tg.nodes].map((i) => i.key))
+		const asIs = new Set(tg.edges.flatMap((e) => [e.from, e.to]).filter((k) => !listed.has(k) && byKey.has(k)))
+		const skippedEdges = tg.edges.filter((e) => ![e.from, e.to].every((k) => listed.has(k) || asIs.has(k))).map((e) => `${e.from}->${e.to}`)
+		const GEO = { ellipse: 'ellipse', diamond: 'diamond' }
+		const endpoints = [...asIs].map((key) => ({ key, text: text(byKey.get(key)), box: box(byKey.get(key)), style: { geo: GEO[byKey.get(key).type] ?? 'rectangle' } }))
+		const drawable = tg.edges.filter((e) => !skippedEdges.includes(`${e.from}->${e.to}`))
+		const placed = { ...tg, groups: tg.groups.map(keep), nodes: [...tg.nodes.map(keep), ...endpoints], edges: drawable.map((e) => ({ ...e, key: edgeKey(e) })) }
 		const target = toExcalidrawElements(placed)
 		const tgItem = new Map([...tg.groups, ...tg.nodes].map((i) => [i.key, i]))
 		const tgEdge = new Map(tg.edges.map((e) => [edgeKey(e), e]))
 
 		const next = new Map(current.map((e) => [e.id, e]))
 		const idOf = (key) => byKey.get(key)?.id ?? key
-		const out = { created: 0, updated: 0, pruned: 0 }
+		const out = { created: 0, updated: 0, pruned: 0, skippedEdges }
 		for (const t of target) {
 			if (t.type === 'text' && t.containerId) continue // labels are handled with their container
 			const key = t.customData?.key ?? t.id
+			if (asIs.has(key) && t.type !== 'arrow') continue
 			const existing = byKey.get(key)
 			const label = target.find((l) => l.containerId === t.id)
 			if (existing) {
@@ -223,9 +244,12 @@ export function makeExcalidrawHelpers(api, ex) {
 	 * Internal (the exec relay): note every element's version now; the returned function lists the
 	 * shapes (not bound labels) added, changed or deleted since, as { id, key, type, text }.
 	 */
+	// The run is also one undo step: what toucan.tidy changes is held until it ends, then lands in one updateScene.
 	function _track() {
 		const before = new Map(all().map((e) => [e.id, e.version]))
+		scene.begin()
 		return () => {
+			scene.end()
 			const out = { added: [], updated: [], removed: [] }
 			const els = all()
 			const byId = new Map(els.map((e) => [e.id, e]))
@@ -362,5 +386,10 @@ export function makeExcalidrawHelpers(api, ex) {
 		},
 	}
 
-	return { engine: 'excalidraw', get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
+	const measure = () => {
+		const m = measureDiagram(scene)
+		return { ...m, score: scoreDiagram(m) }
+	}
+
+	return { engine: 'excalidraw', scene, measure, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
 }

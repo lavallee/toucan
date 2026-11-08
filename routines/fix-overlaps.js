@@ -1,6 +1,6 @@
 // routine: Fix overlaps
 // description: Overlapping boxes and frames are moved apart by the least distance that clears them, and frames grow to hold what moved.
-// engines: tldraw
+// engines: tldraw, excalidraw
 // kind: tidy
 // when: Boxes overlap or crowd each other.
 // args: gap (px, default 24)

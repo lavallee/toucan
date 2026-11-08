@@ -10,11 +10,34 @@ All notable changes to toucan are recorded here. The format follows
 - **Routines by kind.** Every routine says what it's for (tidy, arrows, layout, style, content, check) and when to use it. The Routines menu groups them, with a search box, `routine list` groups them for agents (`--kind` to narrow), the chat agent gets the list at the start of each conversation, and MCP clients get `toucan_routines` and `toucan_run_routine`.
 - **Learning routines from work.** Every agent run that changes a canvas goes into a work log in the data folder. `toucan routine suggest` finds code agents keep writing by hand, grouped by what it does, and says when a routine already does it. The Routines menu shows the same suggestions under "From your work", where **Bank it** asks the chat agent to bank one. `routine learn --codex` brings in the chat agent's past sessions, and `routine stats` says which routines are used, by whom, and how often they fail.
 - **Templates you add, not only start from.** A canvas has diagrams rather than being one. Every template is now a **block** in a group (processes, structures, systems, time, work, decisions), and `toucan add ID`, or **Add** above the canvas, puts one beside what's there on either engine, never over it. Eleven new blocks: retro, pros and cons, SIPOC, SWOT, stakeholder map, Eisenhower matrix, empathy map, OKR tree, five whys, story map and decision log. Six **starters** make a whole canvas on one subject out of several blocks under headings: system design, incident review, product strategy, project kickoff, research plan and team retro.
-- New routines, from what agents actually did by hand: **Arrows to links** (long arrows become two-way see-also links), **Fit text** (boxes as tall as their text; both engines), **Clear arrow labels** (labels slide off boxes), **Frame these**, **Stack frames**, and **Open out details** (the reverse of Air out; both engines).
+- New routines, from what agents actually did by hand: **Arrows to links** (long arrows become two-way see-also links), **Fit text** (boxes as tall as their text), **Clear arrow labels** (labels slide off boxes), **Frame these**, **Stack frames**, and **Open out details** (the reverse of Air out). All run on both engines.
+- Every routine runs on Excalidraw canvases too, and the Routines menu offers them there: Clean up, Lay it out
+  again, Line things up, Even out the gaps, Match box sizes, Fix overlaps, Fit frames, Neat arrows, Tidy arrows, Colour by
+  frame, Air out and Check this diagram. `toucan.measure()` and `toucan.tidy` exist on both engines and behave the same,
+  because they read and change the canvas through one engine-neutral scene (`toucan.scene`, app/scene.js). On Excalidraw
+  a run lands in one `updateScene`, so one undo reverses it; a box that moves takes its label along, and the arrows bound
+  to it are drawn again.
+- Lay it out again takes `within` (one frame's contents, inside that frame), `direction`, `spacing` and `layerSpacing`,
+  and keeps arrows someone curved or routed by hand.
+- The diagram eval (`scripts/eval-diagrams.mjs`) knocks the same fixtures about on Excalidraw, runs every routine there,
+  and checks what each claims, that nothing is lost, that arrows stay bound and labels stay in their boxes, and that a
+  run is one `updateScene` that one undo reverses. It scores the templates as Excalidraw draws them, too, and takes
+  `--engine tldraw|excalidraw`.
+
+### Changed
+
+- Clean up never leaves a diagram scoring lower than it found it: if tidying would, it changes nothing and says so.
+- Check this diagram doesn't report "text too small to read with the whole diagram in view", or take points for it, on a
+  canvas of more than 25 boxes or three or more frames, which is read by zooming in. It's still measured (`textAtFit`).
+- Fix overlaps also keeps frames clear of the boxes on the page beside them, and Even out the gaps runs until nothing
+  moves, so a second run changes nothing.
 
 ### Fixed
 
 - `toucan.node(key, {h})` on an existing box sets its height outright, rather than leaving tldraw's growth for long text on top of it; and `parent` now moves an existing box into that frame.
+- `applyGraph` on Excalidraw accepts a graph without `groups`, `nodes` or `edges` (it threw "Cannot read properties of
+  undefined"), and draws an arrow to an existing shape the graph doesn't list, as tldraw does, reporting arrows whose
+  end is nowhere in `skippedEdges`.
 
 ## [0.12.2] — 2026-11-07
 

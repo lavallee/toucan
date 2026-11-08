@@ -1,6 +1,6 @@
 // routine: Match box sizes
 // description: Rectangles in a row become one height, and in a column one width. Only ever larger, so no text is squeezed.
-// engines: tldraw
+// engines: tldraw, excalidraw
 // kind: tidy
 // when: Boxes of the same kind are slightly different sizes.
 

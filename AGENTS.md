@@ -178,8 +178,9 @@ Mermaid flowcharts, DOT (export only) and `.excalidraw`.
 
 - **tldraw** (default): `editor` is the tldraw Editor, `tl` the tldraw module; full helpers below.
 - **Excalidraw**: `editor` is the ExcalidrawImperativeAPI (`getSceneElements()`, `updateScene({elements,
-  captureUpdate})`, …), `tl` the `@excalidraw/excalidraw` module. `toucan` has the core only: `summary`,
-  `graph`, `applyGraph`, `screenshot`, `zoomTo`, `get`, `remove`, `text`, `keyOf`. A shape's key is its
+  captureUpdate})`, …), `tl` the `@excalidraw/excalidraw` module. `toucan` has the core: `summary`,
+  `graph`, `applyGraph`, `screenshot`, `zoomTo`, `get`, `remove`, `text`, `keyOf`, and the same `measure()`, `tidy` and
+  `scene` as tldraw (so every shipped routine runs there too). A shape's key is its
   `customData.key` (falling back to its id). Change elements with `tl.newElementWith(el, {...})`, which
   bumps the version so the edit syncs to other tabs; prefer `applyGraph` for structure. Import doesn't move an existing element into a different frame there (it does on tldraw); reparent it with `frameId` yourself.
 - Converting a canvas between engines is `new NAME --engine E --from CANVAS` (through TG: keys, text,
@@ -227,7 +228,13 @@ sequence, fishbone, funnel, stack, cycle) has its own fields, and a box's `detai
 outgrew its box, arrows through boxes, crossings, labels on boxes, boxes cut off by a frame. `routine run check-diagram` reports the same and points at
 the shapes. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing
 overlapping or cut off; arrows that don't run through boxes; boxes of a kind that match and line up; one direction of flow; short titles, with the rest in
-`meta.detail`; and text you can read when the whole diagram fits on screen.
+`meta.detail`; and text you can read when the whole diagram fits on screen (on a big canvas, over 25 boxes or three or more frames, that
+last one is only a measure: it's read by zooming in).
+
+`toucan.measure()` and `toucan.tidy.*` read the canvas through `toucan.scene` (app/scene.js), the same on both engines: `scene.items()` gives every
+shape in page coordinates with its `kind` (box, frame, text, note, arrow), `scene.arrows()` what each arrow joins and how it runs, and `place`,
+`restyle`, `setArrow`, `checkpoint` and `rollback` change them. Use it for a routine that should run on either engine. On Excalidraw its changes
+land together in one `updateScene` when the exec ends (one undo step), moving a box moves its label, and the arrows bound to it are drawn again.
 
 ## Formats and details: short boxes, with the rest a click away
 
@@ -320,13 +327,14 @@ A **routine** is a chore banked once and run on any canvas, from the person's **
 canvas script is lasting behaviour on one canvas (a button, an overlay, a reaction); a routine runs once, when
 asked, anywhere. Each has a **kind**, and `routine list` groups them by it, with when to use each:
 
-- **tidy**: `clean-up` (prefer it when someone says "tidy this": it keeps their arrangement), `align-boxes`, `distribute-evenly`,
+- **tidy**: `clean-up` (prefer it when someone says "tidy this": it keeps their arrangement, and never leaves the score lower), `align-boxes`, `distribute-evenly`,
   `match-sizes`, `fix-overlaps`, `fit-frames`, `fit-text`
 - **arrows**: `neat-arrows`, `tidy-arrows`, `clear-arrow-labels`, `arrows-to-links` (long arrows become see-also links), `straighten-lines`
-- **layout**: `lay-out-again` (rearranges everything), `frame-these`, `stack-frames`, `air-out`
+- **layout**: `lay-out-again` (rearranges everything, or one frame's contents with `--args '{"within": "KEY"}'`, and keeps arrows
+  someone curved or routed by hand), `frame-these`, `stack-frames`, `air-out`
 - **style**: `colour-by-frame`; **content**: `open-details` (the reverse of air-out); **check**: `check-diagram` (changes nothing)
 
-Run one rather than writing that code yourself: `routine run NAME --args '{"…": …}'` for those that take arguments
+Every one runs on both engines. Run one rather than writing that code yourself: `routine run NAME --args '{"…": …}'` for those that take arguments
 (`routine list` says which). toucan also learns routines from work. Every run that changes a canvas goes into a work log, and
 `routine suggest` finds the code agents keep writing by hand, grouped by what it does, with the routines that already do it.
 A habit no routine covers is worth banking; people see the same suggestions in their Routines menu, with **Bank it**, which

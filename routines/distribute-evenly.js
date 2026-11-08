@@ -1,6 +1,6 @@
 // routine: Even out the gaps
 // description: Within each row and column the gaps become equal. A row with a deliberate hole in it is left alone.
-// engines: tldraw
+// engines: tldraw, excalidraw
 // kind: tidy
 // when: A row or column has uneven gaps.
 // args: tolerance (px, default 20)

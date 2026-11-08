@@ -1,11 +1,12 @@
 // routine: Lay it out again
-// description: Rearranges everything from scratch to follow the arrows, frame by frame. Use it when a diagram has lost its shape: positions are not kept, and one undo reverses it.
-// engines: tldraw
+// description: Rearranges everything from scratch to follow the arrows, frame by frame, or only one frame's contents (within). Use it when a diagram has lost its shape: positions are not kept, arrows someone routed by hand are, and one undo reverses it.
+// engines: tldraw, excalidraw
 // kind: layout
 // when: A diagram has lost its shape and its arrangement doesn't matter: lays everything out afresh, following the arrows.
-// args: direction (RIGHT or DOWN; default: the way most arrows go)
+// args: within (a frame key: only its contents), direction (RIGHT or DOWN; default: the way most arrows go), spacing, layerSpacing
 
-await toucan.tidy.layOut(toucan, args)
-editor.zoomToFit({ animation: { duration: 250 } })
+// Takes { within: a frame's key, direction: 'RIGHT' or 'DOWN', spacing, layerSpacing }, all optional.
+const n = await toucan.tidy.layOut(args)
+toucan.scene.fit()
 const m = toucan.measure()
-return { summary: `Laid out again. Score ${m.score} of 100.`, score: m.score }
+return { summary: `Laid out ${n} box${n === 1 ? '' : 'es'} again${args.within ? ` in ${args.within}` : ''}. Score ${m.score} of 100.`, score: m.score, changed: n }
