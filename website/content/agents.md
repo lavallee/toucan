@@ -312,7 +312,7 @@ asked, anywhere. Each has a **kind**, and `routine list` groups them by it, with
   someone curved or routed by hand), `frame-these`, `stack-frames`, `air-out`
 - **style**: `colour-by-frame`; **content**: `open-details` (the reverse of air-out); **check**: `check-diagram` (changes nothing)
 
-Every one runs on both engines. Run one rather than writing that code yourself: `routine run NAME --args '{"…": …}'` for those that take arguments
+All but `clear-arrow-labels` run on both engines (Excalidraw always puts an arrow's label at its middle). Run one rather than writing that code yourself: `routine run NAME --args '{"…": …}'` for those that take arguments
 (`routine list` says which). toucan also learns routines from work. Every run that changes a canvas goes into a work log, and
 `routine suggest` finds the code agents keep writing by hand, grouped by what it does, with the routines that already do it.
 A habit no routine covers is worth banking; people see the same suggestions in their Routines menu, with **Bank it**, which

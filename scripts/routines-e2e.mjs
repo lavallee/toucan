@@ -81,22 +81,33 @@ try {
 	assert.ok(await ex('ex', "const els = editor.getSceneElements(); const box = els.find((e) => e.customData?.key === 'c'); const t = els.find((e) => e.containerId === box.id); return box.height >= t.height + 19 && t.y >= box.y"), 'the container holds its text again')
 	step('tldraw and excalidraw: fit text')
 
-	// Frame these, then stack frames (tldraw).
-	const before = await ex('tl', "return ['a', 'b'].map((k) => { const b = editor.getShapePageBounds(toucan.get(k)); return [Math.round(b.x), Math.round(b.y)] })")
-	const framed = await routine('tl', 'frame-these', { keys: ['a', 'b'], name: 'Start' })
-	assert.equal(framed.frame, 'start')
-	assert.deepEqual(await ex('tl', "return ['a', 'b'].map((k) => toucan.get(k).parentId === toucan.idFor('start'))"), [true, true])
-	assert.deepEqual(await ex('tl', "return ['a', 'b'].map((k) => { const b = editor.getShapePageBounds(toucan.get(k)); return [Math.round(b.x), Math.round(b.y)] })"), before, 'nothing moved on the page')
-	await routine('tl', 'frame-these', { keys: ['c', 'd'], name: 'Finish' })
-	await ex('tl', "editor.updateShape({ id: toucan.idFor('finish'), type: 'frame', x: toucan.get('start').x + 37, y: toucan.get('start').y + 500 }); return 1")
-	const stacked = await routine('tl', 'stack-frames', { gap: 60 })
-	assert.ok(stacked.changed >= 1, JSON.stringify(stacked))
-	const [s1, s2] = await ex('tl', "return ['start', 'finish'].map((k) => { const b = editor.getShapePageBounds(toucan.get(k)); return { x: Math.round(b.x), y: Math.round(b.y), h: Math.round(b.h) } })")
-	assert.deepEqual([s1.x === s2.x, s2.y - (s1.y + s1.h)], [true, 60], 'one column, 60px apart')
-	step('tldraw: frame these, and stack frames')
+	// Frame these, then stack frames, on both engines: nothing moves on the page, and each frame carries what's in it.
+	const at = (c, keys) => ex(c, `const items = toucan.scene.items(); return ${JSON.stringify(keys)}.map((k) => { const i = items.find((x) => x.key === k); return [Math.round(i.x), Math.round(i.y)] })`)
+	const frameOf = (c, keys) => ex(c, `const items = toucan.scene.items(); const key = (id) => items.find((x) => x.id === id)?.key ?? null; return ${JSON.stringify(keys)}.map((k) => key(items.find((x) => x.key === k).frame))`)
+	for (const c of ['tl', 'ex']) {
+		const name = c === 'tl' ? 'tldraw' : 'excalidraw'
+		const before = await at(c, ['a', 'b'])
+		const framed = await routine(c, 'frame-these', { keys: ['a', 'b'], name: 'Start' })
+		assert.equal(framed.frame, 'start')
+		assert.deepEqual(await frameOf(c, ['a', 'b']), ['start', 'start'], `${name}: both boxes are in the frame`)
+		assert.deepEqual(await at(c, ['a', 'b']), before, `${name}: nothing moved on the page`)
+		await routine(c, 'frame-these', { keys: ['c', 'd'], name: 'Finish' })
+		assert.deepEqual(await frameOf(c, ['c', 'd']), ['finish', 'finish'])
+		// Knock the second frame out of line, then stack them.
+		await ex(c, "const s = toucan.scene; const [st, fi] = ['start', 'finish'].map((k) => s.items().find((i) => i.key === k)); s.batch(() => s.place(fi.id, { x: st.x + 37, y: st.y + st.h + 500, w: fi.w, h: fi.h }, { carry: true })); return 1")
+		const inFinish = await at(c, ['c', 'finish'])
+		const stacked = await routine(c, 'stack-frames', { gap: 60 })
+		assert.ok(stacked.changed >= 1, JSON.stringify(stacked))
+		const [s1, s2] = await ex(c, "const items = toucan.scene.items(); return ['start', 'finish'].map((k) => { const b = items.find((i) => i.key === k); return { x: Math.round(b.x), y: Math.round(b.y), h: Math.round(b.h) } })")
+		assert.deepEqual([s1.x === s2.x, s2.y - (s1.y + s1.h)], [true, 60], `${name}: one column, 60px apart`)
+		const [c2, f2] = await at(c, ['c', 'finish'])
+		assert.deepEqual([c2[0] - f2[0], c2[1] - f2[1]], [inFinish[0][0] - inFinish[1][0], inFinish[0][1] - inFinish[1][1]], `${name}: the frame's boxes moved with it`)
+		if (process.env.SHOTS) await toucan('--canvas', c, 'screenshot', join(process.env.SHOTS, `stacked-${name}.png`))
+		step(`${name}: frame these, and stack frames`)
+	}
 
 	// Clear arrow labels: a box dropped on a labelled arrow's middle.
-	await ex('tl', "toucan.node('l1', { x: 0, y: 1200, w: 120, h: 60, text: 'From' }); toucan.node('l2', { x: 700, y: 1200, w: 120, h: 60, text: 'To' }); toucan.edge('l1', 'l2', { text: 'sends a report' }); toucan.node('blocker', { x: 330, y: 1190, w: 140, h: 80, text: 'In the way' }); return 1")
+	await ex('tl', "toucan.node('l1', { x: 0, y: 3200, w: 120, h: 60, text: 'From' }); toucan.node('l2', { x: 700, y: 3200, w: 120, h: 60, text: 'To' }); toucan.edge('l1', 'l2', { text: 'sends a report' }); toucan.node('blocker', { x: 330, y: 3190, w: 140, h: 80, text: 'In the way' }); return 1")
 	const onBox = async () => (await ex('tl', 'return toucan.measure().labelOnBox'))
 	assert.ok((await onBox()) > 0, 'set up: the label sits on a box')
 	const cleared = await routine('tl', 'clear-arrow-labels')

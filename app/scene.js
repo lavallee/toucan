@@ -302,8 +302,9 @@ export function excalidrawScene(api, ex) {
 			if (!e) return null
 			const fixed = a.elbowed && (e === from ? a.startBinding : a.endBinding)?.fixedPoint
 			if (fixed) return { x: Math.min(1, Math.max(0, Math.round(fixed[0] * 100) / 100)), y: Math.min(1, Math.max(0, Math.round(fixed[1] * 100) / 100)) }
-			const aim = outline(e, other ? centre(boxOf(other)) : p)
-			if (Math.hypot(aim.x - p.x, aim.y - p.y) < 3) return null
+			// Aimed at the middle, whether drawn with our gap or touching the box (as applyGraph and Excalidraw itself draw them).
+			const target = other ? centre(boxOf(other)) : p
+			if ([GAP, 0].some((gap) => { const aim = outline(e, target, gap); return Math.hypot(aim.x - p.x, aim.y - p.y) < 3 })) return null
 			const b = boxOf(e)
 			const nx = (p.x - b.x) / (b.w || 1), ny = (p.y - b.y) / (b.h || 1)
 			const clamp = (v) => Math.min(1, Math.max(0, v))

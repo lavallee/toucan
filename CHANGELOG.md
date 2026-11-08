@@ -10,8 +10,8 @@ All notable changes to toucan are recorded here. The format follows
 - **Routines by kind.** Every routine says what it's for (tidy, arrows, layout, style, content, check) and when to use it. The Routines menu groups them, with a search box, `routine list` groups them for agents (`--kind` to narrow), the chat agent gets the list at the start of each conversation, and MCP clients get `toucan_routines` and `toucan_run_routine`.
 - **Learning routines from work.** Every agent run that changes a canvas goes into a work log in the data folder. `toucan routine suggest` finds code agents keep writing by hand, grouped by what it does, and says when a routine already does it. The Routines menu shows the same suggestions under "From your work", where **Bank it** asks the chat agent to bank one. `routine learn --codex` brings in the chat agent's past sessions, and `routine stats` says which routines are used, by whom, and how often they fail.
 - **Templates you add, not only start from.** A canvas has diagrams rather than being one. Every template is now a **block** in a group (processes, structures, systems, time, work, decisions), and `toucan add ID`, or **Add** above the canvas, puts one beside what's there on either engine, never over it. Eleven new blocks: retro, pros and cons, SIPOC, SWOT, stakeholder map, Eisenhower matrix, empathy map, OKR tree, five whys, story map and decision log. Six **starters** make a whole canvas on one subject out of several blocks under headings: system design, incident review, product strategy, project kickoff, research plan and team retro.
-- New routines, from what agents actually did by hand: **Arrows to links** (long arrows become two-way see-also links), **Fit text** (boxes as tall as their text), **Clear arrow labels** (labels slide off boxes), **Frame these**, **Stack frames**, and **Open out details** (the reverse of Air out). All run on both engines.
-- Every routine runs on Excalidraw canvases too, and the Routines menu offers them there: Clean up, Lay it out
+- New routines, from what agents actually did by hand: **Arrows to links** (long arrows become two-way see-also links), **Fit text** (boxes as tall as their text), **Clear arrow labels** (labels slide off boxes), **Frame these**, **Stack frames**, and **Open out details** (the reverse of Air out). All but Clear arrow labels run on both engines: Excalidraw always puts an arrow's label at its middle.
+- Every shipped routine runs on Excalidraw canvases too, and the Routines menu offers them there: Clean up, Lay it out
   again, Line things up, Even out the gaps, Match box sizes, Fix overlaps, Fit frames, Neat arrows, Tidy arrows, Colour by
   frame, Air out and Check this diagram. `toucan.measure()` and `toucan.tidy` exist on both engines and behave the same,
   because they read and change the canvas through one engine-neutral scene (`toucan.scene`, app/scene.js). On Excalidraw
@@ -34,6 +34,7 @@ All notable changes to toucan are recorded here. The format follows
 
 ### Fixed
 
+- On Excalidraw, an arrow drawn touching its boxes (as `applyGraph` and Excalidraw draw them) counts as aimed at their middles, so tidying re-aims it when a box moves, rather than pinning it to the side it first left from.
 - `toucan.node(key, {h})` on an existing box sets its height outright, rather than leaving tldraw's growth for long text on top of it; and `parent` now moves an existing box into that frame.
 - `applyGraph` on Excalidraw accepts a graph without `groups`, `nodes` or `edges` (it threw "Cannot read properties of
   undefined"), and draws an arrow to an existing shape the graph doesn't list, as tldraw does, reporting arrows whose
