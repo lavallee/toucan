@@ -46,6 +46,7 @@
     "test:presence": "node scripts/presence-e2e.mjs",
     "test:references": "node scripts/references-e2e.mjs",
     "test:routines": "node scripts/routines-e2e.mjs",
+    "test:templates": "node scripts/templates-e2e.mjs",
     "check": "node scripts/check-repo.mjs",
     "docs": "node scripts/build-features.mjs && artoo build website",
     "prepack": "npm run build",

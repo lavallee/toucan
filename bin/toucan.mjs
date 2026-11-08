@@ -20,7 +20,8 @@
 //     url                         sign-in link for the browser (opens the index of canvases)
 //     canvases                    list canvases: title, shapes, scripts, open tabs
 //     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE | --template ID] [--title T] [--description D] [--canvas-format F]
-//     templates [show ID]         diagrams to start from: flowchart, org chart, sequence, roadmap and more (show: its description, as an example)
+//     templates [show ID]         starters (whole canvases) and blocks (one diagram each) to start from or add (show: one in full, as an example)
+//     add TEMPLATE                put a block or a starter on --canvas, beside what's there
 //     draw FILE|- [--update] [--move] [--label T]   lay out a diagram described as data (same form as a template) onto --canvas
 //                                 make a canvas; --from copies another canvas (or a graph file) via TG
 //     graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   export (no tab needed)
@@ -100,7 +101,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -357,8 +358,14 @@ switch (cmd) {
 	case 'templates': {
 		const [, sub, id] = argv
 		if (sub === 'show' && id) print(await call(`/api/templates/${id}`))
-		else if (!sub) print((await call('/api/templates')).templates)
-		else die('usage: templates [show ID]')
+		else if (!sub) {
+			// Starters first (whole canvases), then blocks by what they're for.
+			const { groups, templates } = await call('/api/templates')
+			print({
+				starters: templates.filter((t) => t.type === 'starter').map(({ id, title, use, parts }) => ({ id, title, use, has: parts })),
+				blocks: groups.map((g) => ({ group: g.label, about: g.about, blocks: templates.filter((t) => t.type === 'block' && t.group === g.id).map(({ id, title, use }) => ({ id, title, use })) })),
+			})
+		} else die('usage: templates [show ID]')
 		break
 	}
 	case 'draw': {
@@ -373,6 +380,15 @@ switch (cmd) {
 		const named = typeof label === 'string' ? label : `draw ${spec.title ?? spec.kind}`
 		const out = await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move })})`, 120000, named, typeof label === 'string' ? label : `drawing ${spec.title ?? spec.kind}`)
 		print(placed.prefix ? { ...out, keysPrefixed: placed.prefix } : out)
+		break
+	}
+	case 'add': {
+		// A block or a starter onto --canvas, beside what's there. Its content is an example to edit, not a placeholder.
+		const [id] = positional()
+		if (!id) die('usage: add TEMPLATE   (see `toucan templates`)')
+		const r = await call(cpath('/add'), { method: 'POST', body: JSON.stringify({ template: id, agent }) })
+		if (!r.ok) die(r.error)
+		print(r)
 		break
 	}
 	case 'files':

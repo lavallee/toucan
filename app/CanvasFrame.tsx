@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { AwayNotice } from './AwayNotice'
 import { AgentStatus } from './pulses'
 import { ReferencesButton, ReferencesPanel } from './References'
+import { AddMenu } from './AddMenu'
 import { close as closeReferences, openReference, toggle as toggleReferences, useReferences } from './references-store'
 
 document.title = `${canvasName} · toucan`
@@ -109,6 +110,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 						<p className="border-t px-2 pt-1.5 pb-1 text-xs text-muted-foreground">Choosing a format moves nothing. To give an existing diagram room, run Air out from Routines.</p>
 					</PopoverContent>
 				</Popover>
+				<AddMenu />
 				<ReferencesButton open={referencesOpen} onToggle={toggleReferences} />
 				<CommentButton onComment={onComment} />
 				<ThreadsButton />

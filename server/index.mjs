@@ -29,8 +29,8 @@ import * as refs from './references.mjs'
 import { createProfiles, makeLocalProfile, profileInstructions, ProfileError } from './profiles.mjs'
 import { hostCheck, parsePublicUrl, refusal } from '../lib/hosts.mjs'
 import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
-import { layOut } from '../lib/layouts.mjs'
-import { templateById, templateList } from '../templates/index.mjs'
+import { compose, layOut, placeBeside } from '../lib/layouts.mjs'
+import { GROUPS as TEMPLATE_GROUPS, starterById, templateById, templateList } from '../templates/index.mjs'
 import { FORMATS, fromTldraw, fromExcalidraw, toExcalidrawElements } from '../lib/tg.mjs'
 import { CONFIG, ensureToken, readJson, resolveData, writeConfig } from '../lib/paths.mjs'
 
@@ -427,7 +427,8 @@ const server = createServer(async (req, res) => {
 		}
 		if (route === 'canvases' && !canvas && req.method === 'POST') {
 			const { name, title, description, engine = 'tldraw', from, graph, format, template } = JSON.parse(await body(req))
-			const starter = template ? templateById(template) : null
+			// A block (one diagram) or a starter (several, on one subject).
+			const starter = template ? templateById(template) ?? starterById(template) : null
 			if (template && !starter) return json(res, 400, { error: `no template ${template}: see toucan templates` })
 			if (format && !Object.hasOwn(CANVAS_FORMATS, format)) return json(res, 400, { error: `format: one of ${Object.keys(CANVAS_FORMATS).join(', ')}` })
 			if (!NAME.test(name ?? '')) return json(res, 400, { error: 'name: letters, digits, - and _, up to 64' })
@@ -435,7 +436,7 @@ const server = createServer(async (req, res) => {
 			if (canvasNames().includes(name)) return json(res, 409, { error: `${name} already exists` })
 			if (from && !canvasNames().includes(from)) return json(res, 404, { error: `no canvas ${from} to copy from` })
 			// Seeding goes through the graph, so it works across engines: tldraw → TG → Excalidraw, and back.
-			const seed = starter ? await layOut(starter) : graph ?? (from ? graphOf(from) : null)
+			const seed = starter ? await (starter.parts ? compose(starter) : layOut(starter)) : graph ?? (from ? graphOf(from) : null)
 			const idx = readIndex()
 			idx[name] = { title: title || starter?.title || name, description: description ?? starter?.use ?? '', engine, created: new Date().toISOString(), ...(from && { from }), ...((format ?? starter?.format ?? readIndex()[from]?.format) && { format: format ?? starter?.format ?? readIndex()[from]?.format }) }
 			writeIndex(idx)
@@ -454,10 +455,10 @@ const server = createServer(async (req, res) => {
 			}
 		}
 		if (route === 'templates' && canvas) {
-			const spec = templateById(canvas)
+			const spec = templateById(canvas) ?? starterById(canvas)
 			return spec ? json(res, 200, spec) : json(res, 404, { error: `no template ${canvas}` })
 		}
-		if (route === 'templates') return json(res, 200, { templates: templateList() })
+		if (route === 'templates') return json(res, 200, { groups: TEMPLATE_GROUPS, templates: templateList() })
 		if (route === 'routines') {
 			const name = canvas // /api/routines/<name>
 			if (!name && req.method === 'GET') {
@@ -716,6 +717,21 @@ const server = createServer(async (req, res) => {
 			}
 			broadcast(canvas, { type: 'show', ref, agent: speaker(canvas, agent) })
 			return json(res, 200, { ok: true, ref, tabs: (tabs.get(canvas) ?? []).filter((w) => !w.headless).length })
+		}
+		// A block or a starter, added to the canvas beside what's there: what a canvas *has*, not what it *is*.
+		if (sub === 'add' && req.method === 'POST') {
+			const { template, agent } = JSON.parse(await body(req))
+			const spec = templateById(template) ?? starterById(template)
+			if (!spec) return json(res, 404, { error: `no template ${template}: see toucan templates` })
+			try {
+				const tg = await (spec.parts ? compose(spec) : layOut(spec))
+				const here = await exec(canvas, 'const g = toucan.graph(); return { keys: [...g.nodes, ...g.groups].map((n) => n.key), boxes: [...g.nodes, ...g.groups].map((n) => n.box).filter(Boolean) }', 30000, undefined, { agent: agent || 'toucan', doing: `adding ${spec.title}` })
+				const { prefix } = placeBeside(tg, here)
+				const result = await exec(canvas, `return await toucan.applyGraph(${JSON.stringify(tg)})`, 120000, `add ${spec.title}`, { agent: agent || 'toucan', doing: `adding ${spec.title}` })
+				return json(res, 200, { ok: true, added: spec.title, ...(prefix && { keysPrefixed: prefix }), result })
+			} catch (e) {
+				return json(res, 200, { ok: false, error: String(e.message ?? e) })
+			}
 		}
 		// The agent says what it is about to do, and optionally points at shapes (keys): every tab shows it.
 		if (sub === 'say' && req.method === 'POST') {

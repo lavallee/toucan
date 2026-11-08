@@ -20,5 +20,16 @@
  "comparison": 100,
  "fishbone": 97,
  "funnel": 100,
- "cycle": 97
+ "cycle": 97,
+ "retro": 100,
+ "pros-cons": 100,
+ "sipoc": 100,
+ "swot": 98,
+ "stakeholder-map": 97,
+ "eisenhower": 97,
+ "empathy-map": 97,
+ "okr-tree": 96,
+ "five-whys": 96,
+ "story-map": 100,
+ "decision-log": 100
 }

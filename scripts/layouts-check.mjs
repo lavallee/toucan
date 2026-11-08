@@ -104,3 +104,20 @@ console.log(`ok  layouts: ${TEMPLATES.length} templates`)
 	}
 	console.log('ok  docs: tour images')
 }
+
+// Starters: several blocks on one canvas, with no key shared between parts and no arrow left loose.
+{
+	const { compose } = await import('../lib/layouts.mjs')
+	const { STARTERS, GROUPS, TEMPLATES: ALL } = await import('../templates/index.mjs')
+	assert.ok(ALL.every((t) => GROUPS.some((g) => g.id === t.group)), 'every block is in a group')
+	for (const s of STARTERS) {
+		const tg = await compose(s)
+		const keys = [...tg.nodes, ...tg.groups].map((i) => i.key)
+		assert.equal(new Set(keys).size, keys.length, `${s.id}: keys are unique across its parts`)
+		for (const e of tg.edges) assert.ok(keys.includes(e.from) && keys.includes(e.to), `${s.id}: ${e.from} -> ${e.to} joins two of its boxes`)
+		const boxes = [...tg.nodes, ...tg.groups].filter((i) => !i.group && !i.parent).map((i) => i.box)
+		for (const part of s.parts) assert.ok(tg.nodes.some((n) => n.key === `${part.id}-heading` && n.text === part.title), `${s.id}: ${part.id} has its heading`)
+		assert.ok(boxes.length, `${s.id} has something to show`)
+	}
+	console.log(`ok  layouts: ${STARTERS.length} starters, parts kept apart`)
+}

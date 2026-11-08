@@ -38,7 +38,8 @@ node bin/toucan.mjs profiles                                   # the named agent
 node bin/toucan.mjs profiles add ID --workdir DIR [--context F,F]   # a profile of your own, from the agent's folder (starts from its AGENTS.md)
 node bin/toucan.mjs --canvas NAME meta --profile SOURCE/ID|none   # work on the canvas with one: its knowledge, briefing and skills
 node bin/toucan.mjs --canvas NAME profile                     # the agent the canvas works with: what it reads at the start, and its skills
-node bin/toucan.mjs templates                                  # diagrams to start from; `new NAME --template ID` makes one
+node bin/toucan.mjs templates                                  # blocks and starters; `new NAME --template ID` makes a canvas from one
+node bin/toucan.mjs --canvas NAME add ID                       # add a block or starter beside what's on the canvas
 node bin/toucan.mjs templates show ID                          # a template's description, to copy the form of
 node bin/toucan.mjs --canvas NAME draw FILE|- [--update] [--move] [--label T]   # lay out a diagram described as data onto a canvas
 node bin/toucan.mjs --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes   # comment threads
@@ -204,10 +205,19 @@ is under them. Text uses rich text: `props.richText = tl.toRichText('…')`.
 
 ## Templates and layout: don't place boxes by hand
 
-Most diagrams are a known shape. `toucan templates` lists the roster, each a realistic sample you can edit: flowchart, swimlane, org chart, decision
-tree, mind map, sequence, layered architecture, service map, network, entity relationships, state machine, build pipeline, roadmap, timeline, kanban,
-2x2, customer journey, responsibility chart, comparison table, fishbone, funnel and cycle. `toucan new NAME --template ID` makes one with the right
-format; then change its boxes with `toucan.node`, or `import` more.
+Most diagrams are a known shape, and a canvas *has* diagrams rather than *being* one. `toucan templates` lists two sorts, each a realistic
+sample you can edit:
+
+- **Blocks**, one diagram each, in groups: processes (flowchart, swimlane, sequence, state machine, build pipeline, funnel, cycle, SIPOC),
+  structures (org chart, decision tree, mind map, OKR tree), systems (layered architecture, service map, network, entity relationships), time
+  (roadmap, timeline), work (kanban, customer journey, responsibility chart, retro, empathy map, story map) and decisions (2x2, comparison table,
+  fishbone, pros and cons, SWOT, stakeholder map, Eisenhower, five whys, decision log).
+- **Starters**, a whole canvas on one subject made of several blocks under their own headings: system design, incident review, product strategy,
+  project kickoff, research plan, team retro.
+
+`toucan new NAME --template ID` makes a canvas from either, with the right format. `toucan --canvas NAME add ID` puts one beside what's already on a
+canvas, on either engine, and never over it: if its keys clash it takes a prefix, which the command reports. People do the same from **Add** above
+the canvas. Then change its boxes with `toucan.node`, or `import` more.
 
 To draw on a canvas you're already on, describe the diagram as data and let the engine place it: `toucan templates show flowchart` shows the form,
 and `toucan --canvas NAME draw plan.json` lays it out beside what's there. Each `kind` (flow, tree, mindmap, lanes, grid, board, quadrant, timeline, gantt,
