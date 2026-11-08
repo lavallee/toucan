@@ -1,6 +1,9 @@
 // routine: Air out
 // description: Make a dense diagram readable: long box text moves into the click-open details, leaving a short, larger name, with a little more room. Nothing is lost, and one undo reverses it.
 // engines: tldraw
+// kind: layout
+// when: A diagram is dense, with long text in boxes: moves the text into details and gives the names room. Only when asked.
+// args: factor (default 1.25): how much to spread
 
 // Names do more for an overview than space does: spreading everything out just zooms it further away.
 const FACTOR = args.factor ?? 1.25

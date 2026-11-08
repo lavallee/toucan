@@ -1,6 +1,9 @@
 // routine: Fix overlaps
 // description: Overlapping boxes and frames are moved apart by the least distance that clears them, and frames grow to hold what moved.
 // engines: tldraw
+// kind: tidy
+// when: Boxes overlap or crowd each other.
+// args: gap (px, default 24)
 
 const n = toucan.tidy.fixOverlaps(args)
 // A box pushed past its frame's edge would be cut off, and could land on the next frame's boxes.

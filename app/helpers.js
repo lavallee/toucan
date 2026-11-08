@@ -325,7 +325,15 @@ export function makeHelpers(editor) {
 		const passed = Object.fromEntries(Object.entries({ geo, w, h, color, fill, dash, size }).filter(([, v]) => v !== undefined))
 		if (label !== undefined) passed.richText = toRichText(label)
 		if (existing) {
+			// A height you give is the height: tldraw's own growth for long text would otherwise sit on top of it.
+			if (h !== undefined && existing.type === 'geo') passed.growY = 0
 			const update = { id, type: existing.type, props: passed, meta: { ...existing.meta, ...meta, key } }
+			// Into another frame (or out to the page): it keeps its place on the page, and lands inside the frame if it was outside.
+			const target = parent === undefined ? null : parent ? idFor(parent) : editor.getCurrentPageId()
+			if (target && target !== existing.parentId && (target === editor.getCurrentPageId() || editor.getShape(target))) {
+				editor.reparentShapes([id], target)
+				if (!move && target !== editor.getCurrentPageId()) placeInsideFrame(id, target)
+			}
 			if (move) Object.assign(update, x !== undefined && { x }, y !== undefined && { y })
 			editor.updateShape(update)
 		} else {

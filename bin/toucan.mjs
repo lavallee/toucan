@@ -45,7 +45,10 @@
 //     threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes
 //                                 comment threads on shapes and regions (--as NAME: speak as a person; default: as the agent)
 //     files                       where this canvas keeps what agents write for it, and what's there
-//     routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
+//     routine list [--kind K] | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] [--kind K] [--when TEXT] [--takes TEXT] | rm NAME
+//     routine suggest [--since 30d] [--min N]   chores agents keep doing by hand, worth banking (from the work log)
+//     routine stats [--since 30d]                which routines get used, by whom, and how often they fail
+//     routine learn --codex [DIR] [--since 30d]  bring the chat agent's past Codex sessions into the work log, so suggest sees them
 //                                 chores banked once and run on any canvas (no --canvas needed to list, show, save or rm)
 //     say TEXT [--at KEY,KEY]     tell people what you're about to do; --at moves your cursor to those shapes
 //     references                  what people can read beside this canvas: its files, its project's, links on it
@@ -394,8 +397,28 @@ switch (cmd) {
 	}
 	case 'routine': {
 		const title = flag('title'), description = flag('description'), engines = flag('engines'), args = flag('args')
+		const kind = flag('kind'), when = flag('when'), takes = flag('takes'), since = flag('since'), min = flag('min'), engineFilter = flag('engine')
 		const [, sub, name, file] = argv
-		if (sub === 'list' || !sub) print((await call('/api/routines')).routines)
+		const query = (o) => Object.entries(o).filter(([, v]) => typeof v === 'string').map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
+		if (sub === 'list' || !sub) {
+			// Grouped by kind, with when to use each: what an agent needs to pick one.
+			const { kinds, routines: list } = await call(`/api/routines?${query({ kind, engine: engineFilter })}`)
+			print(kinds.flatMap((k) => {
+				const mine = list.filter((r) => r.kind === k.id)
+				return mine.length ? [{ kind: k.id, about: k.about, routines: mine.map(({ name, title, when, args: a, engines: e, source }) => ({ name, title, when, ...(a && { args: a }), engines: e, ...(source === 'banked' && { banked: true }) })) }] : []
+			}))
+		} else if (sub === 'learn') {
+			// Past work, so suggestions don't wait for new work to pile up: the chat agent's Codex sessions.
+			const codex = flag('codex')
+			if (!codex) die('usage: routine learn --codex [DIR] [--since 30d]   (DIR: Codex sessions, default ~/.codex/sessions)')
+			const { readCodex } = await import('../lib/learn-codex.mjs')
+			const { sinceMs } = await import('../server/worklog.mjs')
+			const entries = readCodex(typeof codex === 'string' ? codex : undefined, { since: sinceMs(typeof since === 'string' ? since : undefined) })
+			const { added } = await call('/api/routines/learn', { method: 'POST', body: JSON.stringify({ entries }) })
+			print({ found: entries.length, added, canvases: [...new Set(entries.map((e) => e.canvas))].length })
+			console.error('toucan: `toucan routine suggest` now includes this work')
+		} else if (sub === 'suggest') print(await call(`/api/routines/suggestions?${query({ since, min })}`))
+		else if (sub === 'stats') print(await call(`/api/routines/stats?${query({ since })}`))
 		else if (sub === 'show' && name) print((await call(`/api/routines/${name}`)).code)
 		else if (sub === 'run' && name) {
 			const r = await call(cpath(`/routines/${name}/run`), { method: 'POST', body: JSON.stringify({ args: typeof args === 'string' ? JSON.parse(args) : undefined, agent }) })
@@ -403,9 +426,10 @@ switch (cmd) {
 			print(r.result ?? 'done')
 		} else if (sub === 'save' && name && file) {
 			const code = readFileSync(file === '-' ? 0 : file, 'utf8')
-			print(await call(`/api/routines/${name}`, { method: 'PUT', body: JSON.stringify({ code, title, description, engines: typeof engines === 'string' ? engines.split(/[,\s]+/) : undefined }) }))
+			const str = (v) => (typeof v === 'string' ? v : undefined)
+			print(await call(`/api/routines/${name}`, { method: 'PUT', body: JSON.stringify({ code, title, description, engines: typeof engines === 'string' ? engines.split(/[,\s]+/) : undefined, kind: str(kind), when: str(when), args: str(takes) }) }))
 		} else if (sub === 'rm' && name) print(await call(`/api/routines/${name}`, { method: 'DELETE' }))
-		else die('usage: routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME')
+		else die('usage: routine list [--kind K] [--engine E] | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] [--kind K] [--when TEXT] [--takes TEXT] | suggest [--since 30d] [--min N] | stats [--since 30d] | rm NAME')
 		break
 	}
 	case 'guide':

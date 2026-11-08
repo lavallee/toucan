@@ -21,7 +21,8 @@ import { CodexChat } from './codex.mjs'
 import { createHeadless } from './headless.mjs'
 import * as trail from './trail.mjs'
 import * as versions from './versions.mjs'
-import { createRoutines } from './routines.mjs'
+import { createRoutines, KINDS as ROUTINE_KINDS } from './routines.mjs'
+import * as worklog from './worklog.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
 import * as refs from './references.mjs'
@@ -459,16 +460,32 @@ const server = createServer(async (req, res) => {
 		if (route === 'templates') return json(res, 200, { templates: templateList() })
 		if (route === 'routines') {
 			const name = canvas // /api/routines/<name>
-			if (!name && req.method === 'GET') return json(res, 200, { routines: routines.list().map((r) => (url.searchParams.has('code') ? r : routineRow(r))) })
+			if (!name && req.method === 'GET') {
+				const kind = url.searchParams.get('kind'), engine = url.searchParams.get('engine')
+				const list = routines.list().filter((r) => (!kind || r.kind === kind) && (!engine || r.engines.includes(engine)))
+				return json(res, 200, { kinds: ROUTINE_KINDS, routines: list.map((r) => (url.searchParams.has('code') ? r : routineRow(r))) })
+			}
+			// Learning from work (server/worklog.mjs): chores agents keep doing by hand, and how routines are used.
+			if (name === 'suggestions' && req.method === 'GET') {
+				const min = Math.max(2, Number(url.searchParams.get('min')) || 3)
+				return json(res, 200, { since: url.searchParams.get('since') ?? 'all', suggestions: worklog.suggest(worklog.read(CANVASES, url.searchParams.get('since')), { routines: routines.list(), min }) })
+			}
+			if (name === 'learn' && req.method === 'POST') {
+				const { entries } = JSON.parse(String(await rawBody(req, 64 << 20)))
+				return json(res, 200, { added: worklog.importEntries(CANVASES, entries, { engineOf, exists: (c) => canvasNames().includes(c) }) })
+			}
+			if (name === 'stats' && req.method === 'GET') return json(res, 200, worklog.stats(worklog.read(CANVASES, url.searchParams.get('since')), routines.list()))
 			if (!NAME.test(name ?? '')) return json(res, 404, { error: 'not found' })
 			if (req.method === 'GET') {
 				const r = routines.get(name)
 				return r ? json(res, 200, r) : json(res, 404, { error: `no routine ${name}` })
 			}
 			if (req.method === 'PUT') {
-				const { code, title, description, engines } = JSON.parse(await body(req))
+				const { code, title, description, engines, kind, when, args } = JSON.parse(await body(req))
 				if (typeof code !== 'string' || !code.trim()) return json(res, 400, { error: 'code: the routine to bank' })
-				return json(res, 200, routineRow(routines.save(name, { code, title, description, engines })))
+				if (['suggestions', 'stats', 'learn'].includes(name)) return json(res, 400, { error: `${name} is reserved; choose another name` })
+				if (kind && !ROUTINE_KINDS.some((k) => k.id === kind)) return json(res, 400, { error: `kind: one of ${ROUTINE_KINDS.map((k) => k.id).join(', ')}` })
+				return json(res, 200, routineRow(routines.save(name, { code, title, description, engines, kind, when, args })))
 			}
 			if (req.method === 'DELETE') return routines.remove(name) ? json(res, 200, { ok: true, restored: routines.get(name)?.source === 'shipped' }) : json(res, 404, { error: `${name} isn't banked here` })
 			return json(res, 405, { error: 'method' })
@@ -767,7 +784,7 @@ function speaker(canvas, agent) {
 	if (name !== 'Codex' && !(name === 'agent' && chatting)) return name
 	return bound.get(canvas)?.name ?? 'Codex'
 }
-const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, profileOf, profileInstructions, onThread: onThreadEvent, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: turnAgent(canvas, key, active), key, active }) })
+const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, profileOf, profileInstructions, routineIndex: (engine) => routines.list().filter((r) => r.engines.includes(engine)).map((r) => `- ${r.name}, ${r.kind}: ${r.when || r.description}`).join('\n'), onThread: onThreadEvent, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: turnAgent(canvas, key, active), key, active }) })
 
 // ---- comment threads (server/threads.mjs) -------------------------------------------------------
 // What's in the file is the conversation. What an agent is doing right now isn't worth saving: it lives here, and
@@ -918,6 +935,12 @@ function onCanvas(ws, canvas, nonce) {
 			const p = pending.get(msg.id)
 			pending.delete(msg.id)
 			clearTimeout(p.timer)
+			// What agents and routines do is what routines are learned from (server/worklog.mjs).
+			try {
+				worklog.record(CANVASES, { canvas, engine: engineOf(canvas), agent: p.agent, label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error, ms: Date.now() - p.sentAt })
+			} catch (e) {
+				console.error(`work log: ${e.message}`)
+			}
 			// Nobody watched a headless edit land, so it goes on the canvas's trail.
 			if (ws.headless) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
 			if (msg.changes && (msg.changes.added?.length || msg.changes.updated?.length || msg.changes.removed?.length)) {

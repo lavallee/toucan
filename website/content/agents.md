@@ -24,7 +24,8 @@ toucan --canvas NAME notes resolve KEY --reply TEXT   # mark one handled (green 
 toucan --canvas NAME log [--since 2h]           # edits agents made while nobody had it open
 toucan --canvas NAME say TEXT [--at KEY,KEY]   # tell people what you're about to do; point at shapes
 toucan --canvas NAME versions [save LABEL | show N [--format F] | restore N]   # the canvas's history
-toucan routine list | show NAME | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME   # the routine bank
+toucan routine list [--kind K] | show NAME | save NAME FILE [--title T] [--description D] [--engines E] [--kind K] [--when T] | rm NAME   # the routine bank, by kind
+toucan routine suggest [--since 30d] | stats | learn --codex   # chores done by hand worth banking; how routines are used; past chat work
 toucan --canvas NAME routine run NAME [--args JSON]   # run a banked routine: one undo step, on the history
 toucan --canvas NAME files                     # where this canvas keeps what agents write for it
 toucan --canvas NAME references                # what people can read beside the canvas: its files, its project's, links on it
@@ -286,12 +287,27 @@ Scripts, titles and chat threads aren't versioned.
 
 A **routine** is a chore banked once and run on any canvas, from the person's **Routines** menu or the CLI. A
 canvas script is lasting behaviour on one canvas (a button, an overlay, a reaction); a routine runs once, when
-asked, anywhere. toucan ships a set for tidying (`clean-up`, `lay-out-again`, `align-boxes`, `distribute-evenly`, `match-sizes`, `fix-overlaps`, `fit-frames`, `neat-arrows`, `tidy-arrows`, `straighten-lines`, `colour-by-frame`, `air-out`) and one for checking (`check-diagram`). `routine list` has what each does. Prefer `clean-up` when someone says "tidy this": it keeps their arrangement; `lay-out-again` rearranges everything.
+asked, anywhere. Each has a **kind**, and `routine list` groups them by it, with when to use each:
+
+- **tidy**: `clean-up` (prefer it when someone says "tidy this": it keeps their arrangement), `align-boxes`, `distribute-evenly`,
+  `match-sizes`, `fix-overlaps`, `fit-frames`, `fit-text`
+- **arrows**: `neat-arrows`, `tidy-arrows`, `clear-arrow-labels`, `arrows-to-links` (long arrows become see-also links), `straighten-lines`
+- **layout**: `lay-out-again` (rearranges everything), `frame-these`, `stack-frames`, `air-out`
+- **style**: `colour-by-frame`; **content**: `open-details` (the reverse of air-out); **check**: `check-diagram` (changes nothing)
+
+Run one rather than writing that code yourself: `routine run NAME --args '{"…": …}'` for those that take arguments
+(`routine list` says which). toucan also learns routines from work. Every run that changes a canvas goes into a work log, and
+`routine suggest` finds the code agents keep writing by hand, grouped by what it does, with the routines that already do it.
+A habit no routine covers is worth banking; people see the same suggestions in their Routines menu, with **Bank it**, which
+asks the chat agent to. `routine learn --codex` brings in the chat agent's past sessions, and `routine stats` says which
+routines get used, by whom, and how often they fail.
 
 ```js
 // routine: Colour the blocked boxes
 // description: Turn every box mentioning "blocked" red.
 // engines: tldraw
+// kind: style
+// when: Someone wants blocked work to stand out.
 
 const hits = editor.getCurrentPageShapes().filter((s) => s.type === 'geo' && /blocked/i.test(toucan.text(s)))
 editor.updateShapes(hits.map((s) => ({ id: s.id, type: s.type, props: { color: 'red' } })))
@@ -302,7 +318,9 @@ It is the body of an async function with `editor`, `tl`, `toucan` and `args` in 
 exec path: one undo step, glowing edits, a labelled version. The `summary` it returns is what the person sees.
 
 - **When a person says "bank that", or keeps asking for the same chore:** write it to a file, try it with
-  `exec`, then `toucan routine save NAME FILE --title "…" --description "…" --engines tldraw`. It must work
+  `exec`, then `toucan routine save NAME FILE --title "…" --description "…" --engines tldraw --kind style --when "…"`. Prefer
+  `toucan.*` helpers that work on both engines (`graph`, `applyGraph`, `remove`, `selection`), and say `--engines tldraw, excalidraw`
+  when it does. It must work
   from what it finds on the canvas, not from this conversation. Banked routines live in `<data>/_routines/`,
   shared by every canvas on the server; banking under a shipped routine's name replaces it there.
 - **Before doing a chore by hand:** check `routine list`, then `toucan --canvas NAME routine run NAME`.

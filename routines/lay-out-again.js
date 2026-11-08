@@ -1,6 +1,9 @@
 // routine: Lay it out again
 // description: Rearranges everything from scratch to follow the arrows, frame by frame. Use it when a diagram has lost its shape: positions are not kept, and one undo reverses it.
 // engines: tldraw
+// kind: layout
+// when: A diagram has lost its shape and its arrangement doesn't matter: lays everything out afresh, following the arrows.
+// args: direction (RIGHT or DOWN; default: the way most arrows go)
 
 await toucan.tidy.layOut(toucan, args)
 editor.zoomToFit({ animation: { duration: 250 } })

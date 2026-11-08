@@ -5,6 +5,16 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Routines by kind.** Every routine says what it's for (tidy, arrows, layout, style, content, check) and when to use it. The Routines menu groups them, with a search box, `routine list` groups them for agents (`--kind` to narrow), the chat agent gets the list at the start of each conversation, and MCP clients get `toucan_routines` and `toucan_run_routine`.
+- **Learning routines from work.** Every agent run that changes a canvas goes into a work log in the data folder. `toucan routine suggest` finds code agents keep writing by hand, grouped by what it does, and says when a routine already does it. The Routines menu shows the same suggestions under "From your work", where **Bank it** asks the chat agent to bank one. `routine learn --codex` brings in the chat agent's past sessions, and `routine stats` says which routines are used, by whom, and how often they fail.
+- New routines, from what agents actually did by hand: **Arrows to links** (long arrows become two-way see-also links), **Fit text** (boxes as tall as their text; both engines), **Clear arrow labels** (labels slide off boxes), **Frame these**, **Stack frames**, and **Open out details** (the reverse of Air out; both engines).
+
+### Fixed
+
+- `toucan.node(key, {h})` on an existing box sets its height outright, rather than leaving tldraw's growth for long text on top of it; and `parent` now moves an existing box into that frame.
+
 ## [0.12.2] — 2026-11-07
 
 ### Fixed

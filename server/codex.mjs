@@ -24,7 +24,7 @@ Each message comes with a <canvas_brief> of what is on the canvas and selected. 
 Get something on the canvas first, then improve it. For a clear request, your first or second tool call should be the visible edit: for a new diagram, \`draw -\` as below; to add to or relabel what's there, pipe a small Mermaid flowchart to \`import - --format mermaid --label "what this is"\`, or run \`exec -e '...' --label "what this is"\`. Otherwise pick sensible defaults rather than asking. Don't research, read source files or write helper files unless the request can't be done without them. When you do write a file, research or a helper script, put it only in \`${data}/${canvas}.files/\`, name the file in your reply, and open it for them with \`show files/NAME\`. To put a source or a project document in front of them, \`show\` it too (a URL, or project/PATH), and link a box to what's behind it with \`meta.refs\`. Keep the user's hand edits, and make small, reversible changes.
 \`toucan.node\` changes only what you pass and places a new box somewhere free; \`import\` also lays new boxes out beside what they connect to, so prefer it for anything connected. \`import\` only adds and updates: when a request replaces something ("between", "instead of", "move"), also remove what it replaces, with \`toucan.remove('edge:a->b')\` for an arrow. Draw a flow in one direction, without arrows looping back to the start.
 Once your edit is on the canvas, take one \`screenshot\` and fix anything overlapping, cut off or mislabelled, unless you only changed text or colour. Then reply in a line or two with what you changed.
-Before redoing a chore, check \`routine list\` and \`routine run NAME\`. When the user asks to bank what you did, write a routine that works from the canvas alone, try it with \`exec\`, and \`routine save NAME FILE --title T --description D --engines E\`. For lasting new behaviour on one canvas, use \`script put\`.
+A routine does a chore in one step and one undo, so run one rather than writing that code yourself (\`routine run NAME\`, \`--args JSON\` if it takes any; \`routine list\` has them all by kind). When the user asks to bank what you did, write a routine that works from what it finds on any canvas, try it with \`exec\`, and \`routine save NAME FILE --title T --description D --engines E --kind K --when "when to use it"\`. If you notice you're writing code you've written before, \`routine suggest\` lists habits worth banking: offer to bank one. For lasting new behaviour on one canvas, use \`script put\`.
 Sticky notes on tldraw are addressed to you: when asked to handle them, run \`notes\`, act on each using where it sits, then \`notes resolve KEY --reply "…"\`; never delete one.
 When the user gives broad feedback or asks what you'd change, answer on the canvas as a proposal (\`import - --format mermaid --propose\`, or \`proposed: true\` in the helpers) and leave accepting it to them. Connect each new box to the existing ones by their keys, so it lands beside what it's about and reads as part of the diagram.
 To draw a new diagram, don't place boxes by hand: describe it as data and let the layout engine place it. Run \`templates\` to see the kinds, \`templates show ID\` for an example to copy the form of, then pipe your own JSON to \`draw -\`. For a process use flowchart or swimlane; for what something moves between, state-machine; for a tree org-chart or decision-tree; for a system architecture or services; also sequence, er-diagram, pipeline, roadmap, timeline, kanban, quadrant, journey-map, mind-map. Keep each box to a few words and put the rest in \`detail\`. After a layout change, \`routine run check-diagram\` tells you what's wrong and where in a moment; prefer it to a screenshot, and \`routine run clean-up\` or \`lay-out-again\` to nudging boxes by hand.
@@ -42,7 +42,7 @@ Put any file you write, research or a helper script, only in \`${data}/${canvas}
 Leave closing the thread to people, unless they ask you to close it (\`threads close ${id}\`).`
 
 export class CodexChat {
-	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null, profileOf = async () => null, profileInstructions = () => '', onThread = () => {}, onTurn = () => {} }) {
+	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null, profileOf = async () => null, profileInstructions = () => '', routineIndex = () => '', onThread = () => {}, onTurn = () => {} }) {
 		this.onThread = onThread
 		// (canvas, conversation key, active): a turn started or ended, so the canvas can show Codex at work.
 		this.onTurn = onTurn // (canvas, id, event): what's happening in a comment thread's own conversation
@@ -51,6 +51,7 @@ export class CodexChat {
 		// (canvas) => the agent profile the canvas is bound to, or null for toucan's own agent (server/profiles.mjs)
 		this.profileOf = profileOf
 		this.profileInstructions = profileInstructions
+		this.routineIndex = routineIndex // (engine) => the routines an agent can run on it, one line each
 		this.bound = new Map() // conversation key -> { ref, profile } it was started with
 		this.generation = new Map() // canvas -> how many times its agent has changed, so a send that straddles a change starts over
 		this.direct = direct // (canvas, text) => a reply, if this message needed no agent
@@ -252,7 +253,10 @@ export class CodexChat {
 		this.threads.delete(canvas)
 		this.bound.set(canvas, { ref, profile })
 		const base = comment ? threadInstructions(name, comment, this.engineOf(name), this.data) : instructions(name, this.engineOf(name), existsSync(this.notes) ? this.notes : null, this.data)
-		const developerInstructions = profile ? `${base}\n\n${this.profileInstructions(profile)}` : base
+		// The routines it can run, so it reaches for one instead of rewriting it. A conversation keeps the list it started with.
+		const index = this.routineIndex(this.engineOf(name))
+		const withRoutines = index ? `${base}\n\nRoutines on this canvas (name, kind: when to use it):\n${index}` : base
+		const developerInstructions = profile ? `${withRoutines}\n\n${this.profileInstructions(profile)}` : withRoutines
 		const opts = { cwd: this.root, approvalPolicy: 'on-request', developerInstructions, serviceName: 'toucan' }
 		let res
 		const key = this.savedKey(canvas, ref)

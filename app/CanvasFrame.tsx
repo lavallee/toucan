@@ -118,9 +118,9 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 				</Button>
 				<Routines
 					engine={engine}
-					onAskAgent={() => {
+					onAskAgent={(text) => {
 						setChatOpen(true)
-						setDraftRequest({ text: BANK_PROMPT })
+						setDraftRequest({ text: text ?? BANK_PROMPT })
 					}}
 				/>
 				<AppearanceMenu />

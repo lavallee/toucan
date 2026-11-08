@@ -1,6 +1,8 @@
 // routine: Tidy arrows
 // description: Re-route arrows so fewer cross or run through boxes. No box moves.
 // engines: tldraw
+// kind: arrows
+// when: Arrows run through boxes or cross each other.
 
 // For each arrow bound at both ends it tries a straight line, curves of several bends either way, and
 // elbow routes, measures each on the real arrow geometry, and keeps the best:

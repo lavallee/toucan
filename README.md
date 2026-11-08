@@ -196,7 +196,8 @@ node bin/toucan.mjs setup      # builds the app, puts `toucan` on your PATH, and
   you name one. Step back and forward through them read-only, and restore any of them for everyone; what was
   there is saved first, so a restore can be undone too. `toucan versions` does the same from the CLI.
 - **Routines.** Bank a chore once and run it on any canvas from the Routines menu or `toucan routine run`, as
-  one undo step. Ask the chat to "bank that", or paste code. Tidy arrows and Straighten sketchy lines ship with toucan.
+  one undo step. About twenty ship with toucan, grouped by kind (tidy, arrows, layout, style, content, check), and toucan
+  learns more from work: it notices chores agents keep doing by hand and offers to bank them.
 - **Your look.** A light/dark/system override, and clean lettering by default in place of tldraw's handwritten
   font (switch back under Appearance). It's per browser, and it doesn't change the canvases.
 - **An index of canvases** at `/`, with previews, titles, descriptions and which ones are open.
@@ -241,7 +242,8 @@ toucan [--canvas NAME] <command>
   templates [show ID]         diagrams to start from (new NAME --template ID)
   draw FILE|- [--update]      lay out a diagram described as data onto the canvas
   files                       where this canvas keeps what agents write for it
-  routine list | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME
+  routine list [--kind K] | show NAME | run NAME [--args JSON] | save NAME FILE [--kind K] [--when T] … | rm NAME
+  routine suggest | stats | learn --codex   chores agents keep doing by hand, worth banking; how routines are used
   say TEXT [--at KEY,KEY]     tell people what you're about to do; --at points your cursor at those shapes
   references                  what people can read beside the canvas: its files, its project's, links on it
   show REF|PATH|URL           open it for people in the References panel
