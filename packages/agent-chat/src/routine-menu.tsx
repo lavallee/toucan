@@ -15,7 +15,7 @@ const slug = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9_-]+/g, '-')
 const describe = (result: any) => (typeof result === 'string' ? result : result?.summary ?? 'Done')
 
 /** The bank of routines: chores saved once, run on this canvas with one click. One run is one undo step. */
-export function RoutineMenu({ engine, onAskAgent, loadRoutines, runRoutine, saveRoutine, removeRoutine, container, scopeLabel = 'canvas', productName = 'toucan', bodyLabel = 'Routine code', bodyPlaceholder = '// editor, tl, toucan and args are in scope', description = 'Chores banked once, for every canvas. A run is one undo step.' }: { engine:string; onAskAgent:()=>void; loadRoutines:()=>Promise<{routines:Routine[]}>; runRoutine:(name:string)=>Promise<any>; saveRoutine:(name:string,parts:any)=>Promise<any>; removeRoutine:(name:string)=>Promise<any>; container?:HTMLElement|null; scopeLabel?:string; productName?:string; bodyLabel?:string; bodyPlaceholder?:string; description?:string }) {
+export function RoutineMenu({ engine, onAskAgent, loadRoutines, runRoutine, saveRoutine, removeRoutine, container, scopeLabel = 'canvas', productName = 'toucan', askLabel = 'Ask the agent to bank one', namePlaceholder = 'Name, like Colour the blocked boxes red', bodyLabel = 'Routine code', bodyPlaceholder = '// editor, tl, toucan and args are in scope', description = 'Chores banked once, for every canvas. A run is one undo step.' }: { engine:string; onAskAgent:()=>void; loadRoutines:()=>Promise<{routines:Routine[]}>; runRoutine:(name:string)=>Promise<any>; saveRoutine:(name:string,parts:any)=>Promise<any>; removeRoutine:(name:string)=>Promise<any>; container?:HTMLElement|null; scopeLabel?:string; productName?:string; askLabel?:string; namePlaceholder?:string; bodyLabel?:string; bodyPlaceholder?:string; description?:string }) {
 	const [open, setOpen] = useState(false)
 	const [routines, setRoutines] = useState<Routine[] | null>(null)
 	const [running, setRunning] = useState('')
@@ -130,7 +130,7 @@ export function RoutineMenu({ engine, onAskAgent, loadRoutines, runRoutine, save
 				<footer className="border-t p-2">
 					{banking ? (
 						<form onSubmit={bank} className="space-y-1.5">
-							<Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Name, like Colour the blocked boxes red" aria-label="Routine name" className="h-7 text-xs" autoFocus />
+							<Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder={namePlaceholder} aria-label="Routine name" className="h-7 text-xs" autoFocus />
 							<Input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="What it does" aria-label="What it does" className="h-7 text-xs" />
 							<Textarea value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder={bodyPlaceholder} aria-label={bodyLabel} className="h-28 font-mono text-[11px]" />
 							<div className="flex justify-end gap-1.5">
@@ -153,7 +153,7 @@ export function RoutineMenu({ engine, onAskAgent, loadRoutines, runRoutine, save
 									onAskAgent()
 								}}
 							>
-								Ask the agent to bank one
+								{askLabel}
 							</Button>
 							<Button variant="outline" size="sm" onClick={() => setBanking(true)}>
 								{bodyLabel === 'Routine code' ? 'Paste code' : 'Bank a prompt'}
