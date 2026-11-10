@@ -65,8 +65,8 @@ export function ChatComposer({ draft, onDraftChange, onSend, onStop, online, bus
 							{onModeChange && <div role="radiogroup" aria-label="Agent speed" className="flex items-center rounded-md border p-px">
 								{(
 									[
-										['fast', 'Fast', 'Quick edits: a lighter model that acts straight away'],
-										['thorough', 'Thorough', 'Planning and hard layout: slower, thinks longer'],
+										['fast', 'Fast', 'Quick edits: acts straight away'],
+										['thorough', 'Thorough', 'Planning and harder edits: slower, thinks longer'],
 									] as const
 								).map(([value, label, title]) => (
 									<button key={value} type="button" role="radio" aria-checked={mode === value} title={title} onClick={() => onModeChange?.(value)} className={cn('rounded-[5px] px-1.5 py-0.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50', mode === value && 'bg-muted text-foreground')}>
