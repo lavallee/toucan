@@ -1,6 +1,6 @@
+import { ChatHeader, ChatComposer, Conversation } from '../packages/agent-chat/src'
 import * as React from 'react'
 import {
-	ArrowUpIcon,
 	CircleAlertIcon,
 	CircleCheckIcon,
 	CircleDotIcon,
@@ -8,31 +8,18 @@ import {
 	CircleStopIcon,
 	FilePenIcon,
 	LoaderCircleIcon,
-	MessageCircleDashedIcon,
-	PlusIcon,
 	RouteIcon,
 	ShrinkIcon,
-	SquareIcon,
 	TerminalIcon,
 	WrenchIcon,
 } from 'lucide-react'
 
 import { Markdown } from '@/components/markdown'
-import { Bubble, BubbleContent } from '@/components/ui/bubble'
 import { Button } from '@/components/ui/button'
 import { CodeBlock, CodeBlockContent, CodeBlockHeader, CodeBlockLine, CodeBlockTitle } from '@/components/ui/code-block'
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/ui/input-group'
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
 import { Message, MessageContent } from '@/components/ui/message'
-import {
-	MessageScroller,
-	MessageScrollerButton,
-	MessageScrollerContent,
-	MessageScrollerItem,
-	MessageScrollerProvider,
-	MessageScrollerViewport,
-} from '@/components/ui/message-scroller'
+
 import {
 	Trace,
 	TraceCollapsible,
@@ -71,7 +58,6 @@ export function Chat({ toolbar, onHeaderPointerDown, engine, draftRequest, onDra
 	const [draft, setDraft] = React.useState('')
 	const [agent, setAgent] = React.useState<Agent>(null) // toucan's own agent, or the named one this canvas works with
 	const ws = React.useRef<WebSocket | null>(null)
-	const formRef = React.useRef<HTMLFormElement>(null)
 	const inputRef = React.useRef<HTMLTextAreaElement>(null)
 	const [mode, setMode] = React.useState<'fast' | 'thorough'>(() => (localStorage.getItem('toucan.chatMode') === 'thorough' ? 'thorough' : 'fast'))
 	const [routines, setRoutines] = React.useState<{ name: string; title: string; description: string; engines: string[] }[]>([])
@@ -125,19 +111,9 @@ export function Chat({ toolbar, onHeaderPointerDown, engine, draftRequest, onDra
 
 	const send: Send = (msg) => ws.current?.readyState === 1 && ws.current.send(JSON.stringify(msg))
 	const busy = view.busy || pending
-	const text = draft.trim()
-	const canSend = online && text.length > 0 // a message sent mid-turn adjusts the work in progress
 	// Typing "/" offers the banked routines, which run straight away with no agent.
 	const slash = /^\/([\w-]*)$/.exec(draft)
 	const matches = slash ? routines.filter((r) => r.engines.includes(engine) && (r.name.includes(slash[1].toLowerCase()) || r.title.toLowerCase().includes(slash[1].toLowerCase()))) : []
-
-	function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-		event.preventDefault()
-		if (!canSend) return
-		send({ type: 'send', text, mode })
-		setDraft('')
-		setPending(true)
-	}
 
 	const { messages } = view
 	return (
@@ -148,147 +124,12 @@ export function Chat({ toolbar, onHeaderPointerDown, engine, draftRequest, onDra
 			onKeyUp={(e) => e.stopPropagation()}
 			onPaste={(e) => e.stopPropagation()}
 		>
-			<header className="flex items-center gap-2 border-b py-1.5 pr-1.5 pl-4 md:cursor-grab md:active:cursor-grabbing" onPointerDown={onHeaderPointerDown}>
-				<span onPointerDown={(e) => e.stopPropagation()}>
-					<AgentPicker agent={agent} disabled={!online} />
-				</span>
-				<span
-					className={cn('size-2 rounded-full', online ? 'bg-emerald-500' : 'bg-destructive')}
-					role="status"
-					aria-label={online ? 'connected' : 'offline'}
-					title={online ? 'connected' : 'offline'}
-				/>
-				<span className="flex-1" />
-				{toolbar}
-				<Button variant="ghost" size="sm" onClick={() => send({ type: 'new' })} disabled={!online}>
-					<PlusIcon />
-					New chat
-				</Button>
-			</header>
+			<ChatHeader agent={<AgentPicker agent={agent} disabled={!online} />} online={online} toolbar={toolbar} onNew={() => send({ type: 'new' })} onPointerDown={onHeaderPointerDown} />
 
-			<MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor">
-				<div className="relative min-h-0 flex-1">
-					{messages.length === 0 ? (
-						<Empty className="h-full">
-							<EmptyHeader>
-								<EmptyMedia variant="icon">
-									<MessageCircleDashedIcon />
-								</EmptyMedia>
-								<EmptyTitle>{agent && 'name' in agent ? `Working with ${agent.name}` : 'What should change on the canvas?'}</EmptyTitle>
-								<EmptyDescription>
-									{agent && 'name' in agent ? `${agent.name} has their own knowledge loaded, and can draw on the canvas like any agent.` : (<>“Group these into a frame”, “colour anything unowned red”, “add a button that re-runs the layout”.</>)}
-								</EmptyDescription>
-							</EmptyHeader>
-						</Empty>
-					) : (
-						<MessageScroller>
-							<MessageScrollerViewport>
-								<MessageScrollerContent aria-busy={busy} className="gap-5 px-4 py-4">
-									{messages.map((message) =>
-										message.role === 'user' ? (
-											<MessageScrollerItem key={message.id} messageId={message.id} scrollAnchor>
-												<Message align="end">
-													<MessageContent>
-														<Bubble align="end" variant="muted">
-															<BubbleContent className="whitespace-pre-wrap">{messageText(message)}</BubbleContent>
-														</Bubble>
-													</MessageContent>
-												</Message>
-											</MessageScrollerItem>
-										) : (
-											<MessageScrollerItem key={message.id} messageId={message.id}>
-												<AssistantMessage
-													message={message}
-													streaming={busy && message === messages.at(-1)}
-													send={send}
-												/>
-											</MessageScrollerItem>
-										),
-									)}
-									{busy && messages.at(-1)?.role === 'user' && (
-										<MessageScrollerItem messageId="pending">
-											<Trace>
-												<TraceLine status="running">
-													<TraceIcon>
-														<LoaderCircleIcon className="animate-spin" />
-													</TraceIcon>
-													<TraceTitle>Working</TraceTitle>
-												</TraceLine>
-											</Trace>
-										</MessageScrollerItem>
-									)}
-								</MessageScrollerContent>
-							</MessageScrollerViewport>
-							<MessageScrollerButton />
-						</MessageScroller>
-					)}
-				</div>
-			</MessageScrollerProvider>
+			<Conversation messages={messages.map(message => ({ id: message.id, role: message.role, text: messageText(message), content: message.role === 'user' ? undefined : <AssistantMessage message={message} streaming={busy && message === messages.at(-1)} send={send} /> }))} busy={busy} emptyTitle={agent && 'name' in agent ? `Working with ${agent.name}` : 'What should change on the canvas?'} emptyDescription={agent && 'name' in agent ? `${agent.name} has their own knowledge loaded, and can draw on the canvas like any agent.` : '“Group these into a frame”, “colour anything unowned red”, “add a button that re-runs the layout”.'} />
 
-			<div className="p-3 pt-0">
-				<form ref={formRef} onSubmit={onSubmit} className="relative w-full">
-					{matches.length > 0 && (
-						<ul aria-label="Routines" className="absolute inset-x-0 bottom-full z-10 mb-1 max-h-48 overflow-y-auto rounded-lg border bg-popover py-1 shadow-md">
-							{matches.map((r) => (
-								<li key={r.name}>
-									<button
-										type="button"
-										className="block w-full px-3 py-1.5 text-left outline-none hover:bg-muted focus-visible:bg-muted"
-										onClick={() => {
-											send({ type: 'send', text: `/${r.name}`, mode })
-											setDraft('')
-											setPending(true)
-										}}
-									>
-										<span className="font-mono text-xs">/{r.name}</span> <span className="text-xs text-muted-foreground">{r.description || r.title}</span>
-									</button>
-								</li>
-							))}
-						</ul>
-					)}
-					<InputGroup>
-						<InputGroupTextarea
-							value={draft}
-							onChange={(event) => setDraft(event.target.value)}
-							ref={inputRef}
-							placeholder={!online ? 'Reconnecting…' : busy ? 'Add to what it’s doing…' : agent && 'name' in agent ? `Ask ${agent.name}, or / for a routine` : 'Tell it what to put on the canvas, or / for a routine'}
-							aria-label="Message"
-							className="max-h-48 min-h-14 p-3"
-							onKeyDown={(event) => {
-								if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-									event.preventDefault()
-									formRef.current?.requestSubmit()
-								}
-							}}
-						/>
-						<InputGroupAddon align="block-end">
-							<div role="radiogroup" aria-label="Agent speed" className="flex items-center rounded-md border p-px">
-								{(
-									[
-										['fast', 'Fast', 'Quick edits: a lighter model that acts straight away'],
-										['thorough', 'Thorough', 'Planning and hard layout: slower, thinks longer'],
-									] as const
-								).map(([value, label, title]) => (
-									<button key={value} type="button" role="radio" aria-checked={mode === value} title={title} onClick={() => chooseMode(value)} className={cn('rounded-[5px] px-1.5 py-0.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50', mode === value && 'bg-muted text-foreground')}>
-										{label}
-									</button>
-								))}
-							</div>
-							<span className="ml-auto" />
-							{busy && (
-								<InputGroupButton type="button" size="icon-sm" variant="outline" className="rounded-full" aria-label="Stop" title="Stop" onClick={() => send({ type: 'interrupt' })}>
-									<SquareIcon className="fill-current" />
-								</InputGroupButton>
-							)}
-							{(!busy || text.length > 0) && (
-								<InputGroupButton type="submit" size="icon-sm" variant="default" className="rounded-full" disabled={!canSend} aria-label={busy ? 'Add to this turn' : 'Send'} title={busy ? 'Add to this turn' : 'Send'}>
-									<ArrowUpIcon />
-								</InputGroupButton>
-							)}
-						</InputGroupAddon>
-					</InputGroup>
-				</form>
-			</div>
+			<ChatComposer draft={draft} onDraftChange={setDraft} inputRef={inputRef} online={online} busy={busy} mode={mode} onModeChange={chooseMode} matches={matches} placeholder={agent && 'name' in agent ? `Ask ${agent.name}, or / for a routine` : 'Tell it what to put on the canvas, or / for a routine'} onSend={(text, mode) => { send({ type: 'send', text, mode }); setDraft(''); setPending(true) }} onStop={() => send({ type: 'interrupt' })} />
+
 		</aside>
 	)
 }
