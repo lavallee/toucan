@@ -34,11 +34,11 @@ export function ChatComposer({ draft, onDraftChange, onSend, onStop, online, bus
 								<li key={r.name}>
 									<button
 										type="button"
-										className="block w-full px-3 py-1.5 text-left outline-none hover:bg-muted focus-visible:bg-muted"
+										disabled={!online || disabled || (busy && !allowSendWhileBusy)}
+                                    className="block w-full px-3 py-1.5 text-left outline-none hover:bg-muted focus-visible:bg-muted"
 										onClick={() => {
 											onSend(`/${r.name}`, mode)
-											onDraftChange('')
-										}}
+											}}
 									>
 										<span className="font-mono text-xs">/{r.name}</span> <span className="text-xs text-muted-foreground">{r.description || r.title}</span>
 									</button>
