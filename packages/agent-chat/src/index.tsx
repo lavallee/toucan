@@ -51,7 +51,7 @@ export function ChatComposer({ draft, onDraftChange, onSend, onStop, online, bus
 							value={draft}
 							onChange={(event) => onDraftChange(event.target.value)}
 							ref={inputRef}
-							placeholder={!online ? 'Reconnecting…' : busy ? 'Add to what it’s doing…' : placeholder}
+							placeholder={!online ? 'Reconnecting…' : busy ? (allowSendWhileBusy ? 'Add to what it’s doing…' : 'Draft your next request while I work…') : placeholder}
 							aria-label="Message"
 							className="max-h-48 min-h-14 p-3"
 							onKeyDown={(event) => {
@@ -81,7 +81,7 @@ export function ChatComposer({ draft, onDraftChange, onSend, onStop, online, bus
 								</InputGroupButton>
 							)}
 							{(!busy || text.length > 0 || !onStop) && (
-								<InputGroupButton type="submit" size="icon-sm" variant="default" className="rounded-full" disabled={!canSend} aria-label={busy ? 'Add to this turn' : 'Send'} title={busy ? 'Add to this turn' : 'Send'}>
+								<InputGroupButton type="submit" size="icon-sm" variant="default" className="rounded-full" disabled={!canSend} aria-label={busy && allowSendWhileBusy ? 'Add to this turn' : 'Send'} title={busy && allowSendWhileBusy ? 'Add to this turn' : 'Send'}>
 									<ArrowUpIcon />
 								</InputGroupButton>
 							)}
