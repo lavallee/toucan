@@ -1,3 +1,5 @@
+import { routineMatches } from '../packages/agent-chat/src/routines.mjs'
+import { ReasoningLine } from '../packages/agent-chat/src/activity'
 import { ChatHeader, ChatComposer, Conversation } from '../packages/agent-chat/src'
 import * as React from 'react'
 import {
@@ -112,8 +114,7 @@ export function Chat({ toolbar, onHeaderPointerDown, engine, draftRequest, onDra
 	const send: Send = (msg) => ws.current?.readyState === 1 && ws.current.send(JSON.stringify(msg))
 	const busy = view.busy || pending
 	// Typing "/" offers the banked routines, which run straight away with no agent.
-	const slash = /^\/([\w-]*)$/.exec(draft)
-	const matches = slash ? routines.filter((r) => r.engines.includes(engine) && (r.name.includes(slash[1].toLowerCase()) || r.title.toLowerCase().includes(slash[1].toLowerCase()))) : []
+	const matches = routineMatches(routines, draft, engine)
 
 	const { messages } = view
 	return (
@@ -191,7 +192,7 @@ function AssistantMessage({ message, streaming, send }: { message: ChatMessage; 
 function StepLine({ part, streaming }: { part: ChatPart; streaming: boolean }) {
 	switch (part.type) {
 		case 'reasoning':
-			return <ReasoningLine text={part.text} running={streaming && part.state === 'streaming'} />
+			return <ReasoningLine text={part.text} running={streaming && part.state === 'streaming'} renderText={text => <Markdown className="text-muted-foreground">{text}</Markdown>} />
 		case 'tool-runCommand':
 			return <CommandLine part={part} streaming={streaming} />
 		case 'tool-editFiles':
@@ -220,25 +221,6 @@ function StepLine({ part, streaming }: { part: ChatPart; streaming: boolean }) {
 	return null
 }
 
-// Reasoning pattern: opens while the model thinks, closes when done, unless the person chose.
-function ReasoningLine({ text, running }: { text: string; running: boolean }) {
-	const [open, setOpen] = React.useState<boolean>()
-	const line = (
-		<TraceLine status={running ? 'running' : undefined}>
-			<TraceIcon>{running ? <LoaderCircleIcon className="animate-spin" /> : <CircleCheckIcon />}</TraceIcon>
-			<TraceTitle>{running ? 'Thinking' : 'Thought'}</TraceTitle>
-		</TraceLine>
-	)
-	if (text.length === 0) return line
-	return (
-		<TraceCollapsible open={open ?? running} onOpenChange={setOpen}>
-			<TraceCollapsibleTrigger>{line}</TraceCollapsibleTrigger>
-			<TraceCollapsibleContent>
-				<Markdown className="text-muted-foreground">{text}</Markdown>
-			</TraceCollapsibleContent>
-		</TraceCollapsible>
-	)
-}
 
 const seconds = (ms?: number | null) => (ms == null ? null : ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`)
 

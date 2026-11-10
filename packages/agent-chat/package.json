@@ -1,17 +1,24 @@
 {
   "name": "@lyra-forge/agent-chat",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "license": "MIT",
   "exports": {
     ".": "./src/index.tsx",
     "./ui/*": "./src/ui/*.tsx",
-    "./theme.css": "./src/theme.css"
+    "./theme.css": "./src/theme.css",
+    "./dock": "./src/dock.tsx",
+    "./activity": "./src/activity.tsx",
+    "./server/rpc": "./server/codex-rpc.mjs",
+    "./server/routines": "./server/routine-bank.mjs",
+    "./routines": "./src/routines.mjs",
+    "./routine-menu": "./src/routine-menu.tsx"
   },
   "files": [
     "src",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "server"
   ],
   "peerDependencies": {
     "react": ">=19",
