@@ -3,10 +3,9 @@
 // Codex edits the canvas the same way a terminal agent does — by running bin/toucan.mjs —
 // so there is one path for both. Approval requests are forwarded to the browser.
 
-import { spawn } from 'node:child_process'
+import { CodexRpc } from '../packages/agent-chat/server/codex-rpc.mjs'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import readline from 'node:readline'
 
 // Who answers, per message. Fast suits most canvas work; Thorough is for planning and hard layout. Both use
 // Codex's current default model unless set here, so they don't go stale as models change. Measured on real
@@ -115,7 +114,10 @@ export class CodexChat {
 	// ---- JSON-RPC over stdio -------------------------------------------------
 	start() {
 		if (this.proc) return this.ready
-		this.proc = spawn('codex', ['app-server'], { cwd: this.root, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, TOUCAN_AGENT: 'Codex' } })
+		this.rpc = new CodexRpc({ command: ['codex', 'app-server'], cwd: this.root, env: { ...process.env, TOUCAN_AGENT: 'Codex' } })
+		this.rpc.on('notification', msg => this.onLine(JSON.stringify(msg)))
+		this.rpc.on('request', msg => this.onLine(JSON.stringify(msg)))
+		this.proc = this.rpc.start()
 		this.proc.stderr.on('data', (d) => process.stderr.write(`[codex] ${d}`))
 		// No codex here: the canvas still works, and the panel says why the chat doesn't.
 		this.proc.on('error', (e) => {
@@ -136,7 +138,6 @@ export class CodexChat {
 			for (const [, c] of this.calls) c.reject(new Error('codex app-server exited'))
 			this.calls.clear()
 		})
-		readline.createInterface({ input: this.proc.stdout }).on('line', (line) => this.onLine(line))
 		this.ready = (async () => {
 			await this.call('initialize', { clientInfo: { name: 'toucan', title: 'toucan', version: VERSION }, capabilities: null })
 			this.notify('initialized', {})
@@ -147,19 +148,9 @@ export class CodexChat {
 		return this.ready
 	}
 
-	call(method, params) {
-		const id = ++this.seq
-		return new Promise((resolve, reject) => {
-			this.calls.set(id, { resolve, reject })
-			this.proc.stdin.write(JSON.stringify({ method, id, params }) + '\n')
-		})
-	}
-	notify(method, params) {
-		this.proc.stdin.write(JSON.stringify({ method, params }) + '\n')
-	}
-	reply(id, result) {
-		this.proc?.stdin.write(JSON.stringify({ id, result }) + '\n')
-	}
+	call(method, params) { return this.rpc.call(method, params) }
+	notify(method, params) { this.rpc.notify(method, params) }
+	reply(id, result) { this.rpc?.reply(id, result) }
 
 	onLine(line) {
 		let msg

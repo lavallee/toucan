@@ -1,0 +1,34 @@
+{
+  "name": "@lyra-forge/agent-chat",
+  "version": "0.2.3",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./ui/*": "./src/ui/*.tsx",
+    "./theme.css": "./src/theme.css",
+    "./dock": "./src/dock.tsx",
+    "./activity": "./src/activity.tsx",
+    "./server/rpc": "./server/codex-rpc.mjs",
+    "./server/routines": "./server/routine-bank.mjs",
+    "./routines": "./src/routines.mjs",
+    "./routine-menu": "./src/routine-menu.tsx"
+  },
+  "files": [
+    "src",
+    "LICENSE",
+    "README.md",
+    "server"
+  ],
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "dependencies": {
+    "@shadcn/react": "0.3.1",
+    "class-variance-authority": "0.7.1",
+    "cn": "0.4.0",
+    "lucide-react": "1.57.0",
+    "radix-ui": "1.8.1"
+  }
+}

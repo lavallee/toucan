@@ -1,3 +1,4 @@
+import { createRoutineBank } from '../packages/agent-chat/server/routine-bank.mjs'
 // Routines: chores banked once and run on any canvas, from the app's Routines menu or
 // `toucan routine run`. A routine is a .js file: the body of an async function with `editor`, `tl`,
 // `toucan` and `args` in scope, which may return a JSON value (its `summary` string is shown to the
@@ -48,19 +49,14 @@ const oneLine = (s) => String(s).replace(/\s+/g, ' ').trim()
 
 export function createRoutines({ shipped, data }) {
 	const banked = join(data, '_routines')
-	const scan = (dir, source) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.js')).map((f) => ({ ...parse(f.slice(0, -3), readFileSync(join(dir, f), 'utf8')), source })) : [])
-	const list = () => {
-		const all = new Map([...scan(shipped, 'shipped'), ...scan(banked, 'banked')].map((r) => [r.name, r]))
-		return [...all.values()].sort((a, b) => a.title.localeCompare(b.title))
-	}
+	const bank = createRoutineBank({ shipped, banked, extension: '.js', parse, compose })
+	const list = () => bank.list()
+
 	return {
 		list,
 		get: (name) => list().find((r) => r.name === name) ?? null,
-		save(name, parts) {
-			mkdirSync(banked, { recursive: true })
-			writeFileSync(join(banked, `${name}.js`), compose(parts))
-			return parse(name, readFileSync(join(banked, `${name}.js`), 'utf8'))
-		},
+		save: (name, parts) => bank.save(name, parts),
+
 		/** Only banked routines can be removed; removing one that shadows a shipped routine restores it. */
 		remove(name) {
 			const f = join(banked, `${name}.js`)
