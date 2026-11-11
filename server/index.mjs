@@ -106,7 +106,7 @@ function run(canvas, code, timeoutMs = 30000, label, agent) {
 		const send = (ws, next) => {
 			const id = ++execSeq
 			const done = (f) => (v) => (ws.headless && headless.touch(canvas, false), f(v))
-			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now(), agent }
+			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now(), agent, next }
 			if (ws.headless) headless.touch(canvas, true)
 			p.timer = setTimeout(() => {
 				pending.delete(id)
@@ -970,7 +970,18 @@ function onCanvas(ws, canvas, nonce) {
 			if (ids.length) for (const other of tabs.get(canvas) ?? []) if (other !== ws && other.readyState === 1) other.send(JSON.stringify({ type: 'agent-edit', ids, agent: p.agent }))
 		}
 	})
-	ws.on('close', () => tabs.set(canvas, (tabs.get(canvas) ?? []).filter((w) => w !== ws)))
+	ws.on('close', () => {
+		tabs.set(canvas, (tabs.get(canvas) ?? []).filter((w) => w !== ws))
+		// A run this tab had taken can't finish now: say so at once rather than at the timeout. The usual cause is the editor
+		// reloading because tldraw refused a shape, or the person closing the tab. One it hadn't taken yet goes to the next tab.
+		for (const [id, p] of pending) {
+			if (p.ws !== ws) continue
+			pending.delete(id)
+			clearTimeout(p.timer)
+			if (!p.acked) p.next()
+			else p.reject(new Error(`the tab running this closed before it finished: either the editor reloaded (tldraw does when a shape has a value it doesn't accept, such as an unknown geo or colour) or someone closed the tab. Check the canvas with \`summary\` before running it again.`))
+		}
+	})
 }
 
 // Drop sockets whose browser went away without closing (sleep, network change).
