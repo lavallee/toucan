@@ -55,6 +55,7 @@
   "dependencies": {
     "@tldraw/sync-core": "5.5.2",
     "elkjs": "^0.12.0",
+    "gifenc": "^1.0.3",
     "ws": "^8.22.0"
   },
   "devDependencies": {

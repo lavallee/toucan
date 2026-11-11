@@ -569,6 +569,17 @@
    "who": "agent"
   },
   {
+   "id": "animate",
+   "group": "formats",
+   "name": "Animated build",
+   "summary": "A GIF of the diagram building up box by box, in the order the arrows go, to drop into a doc, a slide or a chat.",
+   "app": "Animate",
+   "cli": "animate [OUT.gif]",
+   "since": "0.14.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
    "id": "mermaid",
    "group": "formats",
    "name": "Mermaid in and out",

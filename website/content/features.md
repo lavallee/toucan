@@ -92,6 +92,7 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
+| Animated build | A GIF of the diagram building up box by box, in the order the arrows go, to drop into a doc, a slide or a chat. | **Animate**; CLI: `animate [OUT.gif]` | 0.14.0 |
 | [Mermaid in and out](tour.html#or-as-mermaid) | Paste or import Mermaid: on a blank canvas it looks like a template, and on a full one it merges by key. | **Chat: paste**; CLI: `import FILE --format mermaid` · `graph --format mermaid` | 0.1.0 |
 | [JSON Canvas, Excalidraw, DOT](tour.html#or-as-mermaid) | Import and export JSON Canvas (Obsidian) and .excalidraw; export DOT. | CLI: `import` · `graph --format jsoncanvas\|excalidraw\|dot` | 0.1.0 |
 | [Toucan graph](agents.html#graphs-the-engine-neutral-path) | An engine-neutral graph format, with keyed upsert import and automatic layout. | CLI: `graph` · `import --format tg` | 0.1.0 |
@@ -105,4 +106,4 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [A server that looks after itself](how-it-works.html) | Commands start a background server when needed, and never fight one you run yourself. | CLI: `start` · `stop` · `restart` · `start --take-over` | 0.8.0 |
 | [Remote and behind a proxy](how-it-works.html) | Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to. | **Sign-in page**; CLI: `--public-url` · `--allow-host` · `TOUCAN_URL` · `TOUCAN_TOKEN` | 0.11.0 |
 
-*54 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
+*55 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*

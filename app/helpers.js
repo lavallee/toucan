@@ -11,6 +11,7 @@ import { fromTldraw, layoutMissing } from '../lib/tg.mjs'
 import { pulse as glow } from './pulses'
 import { measureDiagram, scoreDiagram } from './measure'
 import { makeTidy } from './tidy'
+import { buildOrder, makeGif } from './animate'
 import { tldrawScene } from './scene'
 import { refsOfShape } from './reference-links'
 
@@ -629,6 +630,44 @@ export function makeHelpers(editor) {
 		return btoa(s)
 	}
 
+	/**
+	 * An animated build of the page as a GIF (app/animate.js): boxes appear in the order the arrows go, each with its arrows.
+	 * tldraw exports a frame with everything in it, so frames (lanes, sections) are drawn here underneath, in its frame style,
+	 * and only boxes and arrows come from its export, all at one fixed scale so every frame of the GIF lines up.
+	 */
+	async function animate({ max = 1200, step = 700, hold = 2500 } = {}) {
+		const all = [...editor.getCurrentPageShapeIds()]
+		if (!all.length) return null
+		const steps = buildOrder(scene)
+		const B = editor.getShapesPageBounds(all)
+		const pad = 32
+		const scale = Math.min(1, max / Math.max(B.w + pad * 2, B.h + pad * 2))
+		const width = Math.round((B.w + pad * 2) * scale), height = Math.round((B.h + pad * 2) * scale)
+		const bounds = new tl_Box(B.x - pad, B.y - pad, B.w + pad * 2, B.h + pad * 2)
+		const at = (x, y) => [(x - bounds.x) * scale, (y - bounds.y) * scale]
+		const render = async (ids, ctx) => {
+			const shapes = ids.map((id) => editor.getShape(id)).filter(Boolean)
+			for (const f of shapes.filter((s) => s.type === 'frame')) {
+				const b = editor.getShapePageBounds(f)
+				const [x, y] = at(b.x, b.y)
+				ctx.fillStyle = '#ffffff'
+				ctx.strokeStyle = '#9fa8b2'
+				ctx.lineWidth = Math.max(1, scale)
+				ctx.fillRect(x, y, b.w * scale, b.h * scale)
+				ctx.strokeRect(x, y, b.w * scale, b.h * scale)
+				ctx.fillStyle = '#5f6369'
+				ctx.font = `${Math.max(9, 12 * scale)}px Inter, system-ui, sans-serif`
+				ctx.textBaseline = 'bottom'
+				ctx.fillText(f.props.name || 'Frame', x, y - 4 * scale)
+			}
+			const rest = shapes.filter((s) => s.type !== 'frame').map((s) => s.id)
+			if (!rest.length) return
+			const { blob } = await editor.toImage(rest, { format: 'png', bounds, padding: 0, scale, pixelRatio: 1, background: false, darkMode: false })
+			ctx.drawImage(await createImageBitmap(blob), 0, 0, width, height)
+		}
+		return makeGif(steps, render, { width, height, step, hold, background: '#f9fafb' })
+	}
+
 	/** Make shapes (ids or keys) glow for a moment in this tab, as agent edits do in every tab; the agent's cursor moves there. */
 	function pulse(idsOrKeys, via) {
 		glow([idsOrKeys].flat().map((k) => (String(k).startsWith('shape:') ? k : idFor(k))), via)
@@ -664,7 +703,7 @@ export function makeHelpers(editor) {
 
 	// The canvas as the tidying and the diagram check see it, the same on both engines (app/scene.js).
 	const scene = tldrawScene(editor, { keyOf, text, toRichText })
-	const api = { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
+	const api = { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, animate, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
 		const m = measureDiagram(scene)
 		return { ...m, score: scoreDiagram(m) }
 	}, tidy: makeTidy(scene) }

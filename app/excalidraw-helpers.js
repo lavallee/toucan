@@ -12,6 +12,7 @@ import { refsOfShape } from './reference-links'
 import { excalidrawScene } from './scene'
 import { measureDiagram, scoreDiagram } from './measure'
 import { makeTidy } from './tidy'
+import { buildOrder, makeGif } from './animate'
 
 const elk = new ELK()
 
@@ -233,6 +234,30 @@ export function makeExcalidrawHelpers(api, ex) {
 		return btoa(s)
 	}
 
+	/**
+	 * An animated build of the scene as a GIF (app/animate.js): boxes appear in the order the arrows go, each with its arrows and
+	 * labels. Every frame of the GIF carries a transparent box the size of the whole scene, so they all export at one scale.
+	 */
+	async function animate({ max = 1200, step = 700, hold = 2500 } = {}) {
+		const all = live()
+		if (!all.length) return null
+		const steps = buildOrder(scene)
+		const [x0, y0, x1, y1] = ex.getCommonBounds(all)
+		const [spacer] = ex.convertToExcalidrawElements([{ type: 'rectangle', x: x0, y: y0, width: x1 - x0, height: y1 - y0, strokeColor: 'transparent', backgroundColor: 'transparent', strokeWidth: 1 }])
+		const appState = { ...api.getAppState(), exportBackground: false, exportWithDarkMode: false, frameRendering: { enabled: true, name: true, outline: true, clip: true } }
+		const pad = 32
+		const scale = Math.min(1, max / Math.max(x1 - x0 + pad * 2, y1 - y0 + pad * 2))
+		const width = Math.round((x1 - x0 + pad * 2) * scale), height = Math.round((y1 - y0 + pad * 2) * scale)
+		const render = async (ids, ctx) => {
+			const on = new Set(ids)
+			// A box brings its label, an arrow its label.
+			const els = all.filter((e) => on.has(e.id) || (e.containerId && on.has(e.containerId)))
+			const canvas = await ex.exportToCanvas({ elements: [spacer, ...els], appState, files: api.getFiles(), exportPadding: pad, getDimensions: () => ({ width, height, scale }) })
+			ctx.drawImage(canvas, 0, 0, width, height)
+		}
+		return makeGif(steps, render, { width, height, step, hold, background: '#ffffff' })
+	}
+
 	/** Make elements (ids or keys) glow for a moment in this tab, as agent edits do in every tab; the agent's cursor moves there. */
 	function pulse(idsOrKeys, via) {
 		// In the order given (what a run added comes first), so the agent's cursor goes to the right one.
@@ -391,5 +416,5 @@ export function makeExcalidrawHelpers(api, ex) {
 		return { ...m, score: scoreDiagram(m) }
 	}
 
-	return { engine: 'excalidraw', scene, measure, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
+	return { engine: 'excalidraw', scene, measure, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
 }
