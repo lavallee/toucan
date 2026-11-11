@@ -12,7 +12,7 @@ import { homedir, platform, tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
-import { TEMPLATES } from '../templates/index.mjs'
+import { GROUPS as TEMPLATE_GROUPS, STARTERS, TEMPLATES } from '../templates/index.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
@@ -583,13 +583,8 @@ function writeTour() {
 	writeFileSync(join(ROOT, 'website/content/tour.md'), lines.filter((l) => l !== null && l !== undefined && l !== false).join('\n'))
 }
 
-const GROUPS = [
-	['Processes', 'What happens, in what order, and who does it.', ['flowchart', 'swimlane', 'pipeline', 'state-machine', 'cycle', 'sequence']],
-	['Structures', 'What belongs under what.', ['org-chart', 'decision-tree', 'mind-map']],
-	['Systems', 'Named parts and the real connections between them.', ['architecture', 'services', 'network', 'er-diagram']],
-	['Time', 'Where position means a date.', ['roadmap', 'timeline']],
-	['Work and decisions', 'Sorting things, comparing them, and working out why.', ['kanban', 'quadrant', 'journey-map', 'responsibility', 'comparison', 'fishbone', 'funnel']],
-]
+// The gallery's sections are the templates' own groups, so a new block lands in the right one without editing this.
+const GROUPS = TEMPLATE_GROUPS.map((g) => [g.label, `${g.about}.`, TEMPLATES.filter((t) => t.group === g.id).map((t) => t.id)])
 function writeGallery() {
 	const seen = new Set()
 	const page = [
@@ -597,7 +592,13 @@ function writeGallery() {
 		'',
 		'Every diagram toucan starts from, as it draws them. Each one is ordinary shapes you can change. These same diagrams are the test set for layout, so a change that makes one worse fails the build.',
 		'',
-		'Start one with `toucan new NAME --template ID`, or from **Start from** on the index page. An agent can read the description behind any of them with `toucan templates show ID`, then draw its own in the same form with `toucan --canvas NAME draw -`. See [See it work](tour.html) for that in action.',
+		'A canvas *has* diagrams rather than *being* one. Each diagram below is a **block**: start a canvas with one (`toucan new NAME --template ID`, or **Start from** on the index page), or add it beside what is already on a canvas (`toucan --canvas NAME add ID`, or **Add** above the canvas). An agent can read the description behind any of them with `toucan templates show ID`, then draw its own in the same form with `toucan --canvas NAME draw -`. See [See it work](tour.html) for that in action.',
+		'',
+		'## Starters',
+		'',
+		'A **starter** is a whole canvas on one subject, made of several blocks laid out under their own headings. Start one the same way: `toucan new NAME --template ID`.',
+		'',
+		...STARTERS.map((s) => `- **${s.title}** (\`${s.id}\`): ${s.use} It has: ${s.parts.map((p) => p.title).join(', ')}.`),
 		'',
 	]
 	for (const [name, about, ids] of [...GROUPS, ['Others', '', TEMPLATES.map((t) => t.id).filter((id) => !GROUPS.some((g) => g[2].includes(id)))]]) {

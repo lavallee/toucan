@@ -1,6 +1,9 @@
 // routine: Air out
 // description: Make a dense diagram readable: long box text moves into the click-open details, leaving a short, larger name, with a little more room. Nothing is lost, and one undo reverses it.
-// engines: tldraw
+// engines: tldraw, excalidraw
+// kind: layout
+// when: A diagram is dense, with long text in boxes: moves the text into details and gives the names room. Only when asked.
+// args: factor (default 1.25): how much to spread
 
 // Names do more for an overview than space does: spreading everything out just zooms it further away.
 const FACTOR = args.factor ?? 1.25
@@ -20,26 +23,37 @@ function split(full) {
 	return { title: `${cut.slice(0, cut.lastIndexOf(' ') > 12 ? cut.lastIndexOf(' ') : MAX_TITLE)}…`, detail: lines.join('\n') }
 }
 
-const shapes = editor.getCurrentPageShapes()
-let shortened = 0
-const updates = shapes.flatMap((s) => {
-	const move = { id: s.id, type: s.type, x: s.x * FACTOR, y: s.y * FACTOR }
-	if (s.type === 'arrow') {
-		// A bound end follows what it's bound to, and a free end moves with everything else.
-		const bound = editor.getBindingsFromShape(s, 'arrow').map((b) => b.props.terminal)
-		if (bound.length === 2) return []
-		const free = (end) => (bound.includes(end) ? {} : { [end]: { x: s.props[end].x * FACTOR, y: s.props[end].y * FACTOR } })
-		return [{ ...move, props: { ...free('start'), ...free('end') } }]
+// Everything is spread out from the page's origin, so what's inside a frame keeps its place in it.
+const scene = toucan.scene
+const out = (p) => ({ x: p.x * FACTOR, y: p.y * FACTOR })
+let shortened = 0, moved = 0
+scene.batch(() => {
+	for (const s of scene.items()) {
+		// An arrow's bound ends follow what they're bound to, and a free end moves with everything else.
+		if (s.kind === 'arrow') {
+			const a = scene.arrows().find((x) => x.id === s.id)
+			if (a.from && a.to) continue
+			scene.moveEnds(s.id, out)
+			moved++
+			continue
+		}
+		moved++
+		// A note keeps its size, and stays where it was relative to what it's about.
+		if (s.kind === 'frame') scene.place(s.id, { ...out(s), w: s.w * FACTOR, h: s.h * FACTOR })
+		else if (s.kind !== 'box') scene.place(s.id, out(s))
+		else {
+			const parts = split(s.text)
+			if (!parts) {
+				scene.place(s.id, out(s))
+				scene.restyle(s.id, { size: 'l' })
+				continue
+			}
+			shortened++
+			const detail = [parts.detail, typeof s.meta?.detail === 'string' ? s.meta.detail : ''].filter(Boolean).join('\n')
+			scene.place(s.id, { ...out(s), w: s.w * FACTOR, h: Math.min(s.base ?? s.h, 120) })
+			scene.restyle(s.id, { text: parts.title, size: 'l', meta: { detail } })
+		}
 	}
-	if (s.type === 'note') return [move] // keeps its size, and stays where it was relative to what it's about
-	if (s.type === 'frame') return [{ ...move, props: { w: s.props.w * FACTOR, h: s.props.h * FACTOR } }]
-	if (s.type !== 'geo') return [move]
-	const parts = split(toucan.text(s))
-	if (!parts) return [{ ...move, props: { size: 'l' } }]
-	shortened++
-	const detail = [parts.detail, typeof s.meta?.detail === 'string' ? s.meta.detail : ''].filter(Boolean).join('\n')
-	return [{ ...move, props: { richText: tl.toRichText(parts.title), size: 'l', w: s.props.w * FACTOR, h: Math.min(s.props.h, 120) }, meta: { ...s.meta, detail } }]
 })
-editor.updateShapes(updates)
-editor.zoomToFit({ animation: { duration: 250 } })
-return { summary: `${shortened} box${shortened === 1 ? '' : 'es'} shortened, ${updates.length} spread out. Click a box for its details.`, shortened, moved: updates.length }
+scene.fit()
+return { summary: `${shortened} box${shortened === 1 ? '' : 'es'} shortened, ${moved} spread out. Click a box for its details.`, shortened, moved, changed: moved + shortened }

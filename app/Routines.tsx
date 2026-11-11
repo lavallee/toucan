@@ -7,7 +7,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { api, canvasName } from './net'
 
-type Routine = { name: string; title: string; description: string; engines: string[]; source: 'shipped' | 'banked'; code: string }
+type Routine = { name: string; title: string; description: string; engines: string[]; source: 'shipped' | 'banked'; code: string; kind: string; when: string; args: string }
+type Kind = { id: string; label: string; about: string }
+type Suggestion = { id: string; runs: number; canvases: string[]; labels: string[]; coveredBy: string[]; example: string }
+
+/** What an agent is asked when a person banks a habit it noticed. */
+const bankRequest = (s: Suggestion) =>
+	`Bank this as a routine. It's been done by hand ${s.runs} times${s.canvases.length > 1 ? ` on ${s.canvases.length} canvases` : ''}${s.labels.length ? ` (${s.labels.slice(0, 3).map((l) => `"${l}"`).join(', ')})` : ''}. Make it work from what it finds on any canvas, not from this example's names, try it with exec, and save it with a kind and a when line.\n\n\`\`\`js\n${s.example.slice(0, 3000)}\n\`\`\``
 type Outcome = { name: string; ok: boolean; text: string }
 
 const slug = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64)
@@ -15,9 +21,12 @@ const slug = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9_-]+/g, '-')
 const describe = (result: any) => (typeof result === 'string' ? result : result?.summary ?? 'Done')
 
 /** The bank of routines: chores saved once, run on this canvas with one click. One run is one undo step. */
-export function Routines({ engine, onAskAgent }: { engine: string; onAskAgent: () => void }) {
+export function Routines({ engine, onAskAgent }: { engine: string; onAskAgent: (text?: string) => void }) {
 	const [open, setOpen] = useState(false)
 	const [routines, setRoutines] = useState<Routine[] | null>(null)
+	const [kinds, setKinds] = useState<Kind[]>([])
+	const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+	const [q, setQ] = useState('')
 	const [running, setRunning] = useState('')
 	const [outcome, setOutcome] = useState<Outcome | null>(null)
 	const [codeOf, setCodeOf] = useState('')
@@ -26,9 +35,16 @@ export function Routines({ engine, onAskAgent }: { engine: string; onAskAgent: (
 	const [error, setError] = useState('')
 	const asking = useRef(false) // leaving for the chat: focus goes to its input, not back to this button
 
-	const load = () => api('/api/routines?code').then((r) => setRoutines(r.routines), (e) => setError(String(e.message ?? e)))
+	const load = () =>
+		api('/api/routines?code').then(
+			(r) => (setRoutines(r.routines), setKinds(r.kinds ?? [])),
+			(e) => setError(String(e.message ?? e)),
+		)
 	useEffect(() => {
-		if (open) load()
+		if (!open) return
+		load()
+		// Habits not banked yet: what agents keep doing by hand that no routine covers.
+		api('/api/routines/suggestions?since=60d').then((r) => setSuggestions(r.suggestions.filter((s: Suggestion) => !s.coveredBy.length).slice(0, 3)), () => {})
 	}, [open])
 
 	async function run(r: Routine) {
@@ -65,8 +81,11 @@ export function Routines({ engine, onAskAgent }: { engine: string; onAskAgent: (
 		}
 	}
 
-	const usable = routines?.filter((r) => r.engines.includes(engine))
-	const elsewhere = (routines?.length ?? 0) - (usable?.length ?? 0)
+	const forHere = routines?.filter((r) => r.engines.includes(engine))
+	const matches = (r: Routine) => !q || `${r.title} ${r.description} ${r.when} ${r.kind}`.toLowerCase().includes(q.toLowerCase())
+	const usable = forHere?.filter(matches)
+	const elsewhere = (routines?.length ?? 0) - (forHere?.length ?? 0)
+	const groups = (kinds.length ? kinds : [{ id: 'other', label: 'Routines', about: '' }]).map((k) => ({ ...k, list: usable?.filter((r) => (kinds.length ? r.kind === k.id : true)) ?? [] })).filter((g) => g.list.length)
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
@@ -91,10 +110,22 @@ export function Routines({ engine, onAskAgent }: { engine: string; onAskAgent: (
 						{error}
 					</p>
 				)}
-				<ul className="max-h-80 divide-y overflow-y-auto">
+				{(forHere?.length ?? 0) > 6 && (
+					<div className="border-b p-2">
+						<Input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.stopPropagation()} placeholder="Find a routine" aria-label="Find a routine" className="h-7 text-xs" />
+					</div>
+				)}
+				<ul className="max-h-[min(28rem,60vh)] overflow-y-auto">
 					{routines === null && <li className="px-3 py-2 text-xs text-muted-foreground">Loading…</li>}
-					{usable?.length === 0 && <li className="px-3 py-2 text-xs text-muted-foreground">Nothing banked for {engine} yet.</li>}
-					{usable?.map((r) => (
+					{forHere?.length === 0 && <li className="px-3 py-2 text-xs text-muted-foreground">Nothing banked for {engine} yet.</li>}
+					{forHere && forHere.length > 0 && usable?.length === 0 && <li className="px-3 py-2 text-xs text-muted-foreground">No routine matches.</li>}
+					{groups.map((g) => (
+						<li key={g.id}>
+							<h3 className="sticky top-0 z-10 border-b bg-background px-3 pt-1.5 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase" title={g.about}>
+								{g.label}
+							</h3>
+							<ul className="divide-y">
+					{g.list.map((r) => (
 						<li key={r.name} className="px-3 py-2">
 							<div className="flex items-start gap-2">
 								<div className="min-w-0 flex-1">
@@ -124,6 +155,39 @@ export function Routines({ engine, onAskAgent }: { engine: string; onAskAgent: (
 							{codeOf === r.name && <pre className="mt-1 max-h-48 overflow-auto rounded-md bg-muted p-2 font-mono text-[11px] leading-snug">{r.code}</pre>}
 						</li>
 					))}
+							</ul>
+						</li>
+					))}
+					{suggestions.length > 0 && !q && (
+						<li>
+							<h3 className="sticky top-0 z-10 border-b bg-background px-3 pt-1.5 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase" title="Work agents keep doing by hand, which no routine does yet">
+								From your work
+							</h3>
+							<ul className="divide-y">
+								{suggestions.map((s) => (
+									<li key={s.id} className="flex items-start gap-2 px-3 py-2">
+										<div className="min-w-0 flex-1">
+											<p className="truncate text-sm font-medium">{s.labels[0] ?? 'A chore done by hand'}</p>
+											<p className="text-xs text-muted-foreground">
+												Done {s.runs} times{s.canvases.length > 1 ? ` on ${s.canvases.length} canvases` : ''}, by hand.
+											</p>
+										</div>
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() => {
+												asking.current = true
+												setOpen(false)
+												onAskAgent(bankRequest(s))
+											}}
+										>
+											Bank it
+										</Button>
+									</li>
+								))}
+							</ul>
+						</li>
+					)}
 				</ul>
 				{elsewhere > 0 && <p className="border-t px-3 py-1.5 text-xs text-muted-foreground">{elsewhere} more for other engines.</p>}
 				<footer className="border-t p-2">

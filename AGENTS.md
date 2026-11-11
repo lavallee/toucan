@@ -28,7 +28,8 @@ node bin/toucan.mjs --canvas NAME notes resolve KEY --reply TEXT   # mark one ha
 node bin/toucan.mjs --canvas NAME log [--since 2h]           # edits agents made while nobody had it open
 node bin/toucan.mjs --canvas NAME say TEXT [--at KEY,KEY]   # tell people what you're about to do; point at shapes
 node bin/toucan.mjs --canvas NAME versions [save LABEL | show N [--format F] | restore N]   # the canvas's history
-node bin/toucan.mjs routine list | show NAME | save NAME FILE [--title T] [--description D] [--engines E] | rm NAME   # the routine bank
+node bin/toucan.mjs routine list [--kind K] | show NAME | save NAME FILE [--title T] [--description D] [--engines E] [--kind K] [--when T] | rm NAME   # the routine bank, by kind
+node bin/toucan.mjs routine suggest [--since 30d] | stats | learn --codex   # chores done by hand worth banking; how routines are used; past chat work
 node bin/toucan.mjs --canvas NAME routine run NAME [--args JSON]   # run a banked routine: one undo step, on the history
 node bin/toucan.mjs --canvas NAME files                     # where this canvas keeps what agents write for it
 node bin/toucan.mjs --canvas NAME references                # what people can read beside the canvas: its files, its project's, links on it
@@ -37,7 +38,8 @@ node bin/toucan.mjs profiles                                   # the named agent
 node bin/toucan.mjs profiles add ID --workdir DIR [--context F,F]   # a profile of your own, from the agent's folder (starts from its AGENTS.md)
 node bin/toucan.mjs --canvas NAME meta --profile SOURCE/ID|none   # work on the canvas with one: its knowledge, briefing and skills
 node bin/toucan.mjs --canvas NAME profile                     # the agent the canvas works with: what it reads at the start, and its skills
-node bin/toucan.mjs templates                                  # diagrams to start from; `new NAME --template ID` makes one
+node bin/toucan.mjs templates                                  # blocks and starters; `new NAME --template ID` makes a canvas from one
+node bin/toucan.mjs --canvas NAME add ID                       # add a block or starter beside what's on the canvas
 node bin/toucan.mjs templates show ID                          # a template's description, to copy the form of
 node bin/toucan.mjs --canvas NAME draw FILE|- [--update] [--move] [--label T]   # lay out a diagram described as data onto a canvas
 node bin/toucan.mjs --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes   # comment threads
@@ -176,8 +178,9 @@ Mermaid flowcharts, DOT (export only) and `.excalidraw`.
 
 - **tldraw** (default): `editor` is the tldraw Editor, `tl` the tldraw module; full helpers below.
 - **Excalidraw**: `editor` is the ExcalidrawImperativeAPI (`getSceneElements()`, `updateScene({elements,
-  captureUpdate})`, …), `tl` the `@excalidraw/excalidraw` module. `toucan` has the core only: `summary`,
-  `graph`, `applyGraph`, `screenshot`, `zoomTo`, `get`, `remove`, `text`, `keyOf`. A shape's key is its
+  captureUpdate})`, …), `tl` the `@excalidraw/excalidraw` module. `toucan` has the core: `summary`,
+  `graph`, `applyGraph`, `screenshot`, `zoomTo`, `get`, `remove`, `text`, `keyOf`, and the same `measure()`, `tidy` and
+  `scene` as tldraw (so every shipped routine runs there too). A shape's key is its
   `customData.key` (falling back to its id). Change elements with `tl.newElementWith(el, {...})`, which
   bumps the version so the edit syncs to other tabs; prefer `applyGraph` for structure. Import doesn't move an existing element into a different frame there (it does on tldraw); reparent it with `frameId` yourself.
 - Converting a canvas between engines is `new NAME --engine E --from CANVAS` (through TG: keys, text,
@@ -195,6 +198,8 @@ Mermaid flowcharts, DOT (export only) and `.excalidraw`.
 - `await layout(keys | null, {within: frameKey, direction: 'RIGHT'|'DOWN', spacing, layerSpacing})` — ELK.
 
 Colours: black grey light-violet violet blue light-blue yellow orange green light-green light-red red white.
+Only these (and tldraw's geo shapes: rectangle, ellipse, diamond, oval, cloud, hexagon…) work: `node` and `edge` refuse anything else by name,
+`draw` refuses it before drawing, and `applyGraph`/`import` use the default instead and list what they changed in `styleFallbacks`.
 Fill: none semi solid pattern. Dash: draw solid dashed dotted. Size: s m l xl.
 
 Plain tldraw also works: `editor.updateShapes([...])`, `editor.createShape({...})` — but always pass
@@ -203,20 +208,35 @@ is under them. Text uses rich text: `props.richText = tl.toRichText('…')`.
 
 ## Templates and layout: don't place boxes by hand
 
-Most diagrams are a known shape. `toucan templates` lists the roster, each a realistic sample you can edit: flowchart, swimlane, org chart, decision
-tree, mind map, sequence, layered architecture, service map, network, entity relationships, state machine, build pipeline, roadmap, timeline, kanban,
-2x2, customer journey, responsibility chart, comparison table, fishbone, funnel and cycle. `toucan new NAME --template ID` makes one with the right
-format; then change its boxes with `toucan.node`, or `import` more.
+Most diagrams are a known shape, and a canvas *has* diagrams rather than *being* one. `toucan templates` lists two sorts, each a realistic
+sample you can edit:
+
+- **Blocks**, one diagram each, in groups: processes (flowchart, swimlane, sequence, state machine, build pipeline, funnel, cycle, SIPOC),
+  structures (org chart, decision tree, mind map, OKR tree), systems (layered architecture, service map, network, entity relationships), time
+  (roadmap, timeline), work (kanban, customer journey, responsibility chart, retro, empathy map, story map) and decisions (2x2, comparison table,
+  fishbone, pros and cons, SWOT, stakeholder map, Eisenhower, five whys, decision log).
+- **Starters**, a whole canvas on one subject made of several blocks under their own headings: system design, incident review, product strategy,
+  project kickoff, research plan, team retro.
+
+`toucan new NAME --template ID` makes a canvas from either, with the right format. `toucan --canvas NAME add ID` puts one beside what's already on a
+canvas, on either engine, and never over it: if its keys clash it takes a prefix, which the command reports. People do the same from **Add** above
+the canvas. Then change its boxes with `toucan.node`, or `import` more.
 
 To draw on a canvas you're already on, describe the diagram as data and let the engine place it: `toucan templates show flowchart` shows the form,
 and `toucan --canvas NAME draw plan.json` lays it out beside what's there. Each `kind` (flow, tree, mindmap, lanes, grid, board, quadrant, timeline, gantt,
 sequence, fishbone, funnel, stack, cycle) has its own fields, and a box's `detail` is what opens on click. A new drawing never overwrites what's there: if its keys clash it takes a prefix, which the command reports. To change an earlier drawing, draw it again with `--update`, and `--move` to reposition its boxes too.
 
 `toucan.measure()` measures the diagram as drawn and returns a `score` out of 100 and `findings`, each naming the shapes involved: overlaps, text that
-outgrew its box, arrows through boxes, crossings, labels on boxes, boxes cut off by a frame. `routine run check-diagram` reports the same and points at
+outgrew its box, arrows through boxes, crossings, labels on boxes or on each other, arrows through other arrows' labels, boxes cut off by a frame. `routine run check-diagram` reports the same and points at
 the shapes. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing
 overlapping or cut off; arrows that don't run through boxes; boxes of a kind that match and line up; one direction of flow; short titles, with the rest in
-`meta.detail`; and text you can read when the whole diagram fits on screen.
+`meta.detail`; and text you can read when the whole diagram fits on screen (on a big canvas, over 25 boxes or three or more frames, that
+last one is only a measure: it's read by zooming in).
+
+`toucan.measure()` and `toucan.tidy.*` read the canvas through `toucan.scene` (app/scene.js), the same on both engines: `scene.items()` gives every
+shape in page coordinates with its `kind` (box, frame, text, note, arrow), `scene.arrows()` what each arrow joins and how it runs, and `place`,
+`restyle`, `setArrow`, `checkpoint` and `rollback` change them. Use it for a routine that should run on either engine. On Excalidraw its changes
+land together in one `updateScene` when the exec ends (one undo step), moving a box moves its label, and the arrows bound to it are drawn again.
 
 ## Formats and details: short boxes, with the rest a click away
 
@@ -307,12 +327,28 @@ Scripts, titles and chat threads aren't versioned.
 
 A **routine** is a chore banked once and run on any canvas, from the person's **Routines** menu or the CLI. A
 canvas script is lasting behaviour on one canvas (a button, an overlay, a reaction); a routine runs once, when
-asked, anywhere. toucan ships a set for tidying (`clean-up`, `lay-out-again`, `align-boxes`, `distribute-evenly`, `match-sizes`, `fix-overlaps`, `fit-frames`, `neat-arrows`, `tidy-arrows`, `straighten-lines`, `colour-by-frame`, `air-out`) and one for checking (`check-diagram`). `routine list` has what each does. Prefer `clean-up` when someone says "tidy this": it keeps their arrangement; `lay-out-again` rearranges everything.
+asked, anywhere. Each has a **kind**, and `routine list` groups them by it, with when to use each:
+
+- **tidy**: `clean-up` (prefer it when someone says "tidy this": it keeps their arrangement, and never leaves the score lower), `align-boxes`, `distribute-evenly`,
+  `match-sizes`, `fix-overlaps`, `fit-frames`, `fit-text`
+- **arrows**: `neat-arrows`, `tidy-arrows`, `clear-arrow-labels`, `arrows-to-links` (long arrows become see-also links), `straighten-lines`
+- **layout**: `lay-out-again` (rearranges everything, or one frame's contents with `--args '{"within": "KEY"}'`, and keeps arrows
+  someone curved or routed by hand), `frame-these`, `stack-frames`, `air-out`
+- **style**: `colour-by-frame`; **content**: `open-details` (the reverse of air-out); **check**: `check-diagram` (changes nothing)
+
+All but `clear-arrow-labels` run on both engines (Excalidraw always puts an arrow's label at its middle). Run one rather than writing that code yourself: `routine run NAME --args '{"…": …}'` for those that take arguments
+(`routine list` says which). toucan also learns routines from work. Every run that changes a canvas goes into a work log, and
+`routine suggest` finds the code agents keep writing by hand, grouped by what it does, with the routines that already do it.
+A habit no routine covers is worth banking; people see the same suggestions in their Routines menu, with **Bank it**, which
+asks the chat agent to. `routine learn --codex` brings in the chat agent's past sessions, and `routine stats` says which
+routines get used, by whom, and how often they fail.
 
 ```js
 // routine: Colour the blocked boxes
 // description: Turn every box mentioning "blocked" red.
 // engines: tldraw
+// kind: style
+// when: Someone wants blocked work to stand out.
 
 const hits = editor.getCurrentPageShapes().filter((s) => s.type === 'geo' && /blocked/i.test(toucan.text(s)))
 editor.updateShapes(hits.map((s) => ({ id: s.id, type: s.type, props: { color: 'red' } })))
@@ -323,7 +359,9 @@ It is the body of an async function with `editor`, `tl`, `toucan` and `args` in 
 exec path: one undo step, glowing edits, a labelled version. The `summary` it returns is what the person sees.
 
 - **When a person says "bank that", or keeps asking for the same chore:** write it to a file, try it with
-  `exec`, then `toucan routine save NAME FILE --title "…" --description "…" --engines tldraw`. It must work
+  `exec`, then `toucan routine save NAME FILE --title "…" --description "…" --engines tldraw --kind style --when "…"`. Prefer
+  `toucan.*` helpers that work on both engines (`graph`, `applyGraph`, `remove`, `selection`), and say `--engines tldraw, excalidraw`
+  when it does. It must work
   from what it finds on the canvas, not from this conversation. Banked routines live in `<data>/_routines/`,
   shared by every canvas on the server; banking under a shipped routine's name replaces it there.
 - **Before doing a chore by hand:** check `routine list`, then `toucan --canvas NAME routine run NAME`.

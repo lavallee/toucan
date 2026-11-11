@@ -1,6 +1,8 @@
 // routine: Straighten sketchy lines
 // description: Replace hand-drawn outlines and arrows with clean ones, and handwritten Excalidraw text with a plain font. Nothing moves.
 // engines: tldraw, excalidraw
+// kind: arrows
+// when: Hand-drawn lines and arrows are wobbly.
 
 if (toucan.engine === 'excalidraw') {
 	const HANDWRITTEN = new Set([tl.FONT_FAMILY.Virgil, tl.FONT_FAMILY.Excalifont, tl.FONT_FAMILY['Comic Shanns']])

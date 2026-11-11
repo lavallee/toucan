@@ -43,9 +43,10 @@ export function Index() {
 	const [nameEdited, setNameEdited] = useState(false)
 	const [engine, setEngine] = useState('tldraw')
 	const [from, setFrom] = useState('')
-	const [templates, setTemplates] = useState<{ id: string; title: string; use: string }[]>([])
+	const [templates, setTemplates] = useState<{ id: string; title: string; use: string; type?: string; group?: string; parts?: string[] }[]>([])
+	const [groups, setGroups] = useState<{ id: string; label: string }[]>([])
 	useEffect(() => {
-		api('/api/templates').then((r) => setTemplates(r.templates), () => {})
+		api('/api/templates').then((r) => (setTemplates(r.templates), setGroups(r.groups ?? [])), () => {})
 	}, [])
 
 	const load = () => api('/api/canvases').then((r) => setCanvases(r.canvases), (e) => setError(String(e.message ?? e)))
@@ -113,15 +114,18 @@ export function Index() {
 									Start from
 									<select className={cn(SELECT, 'w-full font-normal')} value={from} onChange={(e) => setFrom(e.target.value)}>
 										<option value="">Blank</option>
-										{templates.length > 0 && (
-											<optgroup label="Templates">
-												{templates.map((t) => (
-													<option key={t.id} value={`template:${t.id}`}>
-														{t.title}
-													</option>
-												))}
-											</optgroup>
-										)}
+										{/* Starters are whole canvases on one subject; blocks are one diagram each, grouped by what they're for. */}
+										{[{ id: 'starter', label: 'Starters', list: templates.filter((t) => t.type === 'starter') }, ...groups.map((g) => ({ id: g.id, label: g.label, list: templates.filter((t) => t.type !== 'starter' && t.group === g.id) }))]
+											.filter((g) => g.list.length)
+											.map((g) => (
+												<optgroup key={g.id} label={g.label}>
+													{g.list.map((t) => (
+														<option key={t.id} value={`template:${t.id}`}>
+															{t.title}
+														</option>
+													))}
+												</optgroup>
+											))}
 										{!!canvases?.length && (
 											<optgroup label="Copy of">
 												{canvases.map((c) => (
@@ -133,7 +137,15 @@ export function Index() {
 										)}
 									</select>
 								</label>
-								{from.startsWith('template:') && <p className="text-xs text-muted-foreground">{templates.find((t) => `template:${t.id}` === from)?.use}</p>}
+								{from.startsWith('template:') && (() => {
+									const t = templates.find((x) => `template:${x.id}` === from)
+									return (
+										<p className="text-xs text-muted-foreground">
+											{t?.use}
+											{t?.parts && ` It has: ${t.parts.join(', ').toLowerCase()}.`}
+										</p>
+									)
+								})()}
 								<Button type="submit" className="w-full" disabled={!(nameEdited ? name : slug(title)) && !from.startsWith('template:')}>
 									Create
 								</Button>

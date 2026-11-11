@@ -22,6 +22,17 @@ try {
 	assert.equal(compose({ title: 'New', code: '// routine: Old\n// engines: tldraw\n\nreturn 1' }), '// routine: New\n// engines: tldraw\n\nreturn 1', 'only the fields passed change')
 	assert.equal(compose({ code: 'const s = 1\n// routine: inside\nreturn s' }), 'const s = 1\n// routine: inside\nreturn s', 'header-like lines in the code are left alone')
 
+	// What a routine is for: its kind, when to use it, what it takes. An unknown kind is "other", not an error.
+	const k = parse('k', '// routine: K\n// kind: arrows\n// when: Arrows cross.\n// args: maxBend (px)\n\nreturn 1')
+	assert.deepEqual([k.kind, k.when, k.args], ['arrows', 'Arrows cross.', 'maxBend (px)'])
+	assert.equal(parse('u', '// kind: sorcery\nreturn 1').kind, 'other')
+	assert.equal(compose({ kind: 'check', when: 'Always.', code: '// routine: K\n// kind: tidy\nreturn 1' }), '// routine: K\n// kind: check\n// when: Always.\n\nreturn 1', 'kind and when are header fields like the rest')
+	for (const f of (await import('node:fs')).readdirSync(join(import.meta.dirname, '../routines'))) {
+		const r = parse(f, (await import('node:fs')).readFileSync(join(import.meta.dirname, '../routines', f), 'utf8'))
+		assert.ok(r.kind !== 'other' && r.when, `shipped routine ${f} says its kind and when to use it`)
+	}
+	console.log('ok  routines: kinds, when to use each, and what they take')
+
 	const shipped = join(dir, 'shipped')
 	mkdirSync(shipped)
 	writeFileSync(join(shipped, 'a.js'), '// routine: Shipped A\nreturn "shipped"')

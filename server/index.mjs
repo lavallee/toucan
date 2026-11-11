@@ -21,15 +21,16 @@ import { CodexChat } from './codex.mjs'
 import { createHeadless } from './headless.mjs'
 import * as trail from './trail.mjs'
 import * as versions from './versions.mjs'
-import { createRoutines } from './routines.mjs'
+import { createRoutines, KINDS as ROUTINE_KINDS } from './routines.mjs'
+import * as worklog from './worklog.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
 import * as refs from './references.mjs'
 import { createProfiles, makeLocalProfile, profileInstructions, ProfileError } from './profiles.mjs'
 import { hostCheck, parsePublicUrl, refusal } from '../lib/hosts.mjs'
 import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
-import { layOut } from '../lib/layouts.mjs'
-import { templateById, templateList } from '../templates/index.mjs'
+import { compose, layOut, placeBeside } from '../lib/layouts.mjs'
+import { GROUPS as TEMPLATE_GROUPS, starterById, templateById, templateList } from '../templates/index.mjs'
 import { FORMATS, fromTldraw, fromExcalidraw, toExcalidrawElements } from '../lib/tg.mjs'
 import { CONFIG, ensureToken, readJson, resolveData, writeConfig } from '../lib/paths.mjs'
 
@@ -105,7 +106,7 @@ function run(canvas, code, timeoutMs = 30000, label, agent) {
 		const send = (ws, next) => {
 			const id = ++execSeq
 			const done = (f) => (v) => (ws.headless && headless.touch(canvas, false), f(v))
-			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now(), agent }
+			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now(), agent, next }
 			if (ws.headless) headless.touch(canvas, true)
 			p.timer = setTimeout(() => {
 				pending.delete(id)
@@ -426,7 +427,8 @@ const server = createServer(async (req, res) => {
 		}
 		if (route === 'canvases' && !canvas && req.method === 'POST') {
 			const { name, title, description, engine = 'tldraw', from, graph, format, template } = JSON.parse(await body(req))
-			const starter = template ? templateById(template) : null
+			// A block (one diagram) or a starter (several, on one subject).
+			const starter = template ? templateById(template) ?? starterById(template) : null
 			if (template && !starter) return json(res, 400, { error: `no template ${template}: see toucan templates` })
 			if (format && !Object.hasOwn(CANVAS_FORMATS, format)) return json(res, 400, { error: `format: one of ${Object.keys(CANVAS_FORMATS).join(', ')}` })
 			if (!NAME.test(name ?? '')) return json(res, 400, { error: 'name: letters, digits, - and _, up to 64' })
@@ -434,7 +436,7 @@ const server = createServer(async (req, res) => {
 			if (canvasNames().includes(name)) return json(res, 409, { error: `${name} already exists` })
 			if (from && !canvasNames().includes(from)) return json(res, 404, { error: `no canvas ${from} to copy from` })
 			// Seeding goes through the graph, so it works across engines: tldraw → TG → Excalidraw, and back.
-			const seed = starter ? await layOut(starter) : graph ?? (from ? graphOf(from) : null)
+			const seed = starter ? await (starter.parts ? compose(starter) : layOut(starter)) : graph ?? (from ? graphOf(from) : null)
 			const idx = readIndex()
 			idx[name] = { title: title || starter?.title || name, description: description ?? starter?.use ?? '', engine, created: new Date().toISOString(), ...(from && { from }), ...((format ?? starter?.format ?? readIndex()[from]?.format) && { format: format ?? starter?.format ?? readIndex()[from]?.format }) }
 			writeIndex(idx)
@@ -453,22 +455,38 @@ const server = createServer(async (req, res) => {
 			}
 		}
 		if (route === 'templates' && canvas) {
-			const spec = templateById(canvas)
+			const spec = templateById(canvas) ?? starterById(canvas)
 			return spec ? json(res, 200, spec) : json(res, 404, { error: `no template ${canvas}` })
 		}
-		if (route === 'templates') return json(res, 200, { templates: templateList() })
+		if (route === 'templates') return json(res, 200, { groups: TEMPLATE_GROUPS, templates: templateList() })
 		if (route === 'routines') {
 			const name = canvas // /api/routines/<name>
-			if (!name && req.method === 'GET') return json(res, 200, { routines: routines.list().map((r) => (url.searchParams.has('code') ? r : routineRow(r))) })
+			if (!name && req.method === 'GET') {
+				const kind = url.searchParams.get('kind'), engine = url.searchParams.get('engine')
+				const list = routines.list().filter((r) => (!kind || r.kind === kind) && (!engine || r.engines.includes(engine)))
+				return json(res, 200, { kinds: ROUTINE_KINDS, routines: list.map((r) => (url.searchParams.has('code') ? r : routineRow(r))) })
+			}
+			// Learning from work (server/worklog.mjs): chores agents keep doing by hand, and how routines are used.
+			if (name === 'suggestions' && req.method === 'GET') {
+				const min = Math.max(2, Number(url.searchParams.get('min')) || 3)
+				return json(res, 200, { since: url.searchParams.get('since') ?? 'all', suggestions: worklog.suggest(worklog.read(CANVASES, url.searchParams.get('since')), { routines: routines.list(), min }) })
+			}
+			if (name === 'learn' && req.method === 'POST') {
+				const { entries } = JSON.parse(String(await rawBody(req, 64 << 20)))
+				return json(res, 200, { added: worklog.importEntries(CANVASES, entries, { engineOf, exists: (c) => canvasNames().includes(c) }) })
+			}
+			if (name === 'stats' && req.method === 'GET') return json(res, 200, worklog.stats(worklog.read(CANVASES, url.searchParams.get('since')), routines.list()))
 			if (!NAME.test(name ?? '')) return json(res, 404, { error: 'not found' })
 			if (req.method === 'GET') {
 				const r = routines.get(name)
 				return r ? json(res, 200, r) : json(res, 404, { error: `no routine ${name}` })
 			}
 			if (req.method === 'PUT') {
-				const { code, title, description, engines } = JSON.parse(await body(req))
+				const { code, title, description, engines, kind, when, args } = JSON.parse(await body(req))
 				if (typeof code !== 'string' || !code.trim()) return json(res, 400, { error: 'code: the routine to bank' })
-				return json(res, 200, routineRow(routines.save(name, { code, title, description, engines })))
+				if (['suggestions', 'stats', 'learn'].includes(name)) return json(res, 400, { error: `${name} is reserved; choose another name` })
+				if (kind && !ROUTINE_KINDS.some((k) => k.id === kind)) return json(res, 400, { error: `kind: one of ${ROUTINE_KINDS.map((k) => k.id).join(', ')}` })
+				return json(res, 200, routineRow(routines.save(name, { code, title, description, engines, kind, when, args })))
 			}
 			if (req.method === 'DELETE') return routines.remove(name) ? json(res, 200, { ok: true, restored: routines.get(name)?.source === 'shipped' }) : json(res, 404, { error: `${name} isn't banked here` })
 			return json(res, 405, { error: 'method' })
@@ -700,6 +718,21 @@ const server = createServer(async (req, res) => {
 			broadcast(canvas, { type: 'show', ref, agent: speaker(canvas, agent) })
 			return json(res, 200, { ok: true, ref, tabs: (tabs.get(canvas) ?? []).filter((w) => !w.headless).length })
 		}
+		// A block or a starter, added to the canvas beside what's there: what a canvas *has*, not what it *is*.
+		if (sub === 'add' && req.method === 'POST') {
+			const { template, agent } = JSON.parse(await body(req))
+			const spec = templateById(template) ?? starterById(template)
+			if (!spec) return json(res, 404, { error: `no template ${template}: see toucan templates` })
+			try {
+				const tg = await (spec.parts ? compose(spec) : layOut(spec))
+				const here = await exec(canvas, 'const g = toucan.graph(); return { keys: [...g.nodes, ...g.groups].map((n) => n.key), boxes: [...g.nodes, ...g.groups].map((n) => n.box).filter(Boolean) }', 30000, undefined, { agent: agent || 'toucan', doing: `adding ${spec.title}` })
+				const { prefix } = placeBeside(tg, here)
+				const result = await exec(canvas, `return await toucan.applyGraph(${JSON.stringify(tg)})`, 120000, `add ${spec.title}`, { agent: agent || 'toucan', doing: `adding ${spec.title}` })
+				return json(res, 200, { ok: true, added: spec.title, ...(prefix && { keysPrefixed: prefix }), result })
+			} catch (e) {
+				return json(res, 200, { ok: false, error: String(e.message ?? e) })
+			}
+		}
 		// The agent says what it is about to do, and optionally points at shapes (keys): every tab shows it.
 		if (sub === 'say' && req.method === 'POST') {
 			const { agent, text = '', keys = [] } = JSON.parse(await body(req))
@@ -767,7 +800,7 @@ function speaker(canvas, agent) {
 	if (name !== 'Codex' && !(name === 'agent' && chatting)) return name
 	return bound.get(canvas)?.name ?? 'Codex'
 }
-const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, profileOf, profileInstructions, onThread: onThreadEvent, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: turnAgent(canvas, key, active), key, active }) })
+const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, profileOf, profileInstructions, routineIndex: (engine) => routines.list().filter((r) => r.engines.includes(engine)).map((r) => `- ${r.name}, ${r.kind}: ${r.when || r.description}`).join('\n'), onThread: onThreadEvent, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: turnAgent(canvas, key, active), key, active }) })
 
 // ---- comment threads (server/threads.mjs) -------------------------------------------------------
 // What's in the file is the conversation. What an agent is doing right now isn't worth saving: it lives here, and
@@ -918,6 +951,12 @@ function onCanvas(ws, canvas, nonce) {
 			const p = pending.get(msg.id)
 			pending.delete(msg.id)
 			clearTimeout(p.timer)
+			// What agents and routines do is what routines are learned from (server/worklog.mjs).
+			try {
+				worklog.record(CANVASES, { canvas, engine: engineOf(canvas), agent: p.agent, label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error, ms: Date.now() - p.sentAt })
+			} catch (e) {
+				console.error(`work log: ${e.message}`)
+			}
 			// Nobody watched a headless edit land, so it goes on the canvas's trail.
 			if (ws.headless) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
 			if (msg.changes && (msg.changes.added?.length || msg.changes.updated?.length || msg.changes.removed?.length)) {
@@ -931,7 +970,18 @@ function onCanvas(ws, canvas, nonce) {
 			if (ids.length) for (const other of tabs.get(canvas) ?? []) if (other !== ws && other.readyState === 1) other.send(JSON.stringify({ type: 'agent-edit', ids, agent: p.agent }))
 		}
 	})
-	ws.on('close', () => tabs.set(canvas, (tabs.get(canvas) ?? []).filter((w) => w !== ws)))
+	ws.on('close', () => {
+		tabs.set(canvas, (tabs.get(canvas) ?? []).filter((w) => w !== ws))
+		// A run this tab had taken can't finish now: say so at once rather than at the timeout. The usual cause is the editor
+		// reloading because tldraw refused a shape, or the person closing the tab. One it hadn't taken yet goes to the next tab.
+		for (const [id, p] of pending) {
+			if (p.ws !== ws) continue
+			pending.delete(id)
+			clearTimeout(p.timer)
+			if (!p.acked) p.next()
+			else p.reject(new Error(`the tab running this closed before it finished: either the editor reloaded (tldraw does when a shape has a value it doesn't accept, such as an unknown geo or colour) or someone closed the tab. Check the canvas with \`summary\` before running it again.`))
+		}
+	})
 }
 
 // Drop sockets whose browser went away without closing (sleep, network change).
