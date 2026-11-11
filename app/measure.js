@@ -58,6 +58,11 @@ export function measureDiagram(scene) {
 		const o = (a, b, c) => Math.sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x))
 		return o(p, q, r) * o(p, q, s) < 0 && o(r, s, p) * o(r, s, q) < 0
 	}
+	const segDist = (p, a, b) => {
+		const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy
+		const t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2)) : 0
+		return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy))
+	}
 	const crossesBox = (path, b, pad = 6) => {
 		const x0 = b.x + pad, x1 = b.maxX - pad, y0 = b.y + pad, y1 = b.maxY - pad
 		if (x1 <= x0 || y1 <= y0) return false
@@ -69,7 +74,8 @@ export function measureDiagram(scene) {
 		return false
 	}
 	const info = arrows.map((a) => ({ a, path: scene.arrowPath(a.id), ends: new Set([a.from, a.to].filter(Boolean)) }))
-	let throughBoxes = 0, crossings = 0, labelOnBox = 0, labelOnMarker = 0, labelSqueezed = 0, shortArrows = 0, loose = 0
+	let throughBoxes = 0, crossings = 0, labelOnBox = 0, labelOnMarker = 0, labelSqueezed = 0, shortArrows = 0, loose = 0, labelOnLabel = 0
+	const labels = [] // [arrow, its label's box], to find labels piled on each other (elbows that share a run put theirs together)
 	const markers = boxes.filter((s) => !s.text.trim() || isThin(bounds(s)))
 	const lengths = []
 	let along = 0, against = 0
@@ -91,6 +97,8 @@ export function measureDiagram(scene) {
 		dirs.push({ dx: last.x - first.x, dy: last.y - first.y })
 		const box = a.text.trim() ? scene.arrowLabelBox(a.id) : null
 		if (box) {
+			for (const [other, b] of labels) if (hit(box, b, 2)) (labelOnLabel++, found('arrow labels sit on each other', a, other))
+			labels.push([a, box])
 			for (const s of solid) if (!ends.has(s.id) && hit(box, bounds(s), 2)) (labelOnBox++, found('arrow label sits on a box', a, s))
 			for (const s of markers) if (!ends.has(s.id) && hit(box, bounds(s), 0)) (labelOnMarker++, found('arrow label sits on a line', a))
 			// A label longer than the line it sits on: it hides its own arrow.
@@ -98,6 +106,23 @@ export function measureDiagram(scene) {
 			if ((horizontal ? box.maxX - box.x : box.maxY - box.y) > len * 0.8) (labelSqueezed++, found('arrow label hides its arrow', a))
 		}
 	})
+	// A label another arrow runs through: elbows that share a run put one arrow's label on the other's line.
+	let labelCrossed = 0
+	// Where two arrows share a run (a fork leaving a decision), the other one runs along this one's own line, which reads fine;
+	// it counts only where the other arrow, inside the label, is somewhere this arrow isn't.
+	const near = (pt, path) => path.some((q, k) => k > 0 && segDist(pt, path[k - 1], q) < 2.5)
+	const strays = (other, own, box) => {
+		for (let k = 1; k < other.length; k++) {
+			const p0 = other[k - 1], p1 = other[k], n = Math.max(2, Math.ceil(Math.hypot(p1.x - p0.x, p1.y - p0.y) / 4))
+			for (let t = 0; t <= n; t++) {
+				const pt = { x: p0.x + ((p1.x - p0.x) * t) / n, y: p0.y + ((p1.y - p0.y) * t) / n }
+				if (pt.x > box.x + 2 && pt.x < box.maxX - 2 && pt.y > box.y + 2 && pt.y < box.maxY - 2 && !near(pt, own)) return true
+			}
+		}
+		return false
+	}
+	const pathOf = new Map(info.map((x) => [x.a.id, x.path]))
+	for (const [a, box] of labels) for (const o of info) if (o.a.id !== a.id && crossesBox(o.path, box, 2) && strays(o.path, pathOf.get(a.id), box)) (labelCrossed++, found('an arrow runs through another arrow\'s label', o.a, a))
 	const totals = dirs.reduce((s, d) => ({ r: s.r + Math.max(0, d.dx), l: s.l + Math.max(0, -d.dx), d: s.d + Math.max(0, d.dy), u: s.u + Math.max(0, -d.dy) }), { r: 0, l: 0, d: 0, u: 0 })
 	const flow = totals.r + totals.l + totals.d + totals.u ? Math.max(totals.r, totals.l, totals.d, totals.u) / (totals.r + totals.l + totals.d + totals.u) : 1
 
@@ -185,7 +210,7 @@ export function measureDiagram(scene) {
 	return {
 		findings,
 		boxes: solid.length, arrows: arrows.length, frames: frames.length,
-		overlaps, tooClose, outgrew, frameOverflow, framesOverlap: labelClipped, throughBoxes, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, shortArrows, looseArrows: loose,
+		overlaps, tooClose, outgrew, frameOverflow, framesOverlap: labelClipped, throughBoxes, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, labelOnLabel, labelCrossed, shortArrows, looseArrows: loose,
 		aligned: +aligned.toFixed(2), sizeVariety: +sizeVariety.toFixed(2), gapEvenness: +cv(gaps).toFixed(2), lineEvenness: +mean(lineSpread).toFixed(2), lengthEvenness: +cv(lengths).toFixed(2), flow: +flow.toFixed(2),
 		aspect: page ? +(page.w / page.h).toFixed(2) : 1, fitZoom: +fitZoom.toFixed(2), textAtFit: +(fitZoom * minFont).toFixed(1), large,
 	}
@@ -196,7 +221,7 @@ export function scoreDiagram(m) {
 	let score = 100
 	const fault = (n, each, cap) => (score -= Math.min(cap, n * each))
 	fault(m.overlaps, 12, 40); fault(m.frameOverflow, 8, 24); fault(m.framesOverlap, 8, 16); fault(m.outgrew, 3, 15)
-	fault(m.throughBoxes, 6, 30); fault(m.crossings, 3, 15); fault(m.labelOnBox, 5, 20); fault(m.labelOnMarker, 3, 15); fault(m.unevenRows, 1, 8); fault(m.unevenColumns ?? 0, 1, 8); fault(m.mixedArrows ?? 0, 2, 8); fault(m.emptyGutter ?? 0, 6, 6); fault(m.labelSqueezed, 3, 12); fault(m.tooClose, 2, 10); fault(m.shortArrows, 2, 8)
+	fault(m.throughBoxes, 6, 30); fault(m.crossings, 3, 15); fault(m.labelOnBox, 5, 20); fault(m.labelOnMarker, 3, 15); fault(m.labelOnLabel ?? 0, 5, 20); fault(m.labelCrossed ?? 0, 5, 20); fault(m.unevenRows, 1, 8); fault(m.unevenColumns ?? 0, 1, 8); fault(m.mixedArrows ?? 0, 2, 8); fault(m.emptyGutter ?? 0, 6, 6); fault(m.labelSqueezed, 3, 12); fault(m.tooClose, 2, 10); fault(m.shortArrows, 2, 8)
 	score -= (1 - m.aligned) * 12
 	if (m.arrows > 1) score -= (1 - m.flow) * 4
 	if (m.textAtFit < 11 && !m.large) score -= (11 - m.textAtFit) * 3

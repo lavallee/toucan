@@ -5,7 +5,15 @@ import assert from 'node:assert/strict'
 import ELK from 'elkjs/lib/elk.bundled.js'
 import { layOut, textHeight } from '../lib/layouts.mjs'
 import { TEMPLATES } from '../templates/index.mjs'
+import { STYLE_VALUES } from '../lib/tg.mjs'
+import * as schema from '@tldraw/tlschema'
 
+// What draw checks against is tldraw's own list, so a tldraw upgrade that adds or drops a value shows up here.
+const theirs = { geo: schema.GeoShapeGeoStyle, color: schema.DefaultColorStyle, fill: schema.DefaultFillStyle, dash: schema.DefaultDashStyle, size: schema.DefaultSizeStyle }
+for (const [field, prop] of Object.entries(theirs)) assert.deepEqual([...STYLE_VALUES[field]].sort(), [...prop.values].sort(), `STYLE_VALUES.${field} matches tldraw's`)
+// A shape or colour tldraw doesn't have is refused by name, before it can reach a canvas.
+await assert.rejects(layOut({ kind: 'flow', nodes: [{ id: 'db', text: 'Store', shape: 'cylinder' }, { id: 'x', text: 'X', color: 'teal' }], edges: [] }), /db: shape "cylinder" isn't one of cloud, rectangle.*x: color "teal" isn't one of black/)
+console.log('ok  layouts: style values are tldraw\'s, and anything else is refused by name')
 assert.ok(TEMPLATES.length >= 20, 'a real roster')
 assert.equal(new Set(TEMPLATES.map((t) => t.id)).size, TEMPLATES.length, 'ids are unique')
 assert.ok(textHeight('a '.repeat(80), 200) > textHeight('a', 200), 'more text is taller')

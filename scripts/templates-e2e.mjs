@@ -73,6 +73,18 @@ try {
 	assert.ok((await ex('adding', 'return toucan.graph()')).nodes.some((n) => n.key === 'parts-heading'), 'a starter adds too')
 	await assert.rejects(toucan('--canvas', 'adding', 'add', 'no-such-thing'), /no template/)
 	console.log('ok  add: blocks and starters land beside what is there, never over it')
+
+	// Styles tldraw doesn't have: helpers refuse them by name, applyGraph falls back and says so, and a run whose tab reloads
+	// (tldraw reloads the editor when it refuses a shape) fails at once with the reason, not at the timeout.
+	await toucan('new', 'styles')
+	await settle('styles')
+	await assert.rejects(ex('styles', "toucan.node('n', { text: 'N', geo: 'cylinder' }); return 1"), /node n: geo "cylinder" isn't one of/)
+	const applied = await ex('styles', "return toucan.applyGraph({ tg: 1, nodes: [{ key: 'p', text: 'P', style: { geo: 'cylinder', color: 'teal' } }], edges: [] })")
+	assert.deepEqual(applied.styleFallbacks, ['p: geo "cylinder"', 'p: color "teal"'])
+	const started = Date.now()
+	await assert.rejects(ex('styles', "editor.createShape({ type: 'geo', parentId: editor.getCurrentPageId(), props: { geo: 'cylinder' } }); return 1"), /closed before it finished/)
+	assert.ok(Date.now() - started < 15000, 'a reloaded tab fails the run at once')
+	console.log('ok  styles: refused by name, fallen back from on import, and a tab that reloads ends the run with why')
 } catch (e) {
 	console.error(log.slice(-1500))
 	throw e

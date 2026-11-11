@@ -6,7 +6,7 @@
 // instead of duplicating them, and hand-made moves survive unless asked otherwise.
 
 import ELK from 'elkjs/lib/elk.bundled.js'
-import { Box as tl_Box, createShapeId, createBindingId, toRichText, renderPlaintextFromRichText, fitFrameToContent } from 'tldraw'
+import { Box as tl_Box, createShapeId, createBindingId, toRichText, renderPlaintextFromRichText, fitFrameToContent, GeoShapeGeoStyle, DefaultColorStyle, DefaultFillStyle, DefaultDashStyle, DefaultSizeStyle } from 'tldraw'
 import { fromTldraw, layoutMissing } from '../lib/tg.mjs'
 import { pulse as glow } from './pulses'
 import { measureDiagram, scoreDiagram } from './measure'
@@ -15,6 +15,15 @@ import { tldrawScene } from './scene'
 import { refsOfShape } from './reference-links'
 
 const elk = new ELK()
+
+// tldraw's own lists of style values. A shape with any other value is refused, and the refusal reloads the editor, which ends
+// the run without an answer; so values are checked here first.
+const VALID = { geo: GeoShapeGeoStyle.values, color: DefaultColorStyle.values, fill: DefaultFillStyle.values, dash: DefaultDashStyle.values, size: DefaultSizeStyle.values }
+const invalid = (field, value) => value !== undefined && value !== null && VALID[field] && !VALID[field].includes(value)
+/** Throws, naming what's allowed, if a style value isn't tldraw's. For helpers an agent calls directly. */
+function checkStyle(what, style) {
+	for (const [field, value] of Object.entries(style)) if (invalid(field, value)) throw new Error(`${what}: ${field} "${value}" isn't one of ${VALID[field].join(', ')}`)
+}
 
 export function makeHelpers(editor) {
 	const idFor = (key) => createShapeId(key.replace(/[^\w.:-]/g, '_'))
@@ -323,6 +332,7 @@ export function makeHelpers(editor) {
 	function node(key, { x, y, w, h, text: label, geo, color, fill, dash, size, parent, meta = {}, move = false, proposed = false } = {}) {
 		const id = idFor(key)
 		const existing = editor.getShape(id)
+		checkStyle(`node ${key}`, { geo, color, fill, dash, size })
 		const passed = Object.fromEntries(Object.entries({ geo, w, h, color, fill, dash, size }).filter(([, v]) => v !== undefined))
 		if (label !== undefined) passed.richText = toRichText(label)
 		if (existing) {
@@ -379,6 +389,7 @@ export function makeHelpers(editor) {
 		return id
 	}
 	function edgeOnly(from, to, { text: label, color, dash, size, kind, bend, head, anchors, labelAt, meta }) {
+		checkStyle(`edge ${from}->${to}`, { color, dash, size })
 		const a = get(from), b = get(to)
 		if (!a || !b) throw new Error(`edge ${from} -> ${to}: missing ${!a ? from : to}`)
 		const key = `edge:${from}->${to}`
@@ -466,6 +477,17 @@ export function makeHelpers(editor) {
 		tg = await layoutMissing(tg, { existing: graph(), elk, direction })
 		const raw = tg.extra?.tldraw ?? {}
 		const out = { created: [], updated: 0, pruned: 0, skippedEdges: [] }
+		// A style tldraw doesn't have falls back to its default, and the run says which, rather than failing the whole import.
+		const clean = (x) => {
+			if (!x.style) return x
+			const style = { ...x.style }
+			for (const field of Object.keys(VALID)) {
+				if (field === 'geo' && (style.geo === 'note' || style.geo === 'text')) continue
+				if (invalid(field, style[field])) ((out.styleFallbacks ??= []).push(`${x.key ?? `${x.from}->${x.to}`}: ${field} "${style[field]}"`), delete style[field])
+			}
+			return { ...x, style }
+		}
+		tg = { ...tg, nodes: tg.nodes.map(clean), edges: tg.edges.map(clean) }
 		const pageId = editor.getCurrentPageId()
 		const tgGroup = new Map(tg.groups.map((g) => [g.key, g]))
 		const pageBounds = editor.getCurrentPageBounds()

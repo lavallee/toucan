@@ -198,6 +198,8 @@ Mermaid flowcharts, DOT (export only) and `.excalidraw`.
 - `await layout(keys | null, {within: frameKey, direction: 'RIGHT'|'DOWN', spacing, layerSpacing})` — ELK.
 
 Colours: black grey light-violet violet blue light-blue yellow orange green light-green light-red red white.
+Only these (and tldraw's geo shapes: rectangle, ellipse, diamond, oval, cloud, hexagon…) work: `node` and `edge` refuse anything else by name,
+`draw` refuses it before drawing, and `applyGraph`/`import` use the default instead and list what they changed in `styleFallbacks`.
 Fill: none semi solid pattern. Dash: draw solid dashed dotted. Size: s m l xl.
 
 Plain tldraw also works: `editor.updateShapes([...])`, `editor.createShape({...})` — but always pass
@@ -225,7 +227,7 @@ and `toucan --canvas NAME draw plan.json` lays it out beside what's there. Each 
 sequence, fishbone, funnel, stack, cycle) has its own fields, and a box's `detail` is what opens on click. A new drawing never overwrites what's there: if its keys clash it takes a prefix, which the command reports. To change an earlier drawing, draw it again with `--update`, and `--move` to reposition its boxes too.
 
 `toucan.measure()` measures the diagram as drawn and returns a `score` out of 100 and `findings`, each naming the shapes involved: overlaps, text that
-outgrew its box, arrows through boxes, crossings, labels on boxes, boxes cut off by a frame. `routine run check-diagram` reports the same and points at
+outgrew its box, arrows through boxes, crossings, labels on boxes or on each other, arrows through other arrows' labels, boxes cut off by a frame. `routine run check-diagram` reports the same and points at
 the shapes. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing
 overlapping or cut off; arrows that don't run through boxes; boxes of a kind that match and line up; one direction of flow; short titles, with the rest in
 `meta.detail`; and text you can read when the whole diagram fits on screen (on a big canvas, over 25 boxes or three or more frames, that

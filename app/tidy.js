@@ -2,7 +2,8 @@
 // frames and connections as they are, never touches a sticky note, and leaves a tidy diagram alone, so it's safe to run twice.
 // It's written against the scene (app/scene.js), so it does the same on tldraw and Excalidraw.
 
-import { LAYOUTS, sidesFor } from '../lib/layouts.mjs'
+import { LAYOUTS } from '../lib/layouts.mjs'
+import { flowSides } from '../lib/boxes.mjs'
 import { getFormat } from './formats'
 
 export function makeTidy(scene) {
@@ -211,12 +212,15 @@ export function makeTidy(scene) {
 			for (const a of straight) scene.setArrow(a.id, { kind: 'elbow' })
 			changed += straight.length
 		}
-		for (const a of scene.arrows()) {
-			if (!a.from || !a.to) continue
-			const sa = scene.get(a.from), sb = scene.get(a.to)
+		const arrows = scene.arrows().filter((a) => a.from && a.to)
+		const items = new Map(arrows.flatMap((a) => [a.from, a.to]).map((id) => [id, scene.get(id)]))
+		// Every arrow's sides at once, so a fork's branches and a loop back are seen as such (lib/boxes.mjs flowSides).
+		const want = flowSides(arrows, (id) => items.get(id), mainDirection(), { loops: false })
+		for (const [i, a] of arrows.entries()) {
+			const sa = items.get(a.from), sb = items.get(a.to)
 			if (!sa || !sb || a.bend || sa.geo === 'cloud' || sb.geo === 'cloud') continue
 			if (isMarker(sa) || isMarker(sb)) continue
-			const sides = sidesFor(sa, sb)
+			const sides = want[i]
 			const same = (at, want) => at && Math.abs(at.x - want.x) < 0.01 && Math.abs(at.y - want.y) < 0.01
 			if (same(a.anchors.from, sides.from) && same(a.anchors.to, sides.to)) continue
 			scene.setArrow(a.id, { anchors: { from: sides.from, to: sides.to } })

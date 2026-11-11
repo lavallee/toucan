@@ -34,6 +34,10 @@ All notable changes to toucan are recorded here. The format follows
 
 ### Fixed
 
+- A run whose tab goes away before it finishes fails at once, with the likely reason, instead of hanging until "exec timed out". tldraw reloads the editor when it refuses a shape (a geo or colour it doesn't have), so a `draw` with `"shape": "cylinder"` used to hang.
+- Styles tldraw doesn't have no longer reach it: `draw` refuses them before drawing, naming the box and listing what's allowed; `toucan.node` and `toucan.edge` throw the same; `applyGraph` and `import` use the default instead and list what they changed in `styleFallbacks`.
+- Check this diagram finds arrow labels that sit on each other, or that another arrow runs through (elbow arrows sharing a run put them there), and counts them in the score.
+- Arrows from a labelled fork (yes / no) leave the box by the side they head to, so each label sits on its own line, in a Mermaid or JSON import and after Neat arrows or Clean up. An imported arrow back against the flow goes round the outside rather than through the boxes between. A Mermaid flowchart with a decision and a loop now scores 95 as imported, up from 84.
 - On Excalidraw, an arrow drawn touching its boxes (as `applyGraph` and Excalidraw draw them) counts as aimed at their middles, so tidying re-aims it when a box moves, rather than pinning it to the side it first left from.
 - `toucan.node(key, {h})` on an existing box sets its height outright, rather than leaving tldraw's growth for long text on top of it; and `parent` now moves an existing box into that frame.
 - `applyGraph` on Excalidraw accepts a graph without `groups`, `nodes` or `edges` (it threw "Cannot read properties of
