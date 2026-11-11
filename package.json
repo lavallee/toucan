@@ -1,6 +1,6 @@
 {
   "name": "toucan",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "description": "An infinite canvas in the browser (tldraw or Excalidraw) that you edit by hand while agents edit it through a CLI and a built-in Codex chat.",
   "license": "MIT",
   "author": "Marc Lavallee <mlavallee@gmail.com>",

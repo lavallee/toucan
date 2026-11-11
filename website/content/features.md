@@ -1,5 +1,5 @@
 ---
-description: Everything toucan 0.12.2 does, in one list: where to find each feature, and when it arrived.
+description: Everything toucan 0.13.0 does, in one list: where to find each feature, and when it arrived.
 kicker: Reference
 ---
 # Features
@@ -13,7 +13,8 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Canvas](index.html) | A whiteboard in a browser tab that you edit by hand while agents edit it beside you, synced live across tabs. | **The canvas** | 0.1.0 |
 | [Two engines](tour.html#tldraw-or-excalidraw) | Each canvas runs on tldraw or Excalidraw, and converts between them with keys, text, frames and arrows intact. | **New canvas**; CLI: `new NAME --engine tldraw\|excalidraw` | 0.1.0 |
 | Canvas index | Every canvas on the server in one page, with thumbnails, to open or start one. | **Index**; CLI: `canvases` | 0.1.0 |
-| [Templates](gallery.html) | 22 diagrams to start from: flowchart, swimlane, org chart, sequence, service map, state machine, roadmap, timeline, kanban, journey and more. | **New canvas**; CLI: `templates [show ID]` · `new NAME --template ID` | 0.7.0 |
+| [Templates](gallery.html) | 33 diagrams (blocks) in six groups, from flowchart and swimlane to SWOT, retro and story map, to start a canvas from or add beside what's there. | **New canvas**; CLI: `templates [show ID]` · `new NAME --template ID` · `add ID` | 0.7.0 |
+| [Starters and Add](gallery.html) | Six starters build a canvas on one subject out of several blocks under headings (system design, incident review, product strategy, project kickoff, research plan, team retro); Add puts any block or starter beside what's on a canvas. | **Add · New canvas**; CLI: `add ID` · `new NAME --template ID` | 0.13.0 |
 | [Welcome canvas](quickstart.html) | A first canvas on setup that shows what to try. | CLI: `setup` | 0.8.0 |
 | Appearance and your name | System, light or dark per browser, and the name shown on your comments. | **Appearance** | 0.3.0 |
 | [Example maps](explore.html) | The Odyssey as a story map and Meditations as a map of ideas, with every quotation checked against its source. | **Explore** | 0.6.0 |
@@ -56,11 +57,13 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
-| [Routines](tour.html#tidy-it-up) | Chores banked once and run from a menu, the chat (/name) or the CLI, each one undoable in a single step. | **Routines menu**; CLI: `routine list` · `routine run NAME` | 0.3.0 |
-| [Clean up and the tidying set](tour.html#tidy-it-up) | Clean up, Lay it out again, Line things up, Even out the gaps, Match box sizes, Fix overlaps, Fit frames, Neat arrows, Colour by frame, Tidy arrows. | **Routines menu**; CLI: `routine run clean-up` | 0.7.0 |
+| [Routines](tour.html#tidy-it-up) | Chores banked once and run from a menu, the chat (/name) or the CLI, each one undoable in a single step; grouped by kind (tidy, arrows, layout, style, content, check), each saying when to use it. | **Routines menu**; CLI: `routine list [--kind K]` · `routine run NAME` | 0.3.0 |
+| [Clean up and the tidying set](tour.html#tidy-it-up) | Clean up, Lay it out again, Line things up, Even out the gaps, Match box sizes, Fix overlaps, Fit frames, Neat arrows, Colour by frame, Tidy arrows. All run on Excalidraw too. | **Routines menu**; CLI: `routine run clean-up` | 0.7.0 |
+| Routines from real work | Arrows to links, Fit text, Clear arrow labels, Frame these, Stack frames and Open out details: chores agents kept doing by hand. | **Routines menu**; CLI: `routine run NAME` | 0.13.0 |
 | [Air out](tour.html#air-out-a-dense-diagram) | Moves long text from crowded boxes into their details, enlarges names and spreads things a little. | **Routines menu**; CLI: `routine run air-out` | 0.7.0 |
-| [Check this diagram](tour.html#tidy-it-up) | Scores what's drawn out of 100 and names the shapes at fault, so an agent can fix what it finds. | **Routines menu**; CLI: `routine run check-diagram` | 0.7.0 |
+| [Check this diagram](tour.html#tidy-it-up) | Scores what's drawn out of 100 and names the shapes at fault (overlaps, arrows through boxes, labels on boxes or crossed by other arrows), so an agent can fix what it finds. | **Routines menu**; CLI: `routine run check-diagram` | 0.7.0 |
 | [Bank your own routine](agents.html#routines-chores-worth-keeping) | Ask the chat to make a chore a routine, paste code, or save one from the CLI; it appears in the menu for every canvas. | **Chat · Routines menu**; CLI: `routine save NAME FILE` | 0.3.0 |
+| [Routines learned from work](agents.html#routines-chores-worth-keeping) | A work log of what agents do on canvases; toucan suggests the code they keep writing by hand as routines to bank, and shows which routines get used. | **Routines menu: From your work**; CLI: `routine suggest` · `routine stats` · `routine learn --codex` | 0.13.0 |
 | [Canvas scripts](agents.html#canvas-scripts-growing-features) | Persistent behaviour stored with a canvas, such as a button that re-routes arrows. | CLI: `script list\|put\|rm` | 0.1.0 |
 | Timeline-aware tidying | On a timeline, tidying keeps dates where they are: positions and widths are dates. | — | 0.7.0 |
 
@@ -102,4 +105,4 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [A server that looks after itself](how-it-works.html) | Commands start a background server when needed, and never fight one you run yourself. | CLI: `start` · `stop` · `restart` · `start --take-over` | 0.8.0 |
 | [Remote and behind a proxy](how-it-works.html) | Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to. | **Sign-in page**; CLI: `--public-url` · `--allow-host` · `TOUCAN_URL` · `TOUCAN_TOKEN` | 0.11.0 |
 
-*51 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
+*54 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*

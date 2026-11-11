@@ -5,6 +5,8 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-11-11
+
 ### Added
 
 - **Routines by kind.** Every routine says what it's for (tidy, arrows, layout, style, content, check) and when to use it. The Routines menu groups them, with a search box, `routine list` groups them for agents (`--kind` to narrow), the chat agent gets the list at the start of each conversation, and MCP clients get `toucan_routines` and `toucan_run_routine`.
