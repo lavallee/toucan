@@ -5,6 +5,13 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Animated builds.** **Animate** above the canvas, or `toucan animate [OUT.gif]`, makes a GIF of the diagram building up: from where it starts, box by box in the order the arrows go, a fork's branches (yes and no) arriving together, each with the arrows that join it to what's already there, then the whole diagram held. Slow, normal or fast (`--step`, `--hold`, `--max`), on both engines, and nothing on the canvas changes.
+- TG arrows carry `elbowMid` (where an elbow's middle run sits across the gap, 0..1), read and written on both engines.
+  Excalidraw canvases made from a graph draw elbows and curves as routed, rather than straight lines.
+- `scene.setArrow` takes `labelAt` on tldraw, and `toucan.tidy.clearLabels()` moves labels other arrows run through.
+
 ### Fixed
 
 - **Arrows go round boxes instead of through them.** An elbow only goes round the outside of its own two ends, so an arrow
@@ -21,12 +28,6 @@ All notable changes to toucan are recorded here. The format follows
 - Elbows in a `draw` flow leave and arrive along the flow even when they go well across, and only a fork with two or more
   labelled branches (yes / no) sends them out of its sides.
 - Even out the gaps no longer evens a row or column by pushing a box onto one in the next column or row.
-
-### Added
-
-- TG arrows carry `elbowMid` (where an elbow's middle run sits across the gap, 0..1), read and written on both engines.
-  Excalidraw canvases made from a graph draw elbows and curves as routed, rather than straight lines.
-- `scene.setArrow` takes `labelAt` on tldraw, and `toucan.tidy.clearLabels()` moves labels other arrows run through.
 
 ## [0.13.0] — 2026-11-11
 

@@ -15,6 +15,7 @@ node bin/toucan.mjs --canvas NAME summary [--within KEY]   # JSON of shapes (key
 node bin/toucan.mjs --canvas NAME exec -e 'CODE'           # run JS in the editor; `return` a JSON value
 node bin/toucan.mjs --canvas NAME exec FILE.js             # same, from a file (use for anything > 1 line); --label names it in the history
 node bin/toucan.mjs --canvas NAME screenshot [OUT.png]     # look at it (prints where it wrote; <=1800px)
+node bin/toucan.mjs --canvas NAME animate [OUT.gif] [--step MS] [--hold MS] [--max PX]   # a GIF of the diagram building up, box by box along the arrows
 node bin/toucan.mjs --canvas NAME script list|put NAME FILE|rm NAME   # persistent canvas scripts
 node bin/toucan.mjs canvases                               # every canvas: title, description, shapes, open tabs
 node bin/toucan.mjs new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--canvas-format F]   # make a canvas
@@ -260,7 +261,9 @@ move through the canvas with ← and → in that card, and tells agents how to b
 - **system**: named parts and real connections; ← → follow arrows, and the card lists the choices where they branch. Zoomed out on tldraw, people see frames and
   how many connections run between them, and a frame opens on click. That's only what they see: `summary`, `graph`, `screenshot` and exports still have every shape.
 
-Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. The **Air out** routine (`routine run air-out`, tldraw)
+Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. `animate` (and **Animate** above the canvas) builds
+the diagram up in that same order as a GIF: from where it starts, each box with the arrows that join it to what's already there, a fork's
+branches together, lanes and frames first; nothing on the canvas changes. The **Air out** routine (`routine run air-out`, tldraw)
 converts a dense diagram: long text moves to `meta.detail`, names get larger, and things spread a little. Run it only when asked. Region threads keep their position, so they may need re-anchoring afterwards.
 
 ## Files: what you write for a canvas

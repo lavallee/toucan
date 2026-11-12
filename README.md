@@ -231,6 +231,7 @@ toucan [--canvas NAME] <command>
   summary [--within KEY]      compact JSON of shapes
   exec -e CODE | FILE | - [--label T]   run JS in the live editor; `return` a JSON value
   screenshot [OUT.png]        PNG of the page
+  animate [OUT.gif]           GIF of the page building up, box by box along the arrows
   script list | put NAME FILE | rm NAME
   proposals [accept|reject [KEY...]]   dashed = proposed: list, accept or reject
   selection                   what people have selected, to resolve "this"

@@ -6,7 +6,7 @@
 // Throwaway HOME and data directory, like the other e2e checks.
 import assert from 'node:assert/strict'
 import { execFile, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { homedir, platform, tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -85,6 +85,24 @@ try {
 	await assert.rejects(ex('styles', "editor.createShape({ type: 'geo', parentId: editor.getCurrentPageId(), props: { geo: 'cylinder' } }); return 1"), /closed before it finished/)
 	assert.ok(Date.now() - started < 15000, 'a reloaded tab fails the run at once')
 	console.log('ok  styles: refused by name, fallen back from on import, and a tab that reloads ends the run with why')
+
+	// An animated build: a box per frame, but a fork's branches together; a real GIF, on both engines, and the canvas untouched.
+	for (const engine of ['tldraw', 'excalidraw']) {
+		const name = `anim-${engine}`
+		await toucan('new', name, '--template', 'flowchart', '--engine', engine)
+		await settle(name)
+		const before = JSON.stringify((await ex(name, 'return toucan.graph()')).nodes.map((n) => [n.key, n.box]))
+		const boxes = (await ex(name, "return toucan.scene.items().filter((i) => i.kind !== 'frame' && i.kind !== 'arrow' && !toucan.scene.arrows().some((a) => a.id === i.id)).length"))
+		const gif = join(home, `${name}.gif`)
+		const printed = await toucan('--canvas', name, 'animate', gif, '--step', '300')
+		const bytes = readFileSync(gif)
+		assert.equal(bytes.subarray(0, 6).toString('latin1'), 'GIF89a', `${engine}: a GIF`)
+		// The flowchart's decisions branch two ways, and both branches arrive in one frame, so there are fewer frames than boxes.
+		const frames = Number(printed.match(/\((\d+) frames, \d+x\d+\)/)?.[1])
+		assert.ok(frames > 1 && frames < boxes, `${engine}: branches arrive together (${frames} frames for ${boxes} boxes): ${printed}`)
+		assert.equal(JSON.stringify((await ex(name, 'return toucan.graph()')).nodes.map((n) => [n.key, n.box])), before, `${engine}: nothing on the canvas moved`)
+	}
+	console.log('ok  animate: a GIF that builds the diagram box by box, branches together, on both engines, changing nothing')
 } catch (e) {
 	console.error(log.slice(-1500))
 	throw e

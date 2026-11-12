@@ -16,6 +16,7 @@ import { AwayNotice } from './AwayNotice'
 import { AgentStatus } from './pulses'
 import { ReferencesButton, ReferencesPanel } from './References'
 import { AddMenu } from './AddMenu'
+import { AnimateMenu } from './AnimateMenu'
 import { close as closeReferences, openReference, toggle as toggleReferences, useReferences } from './references-store'
 
 document.title = `${canvasName} · toucan`
@@ -118,6 +119,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 					<HistoryIcon />
 					<span className="max-lg:hidden">History</span>
 				</Button>
+				<AnimateMenu />
 				<Routines
 					engine={engine}
 					onAskAgent={(text) => {
