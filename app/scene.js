@@ -18,7 +18,8 @@
 //   place(id, {x, y, w, h}, {carry, local})   position and size; a frame's contents stay where they are on the page unless
 //                                      `carry`; with `local`, x and y are in the parent's coordinates (item.local)
 //   restyle(id, {color, size, text, meta})          meta is merged into what's there
-//   setArrow(id, {kind, bend, elbowMid, anchors})   only what's given changes
+//   setArrow(id, {kind, bend, elbowMid, anchors, labelAt})   only what's given changes; labelAt (0..1 along it) is tldraw's
+//                                      alone: Excalidraw puts a label at the middle (limits.labelAt)
 //   moveEnds(id, map)                  an arrow's unbound ends go where map(point) says (its bound ends follow their shapes)
 //   saveArrow(id) / restoreArrow(id, saved)          to try routes and put one back
 //   batch(fn), fit()
@@ -28,6 +29,7 @@
 // undo step there too. On Excalidraw, moving a box moves its label with it and redraws the arrows bound to it.
 
 import { COLORS, colorName } from '../lib/tg.mjs'
+import { GAP, endAt as endOn, outline as outlineOf, routePath } from '../lib/route.mjs'
 
 const FONT = { s: 18, m: 22, l: 26, xl: 32 } // tldraw's label sizes
 const withEdges = (b) => ({ x: b.x, y: b.y, w: b.w, h: b.h, maxX: b.x + b.w, maxY: b.y + b.h })
@@ -133,13 +135,14 @@ export function tldrawScene(editor, { keyOf, text: textOf, toRichText }) {
 			if (text !== undefined && 'richText' in s.props) props.richText = toRichText(text)
 			editor.updateShape({ id: s.id, type: s.type, ...(Object.keys(props).length && { props }), ...(meta && { meta: { ...s.meta, ...meta } }) })
 		},
-		setArrow(id, { kind, bend, elbowMid, anchors } = {}) {
+		setArrow(id, { kind, bend, elbowMid, anchors, labelAt } = {}) {
 			const a = editor.getShape(id)
 			if (!a) return
 			const props = {}
 			if (kind !== undefined) props.kind = kind
 			if (bend !== undefined) props.bend = bend
 			if (elbowMid !== undefined) props.elbowMidPoint = elbowMid
+			if (labelAt !== undefined) props.labelPosition = labelAt
 			if (Object.keys(props).length) editor.updateShape({ id, type: 'arrow', props })
 			if (!anchors) return
 			const { start, end } = ends(a)
@@ -163,10 +166,18 @@ export function tldrawScene(editor, { keyOf, text: textOf, toRichText }) {
 			editor.updateShape({ id, type: 'arrow', x: origin.x - p.x, y: origin.y - p.y, ...(Object.keys(props).length && { props }) })
 		},
 		saveArrow: (id) => {
-			const { kind, bend, elbowMidPoint } = editor.getShape(id).props
-			return { kind, bend, elbowMidPoint }
+			const a = editor.getShape(id)
+			const { kind, bend, elbowMidPoint, labelPosition } = a.props
+			// Where its ends are anchored too: trying routes can move them to other sides.
+			return { kind, bend, elbowMidPoint, labelPosition, ends: editor.getBindingsFromShape(a, 'arrow').map((b) => ({ id: b.id, props: { ...b.props } })) }
 		},
-		restoreArrow: (id, saved) => editor.updateShape({ id, type: 'arrow', props: saved }),
+		restoreArrow: (id, saved) => {
+			const { ends, ...props } = saved
+			editor.updateShape({ id, type: 'arrow', props })
+			const now = new Map(editor.getBindingsFromShape(id, 'arrow').map((b) => [b.id, b]))
+			const back = (ends ?? []).filter((b) => now.has(b.id) && JSON.stringify(now.get(b.id).props) !== JSON.stringify(b.props))
+			if (back.length) editor.updateBindings(back.map((b) => ({ id: b.id, type: 'arrow', props: b.props })))
+		},
 		/** A point to come back to within a run: rollback(mark) undoes what was changed since, and nothing is left to undo. */
 		checkpoint: () => editor.markHistoryStoppingPoint('checkpoint'),
 		rollback: (mark) => editor.bailToMark(mark),
@@ -182,8 +193,6 @@ export function tldrawScene(editor, { keyOf, text: textOf, toRichText }) {
 
 const EX_SIZES = { s: 16, m: 20, l: 28, xl: 36 } // Excalidraw's own font sizes
 const PAD = 5 // Excalidraw's BOUND_TEXT_PADDING
-const GAP = 6 // how far an arrow stops short of what it's bound to
-const STUB = 20 // how far an elbow runs out of a side before it turns
 
 export function excalidrawScene(api, ex) {
 	// The engine's own read, kept before the helpers wrap it to land pending changes first (a read in the middle of a batch
@@ -261,28 +270,10 @@ export function excalidrawScene(api, ex) {
 
 	// ---- arrows: how one runs, and drawing it again from that ----------------------------------------------------------
 	const centre = (b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 })
-	/** Where a line from a box's centre toward `to` leaves its outline, `gap` further on. */
-	const outline = (e, to, gap = GAP) => {
-		const b = boxOf(e), c = centre(b)
-		const dx = to.x - c.x, dy = to.y - c.y
-		if (!dx && !dy) return c
-		const rx = b.w / 2, ry = b.h / 2
-		const t = e.type === 'ellipse' ? 1 / Math.hypot(dx / rx, dy / ry) : e.type === 'diamond' ? 1 / (Math.abs(dx) / rx + Math.abs(dy) / ry) : Math.min(dx ? rx / Math.abs(dx) : Infinity, dy ? ry / Math.abs(dy) : Infinity)
-		const len = Math.hypot(dx, dy)
-		return { x: c.x + dx * t + (dx / len) * gap, y: c.y + dy * t + (dy / len) * gap }
-	}
-	const onEdge = (at) => at && (at.x < 0.01 || at.x > 0.99 || at.y < 0.01 || at.y > 0.99)
-	const normal = (at) => (at.x < 0.01 ? { x: -1, y: 0 } : at.x > 0.99 ? { x: 1, y: 0 } : at.y < 0.01 ? { x: 0, y: -1 } : { x: 0, y: 1 })
-	/** Where an arrow's end sits on box `e`: at the anchor if it's on an edge, else where a line toward `toward` leaves it. */
-	const endAt = (e, at, toward) => {
-		if (!onEdge(at)) return outline(e, toward)
-		const b = boxOf(e), n = normal(at)
-		return { x: b.x + b.w * at.x + n.x * GAP, y: b.y + b.h * at.y + n.y * GAP }
-	}
-	const anchorPoint = (e, at) => {
-		const b = boxOf(e)
-		return onEdge(at) ? { x: b.x + b.w * at.x, y: b.y + b.h * at.y } : centre(b)
-	}
+	// The geometry is shared with the layouts (lib/route.mjs), so a route chosen before drawing is the route drawn here.
+	const shapeOf = (e) => ({ ...boxOf(e), geo: e.type })
+	const outline = (e, to, gap = GAP) => outlineOf(shapeOf(e), to, gap)
+	const endAt = (e, at, toward) => endOn(shapeOf(e), at, toward)
 	const pointsOf = (a) => a.points.map(([x, y]) => ({ x: a.x + x, y: a.y + y }))
 	const perp = (p0, p1, m) => {
 		const dx = p1.x - p0.x, dy = p1.y - p0.y, len = Math.hypot(dx, dy) || 1
@@ -323,76 +314,18 @@ export function excalidrawScene(api, ex) {
 		return route
 	}
 
-	/** An orthogonal route from p0 (leaving along n0) to p1 (arriving along -n1), turning at `mid` of the way across. */
-	function elbowPath(p0, n0, p1, n1, mid) {
-		const a = { x: p0.x + n0.x * STUB, y: p0.y + n0.y * STUB }, b = { x: p1.x + n1.x * STUB, y: p1.y + n1.y * STUB }
-		const across = (u, v, along) => (along === 'x' ? u.x + (v.x - u.x) * mid : u.y + (v.y - u.y) * mid)
-		const h0 = n0.y === 0, h1 = n1.y === 0
-		let pts
-		if (h0 && h1) {
-			const mx = across(p0, p1, 'x')
-			pts = (mx - p0.x) * n0.x >= STUB && (mx - p1.x) * n1.x >= STUB ? [p0, { x: mx, y: p0.y }, { x: mx, y: p1.y }, p1] : [p0, a, { x: a.x, y: across(a, b, 'y') }, { x: b.x, y: across(a, b, 'y') }, b, p1]
-		} else if (!h0 && !h1) {
-			const my = across(p0, p1, 'y')
-			pts = (my - p0.y) * n0.y >= STUB && (my - p1.y) * n1.y >= STUB ? [p0, { x: p0.x, y: my }, { x: p1.x, y: my }, p1] : [p0, a, { x: across(a, b, 'x'), y: a.y }, { x: across(a, b, 'x'), y: b.y }, b, p1]
-		} else if (h0) {
-			const corner = { x: p1.x, y: p0.y }
-			pts = (corner.x - p0.x) * n0.x > 0 && (corner.y - p1.y) * n1.y > 0 ? [p0, corner, p1] : [p0, a, { x: a.x, y: b.y }, b, p1]
-		} else {
-			const corner = { x: p0.x, y: p1.y }
-			pts = (corner.y - p0.y) * n0.y > 0 && (corner.x - p1.x) * n1.x > 0 ? [p0, corner, p1] : [p0, a, { x: b.x, y: a.y }, b, p1]
-		}
-		// Drop repeated points and points in the middle of a straight run.
-		const out = []
-		for (const p of pts) {
-			if (out.length && Math.abs(out.at(-1).x - p.x) < 0.5 && Math.abs(out.at(-1).y - p.y) < 0.5) continue
-			const q = out.at(-1), r = out.at(-2)
-			if (r && ((Math.abs(r.x - q.x) < 0.5 && Math.abs(q.x - p.x) < 0.5) || (Math.abs(r.y - q.y) < 0.5 && Math.abs(q.y - p.y) < 0.5))) out.pop()
-			out.push(p)
-		}
-		return out
-	}
-
-	const SIDES = { left: { x: 0, y: 0.5 }, right: { x: 1, y: 0.5 }, top: { x: 0.5, y: 0 }, bottom: { x: 0.5, y: 1 } }
-	/** The sides an elbow joins when it wasn't told: facing each other, as tldraw picks them. */
-	const facing = (ba, bb) => {
-		const overlapX = ba.x < bb.maxX && bb.x < ba.maxX, overlapY = ba.y < bb.maxY && bb.y < ba.maxY
-		const dx = bb.x + bb.w / 2 - (ba.x + ba.w / 2), dy = bb.y + bb.h / 2 - (ba.y + ba.h / 2)
-		const vertical = overlapX || (!overlapY && Math.abs(dy) > Math.abs(dx))
-		return vertical ? { from: dy > 0 ? SIDES.bottom : SIDES.top, to: dy > 0 ? SIDES.top : SIDES.bottom } : { from: dx > 0 ? SIDES.right : SIDES.left, to: dx > 0 ? SIDES.left : SIDES.right }
-	}
-
 	/** The arrow element drawn from a route between its two bound boxes, or null if it isn't bound at both ends. */
 	function draw(a, route) {
 		const from = a.startBinding && element(a.startBinding.elementId), to = a.endBinding && element(a.endBinding.elementId)
 		if (!from || !to) return null
-		let pts
 		const fixed = {}
+		const drawn = routePath(shapeOf(from), shapeOf(to), route)
+		const pts = drawn.points
 		if (route.kind === 'elbow') {
-			const sides = facing(boxOf(from), boxOf(to))
-			const at0 = onEdge(route.anchors.from) ? route.anchors.from : sides.from, at1 = onEdge(route.anchors.to) ? route.anchors.to : sides.to
-			pts = elbowPath(endAt(from, at0), normal(at0), endAt(to, at1), normal(at1), route.elbowMid ?? 0.5)
+			const [at0, at1] = drawn.at
 			// Excalidraw keeps an elbow's ends as a fraction across each box (0.5 nudged off the middle, as it does itself).
 			const nudge = (v) => (Math.abs(v - 0.5) < 0.0001 ? 0.5001 : v)
 			Object.assign(fixed, { start: [nudge(at0.x), nudge(at0.y)], end: [nudge(at1.x), nudge(at1.y)] })
-		} else if (route.free?.length) {
-			const inner = route.free
-			pts = [endAt(from, route.anchors.from, inner[0]), ...inner, endAt(to, route.anchors.to, inner.at(-1))]
-		} else {
-			const aim0 = anchorPoint(from, route.anchors.from), aim1 = anchorPoint(to, route.anchors.to)
-			let p0 = endAt(from, route.anchors.from, aim1), p1 = endAt(to, route.anchors.to, aim0)
-			if (!route.bend) pts = [p0, p1]
-			else {
-				// The bend is how far the curve's middle stands off the straight line, as tldraw measures it.
-				const control = (u, v) => {
-					const dx = v.x - u.x, dy = v.y - u.y, len = Math.hypot(dx, dy) || 1
-					return { x: (u.x + v.x) / 2 - (dy / len) * route.bend, y: (u.y + v.y) / 2 + (dx / len) * route.bend }
-				}
-				const c = control(aim0, aim1)
-				p0 = endAt(from, route.anchors.from, c)
-				p1 = endAt(to, route.anchors.to, c)
-				pts = [p0, control(p0, p1), p1]
-			}
 		}
 		const o = pts[0]
 		const rel = pts.map((p) => [p.x - o.x, p.y - o.y])
@@ -680,7 +613,7 @@ export function excalidrawScene(api, ex) {
 		},
 		// Excalidraw keeps an elbow's sides (fixedPoint), but aims a straight or curved arrow's end at the box's middle (focus) when
 		// someone drags the box, and toucan can't set that focus through the API.
-		limits: { anchors: 'On Excalidraw, a straight or curved arrow keeps its side only until someone drags a box it joins.' },
+		limits: { anchors: 'On Excalidraw, a straight or curved arrow keeps its side only until someone drags a box it joins.', labelAt: 'On Excalidraw an arrow\'s label is always at its middle.' },
 	}
 	return scene
 }
