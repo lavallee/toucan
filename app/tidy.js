@@ -4,6 +4,7 @@
 
 import { LAYOUTS } from '../lib/layouts.mjs'
 import { flowSides } from '../lib/boxes.mjs'
+import { MIDS, chooseLabelAt, chooseRoute, runsThrough, straysThrough } from '../lib/route.mjs'
 import { getFormat } from './formats'
 
 export function makeTidy(scene) {
@@ -88,21 +89,30 @@ export function makeTidy(scene) {
 		const moved = new Set()
 		for (let pass = 0; pass < 4; pass++) {
 			const updates = new Map()
-			const even = (line, along, size, set) => {
+			const at = (s) => ({ ...local(s), ...updates.get(s.id) })
+			const hits = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+			const even = (line, along, size, set, group) => {
 				if (line.length < 3) return
 				const sorted = [...line].sort((a, b) => along(a) - along(b))
 				const gaps = sorted.slice(1).map((s, i) => along(s) - (along(sorted[i]) + size(sorted[i])))
 				if (gaps.some((g) => g < 0) || Math.max(...gaps) > median(gaps) * 2 + 20) return // an overlap, or a hole that means something
 				const gap = gaps.reduce((a, b) => a + b, 0) / gaps.length
-				let at = along(sorted[0])
+				let to = along(sorted[0])
+				const next = new Map()
 				for (const s of sorted) {
-					if (Math.abs(along(s) - at) > 0.5) updates.set(s.id, { s, ...updates.get(s.id), ...set(at) })
-					at += size(s) + gap
+					if (Math.abs(along(s) - to) > 0.5) next.set(s.id, set(to))
+					to += size(s) + gap
 				}
+				// Evening out one line mustn't push a box onto one beside it, in the next column or row.
+				for (const [id, pos] of next) {
+					const s = line.find((x) => x.id === id), box = { ...at(s), ...pos }
+					if (group.some((o) => o.id !== id && !next.has(o.id) && hits(box, at(o)) && !hits(at(s), at(o)))) return
+				}
+				for (const [id, pos] of next) updates.set(id, { s: line.find((x) => x.id === id), ...updates.get(id), ...pos })
 			}
 			for (const group of groups()) {
-				for (const row of timed() ? [] : clusters(group, (s) => local(s).y + local(s).h / 2, tolerance)) even(row, (s) => local(s).x, (s) => local(s).w, (x) => ({ x }))
-				for (const col of clusters(group, (s) => local(s).x + local(s).w / 2, tolerance)) even(col, (s) => local(s).y, (s) => local(s).h, (y) => ({ y }))
+				for (const row of timed() ? [] : clusters(group, (s) => local(s).y + local(s).h / 2, tolerance)) even(row, (s) => local(s).x, (s) => local(s).w, (x) => ({ x }), group)
+				for (const col of clusters(group, (s) => local(s).x + local(s).w / 2, tolerance)) even(col, (s) => local(s).y, (s) => local(s).h, (y) => ({ y }), group)
 			}
 			for (const { s, x, y } of updates.values()) {
 				const l = local(s)
@@ -230,46 +240,97 @@ export function makeTidy(scene) {
 	}
 
 	// ---- arrows through boxes -------------------------------------------------------------------------------------------
-	const seg = (p, q, r, t) => {
-		const o = (a, b, c) => Math.sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x))
-		return o(p, q, r) * o(p, q, t) < 0 && o(r, t, p) * o(r, t, q) < 0
-	}
-	const blocks = (path, b, pad = 6) => {
-		const c = [{ x: b.x + pad, y: b.y + pad }, { x: b.maxX - pad, y: b.y + pad }, { x: b.maxX - pad, y: b.maxY - pad }, { x: b.x + pad, y: b.maxY - pad }]
-		for (let i = 1; i < path.length; i++) {
-			const p = path[i]
-			if (p.x > c[0].x && p.x < c[2].x && p.y > c[0].y && p.y < c[2].y) return true
-			for (let k = 0; k < 4; k++) if (seg(path[i - 1], p, c[k], c[(k + 1) % 4])) return true
+	/**
+	 * Only arrows running through a box are touched: each takes the best route lib/route.mjs finds that clears more of the boxes in
+	 * its way, as the engine draws it: an elbow out of other sides or with its middle run moved, or a gentle curve. Big sweeping arcs
+	 * are worse than the problem, so past a modest bend it gives up and leaves it. `only` limits it to some arrows (ids), as applyGraph
+	 * does for the arrows it just drew.
+	 */
+	function rerouteBlocked({ only } = {}) {
+		const solid = scene.items().filter((s) => s.kind === 'box' && !isMarker(s))
+		const arrows = scene.arrows().filter((a) => a.from && a.to && a.from !== a.to)
+		const paths = new Map(arrows.map((a) => [a.id, scene.arrowPath(a.id)]))
+		let changed = 0
+		for (const a of arrows) {
+			if (only && !only.includes(a.id)) continue
+			const ends = new Set([a.from, a.to])
+			for (const id of [a.from, a.to]) for (const anc of scene.ancestors(id)) ends.add(anc)
+			const sa = scene.get(a.from), sb = scene.get(a.to)
+			// Dots, lifelines and clouds have no sides to leave by.
+			if (!sa || !sb || isMarker(sa) || isMarker(sb) || sa.geo === 'cloud' || sb.geo === 'cloud') continue
+			// Boxes are read again: on Excalidraw an elbow's route depends on nothing else, but a box may have moved this run.
+			const obstacles = solid.filter((s) => !ends.has(s.id)).map((s) => scene.get(s.id) ?? s)
+			const quick = paths.get(a.id)
+			if (!obstacles.some((b) => runsThrough(quick, b))) continue
+			const others = arrows.filter((o) => o.id !== a.id && ![o.from, o.to].some((x) => x === a.from || x === a.to)).map((o) => paths.get(o.id))
+			const was = scene.saveArrow(a.id)
+			const best = chooseRoute({
+				current: { kind: a.kind, bend: a.bend, elbowMid: a.elbowMid, anchors: a.anchors },
+				currentPath: quick,
+				tryRoute: (route) => {
+					scene.setArrow(a.id, route)
+					return scene.arrowPath(a.id)
+				},
+				obstacles,
+				others,
+			})
+			if (best) {
+				scene.setArrow(a.id, best.route)
+				paths.set(a.id, scene.arrowPath(a.id))
+				changed++
+			} else scene.restoreArrow(a.id, was)
 		}
-		return false
+		return changed
 	}
 
 	/**
-	 * Only arrows running through a box are touched: each tries an elbow, then gentle curves, and keeps the first that clears the
-	 * boxes it wasn't clearing. Big sweeping arcs are worse than the problem, so past a modest bend it gives up and leaves it.
+	 * A label another arrow runs through, or that sits on a box or another label, moves along its own arrow to where it reads clear
+	 * (lib/route.mjs). Where there's nowhere clear on the route it has, an elbow tries its middle run elsewhere across the gap, for a
+	 * route with somewhere clear that crosses nothing more and runs through no box and no other label. tldraw only: Excalidraw puts a label at
+	 * the middle. `only` limits it to some arrows (ids).
 	 */
-	function rerouteBlocked() {
-		const OPTIONS = [{ kind: 'elbow', bend: 0 }, ...[40, -40, 80, -80, 140, -140, 220, -220].map((bend) => ({ kind: 'arc', bend }))]
+	function clearLabels({ only } = {}) {
+		if (scene.limits.labelAt) return 0
 		const solid = scene.items().filter((s) => s.kind === 'box' && !isMarker(s))
+		const arrows = scene.arrows()
+		const paths = new Map(arrows.map((a) => [a.id, scene.arrowPath(a.id)]))
+		const labels = new Map(arrows.filter((a) => a.text.trim()).map((a) => [a.id, scene.arrowLabelBox(a.id)]))
 		let changed = 0
-		for (const a of scene.arrows()) {
+		for (const a of arrows) {
+			if ((only && !only.includes(a.id)) || !labels.get(a.id)) continue
 			const ends = new Set([a.from, a.to].filter(Boolean))
-			if (ends.size < 2) continue
 			for (const id of [...ends]) for (const anc of scene.ancestors(id)) ends.add(anc)
-			const others = solid.filter((s) => !ends.has(s.id))
-			const count = () => {
-				const path = scene.arrowPath(a.id)
-				// Boxes are read again: on Excalidraw an elbow's route depends on nothing else, but a box may have moved this run.
-				return others.filter((s) => blocks(path, scene.get(s.id) ?? s)).length
+			const boxes = solid.filter((s) => !ends.has(s.id))
+			const otherLabels = [...labels].filter(([id, b]) => id !== a.id && b).map(([, b]) => b)
+			const place = (own) => chooseLabelAt({ tryAt: (at) => (scene.setArrow(a.id, { labelAt: at }), scene.arrowLabelBox(a.id)), own, others: arrows.filter((o) => o.id !== a.id).map((o) => paths.get(o.id)), boxes, labels: otherLabels })
+			let spot = place(paths.get(a.id))
+			if (spot.trouble && a.kind === 'elbow' && a.from && a.to && a.from !== a.to) {
+				const was = scene.saveArrow(a.id)
+				// Only its middle run moves, so it keeps its sides; it mustn't cross anything more, or run through another label.
+				const sameWay = (o) => (o.from && o.from === a.from) || (o.to && o.to === a.to)
+				const rest = arrows.filter((o) => o.id !== a.id)
+				const strays = (path) => rest.filter((o) => labels.get(o.id) && straysThrough(path, paths.get(o.id), labels.get(o.id))).length
+				const best = chooseRoute({
+					current: { kind: a.kind, bend: a.bend, elbowMid: a.elbowMid, anchors: a.anchors },
+					currentPath: paths.get(a.id),
+					tryRoute: (route) => (scene.setArrow(a.id, route), scene.arrowPath(a.id)),
+					obstacles: boxes,
+					others: rest.map((o) => paths.get(o.id)),
+					beside: rest.filter((o) => !sameWay(o)).map((o) => paths.get(o.id)),
+					extra: (route, path) => 150 * (place(path).trouble + strays(path)),
+					better: true,
+					candidates: MIDS.map((elbowMid) => ({ kind: 'elbow', bend: 0, elbowMid, anchors: a.anchors })),
+				})
+				if (best) {
+					scene.setArrow(a.id, best.route)
+					paths.set(a.id, scene.arrowPath(a.id))
+					changed++
+				} else scene.restoreArrow(a.id, was)
+				spot = place(paths.get(a.id))
 			}
-			if (!count()) continue
-			const was = scene.saveArrow(a.id)
-			const best = OPTIONS.find((o) => {
-				scene.setArrow(a.id, o)
-				return count() === 0
-			})
-			if (best) changed++
-			else scene.restoreArrow(a.id, was)
+			scene.setArrow(a.id, { labelAt: spot.t })
+			labels.set(a.id, scene.arrowLabelBox(a.id))
+			if (spot.t !== 0.5) changed++
 		}
 		return changed
 	}
@@ -376,6 +437,6 @@ export function makeTidy(scene) {
 
 	return {
 		align: batched(align), distribute: batched(distribute), matchSizes: batched(matchSizes), fixOverlaps: batched(fixOverlaps), fitFrames: batched(fitFrames),
-		neatArrows: batched(neatArrows), rerouteBlocked: batched(rerouteBlocked), colourByFrame: batched(colourByFrame), all: batched(all), layOut, mainDirection,
+		neatArrows: batched(neatArrows), rerouteBlocked: batched(rerouteBlocked), clearLabels: batched(clearLabels), colourByFrame: batched(colourByFrame), all: batched(all), layOut, mainDirection,
 	}
 }

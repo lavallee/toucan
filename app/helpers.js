@@ -383,18 +383,18 @@ export function makeHelpers(editor) {
 	}
 
 	/** Create or update an arrow bound to two keyed shapes. */
-	function edge(from, to, { text: label = '', color = 'grey', dash = 'solid', size = 's', kind = 'arc', bend = 0, head = 'arrow', anchors, labelAt, meta = {}, proposed = false } = {}) {
-		const id = edgeOnly(from, to, { text: label, color, dash, size, kind, bend, head, anchors, labelAt, meta })
+	function edge(from, to, { text: label = '', color = 'grey', dash = 'solid', size = 's', kind = 'arc', bend = 0, elbowMid, head = 'arrow', anchors, labelAt, meta = {}, proposed = false } = {}) {
+		const id = edgeOnly(from, to, { text: label, color, dash, size, kind, bend, elbowMid, head, anchors, labelAt, meta })
 		if (proposed) propose(`edge:${from}->${to}`)
 		return id
 	}
-	function edgeOnly(from, to, { text: label, color, dash, size, kind, bend, head, anchors, labelAt, meta }) {
+	function edgeOnly(from, to, { text: label, color, dash, size, kind, bend, elbowMid, head, anchors, labelAt, meta }) {
 		checkStyle(`edge ${from}->${to}`, { color, dash, size })
 		const a = get(from), b = get(to)
 		if (!a || !b) throw new Error(`edge ${from} -> ${to}: missing ${!a ? from : to}`)
 		const key = `edge:${from}->${to}`
 		const id = idFor(key)
-		const props = { color, dash, size, kind, bend, richText: toRichText(label), arrowheadEnd: head === 'none' ? 'none' : 'arrow', ...(labelAt !== undefined && { labelPosition: labelAt }) }
+		const props = { color, dash, size, kind, bend, richText: toRichText(label), arrowheadEnd: head === 'none' ? 'none' : 'arrow', ...(labelAt !== undefined && { labelPosition: labelAt }), ...(elbowMid !== undefined && { elbowMidPoint: elbowMid }) }
 		if (editor.getShape(id)) {
 			editor.updateShape({ id, type: 'arrow', props, meta: { ...meta, key, from, to } })
 			return id
@@ -565,6 +565,7 @@ export function makeHelpers(editor) {
 				const props = { ...styleProps(st, 'arrow'), ...(e.label !== undefined && { richText: toRichText(e.label ?? '') }) }
 				if (st.route) props.kind = st.route === 'elbow' ? 'elbow' : 'arc'
 				if (st.bend !== undefined) props.bend = st.bend
+				if (st.elbowMid !== undefined) props.elbowMidPoint = st.elbowMid
 				if (st.head) props.arrowheadEnd = st.head === 'none' ? 'none' : 'arrow'
 				if (st.labelAt !== undefined) props.labelPosition = st.labelAt
 				editor.updateShape({ id: existing.id, type: 'arrow', props, meta: { ...existing.meta, ...e.meta, key, from: e.from, to: e.to } })
@@ -575,7 +576,7 @@ export function makeHelpers(editor) {
 				}
 				out.updated++
 			} else {
-				edge(e.from, e.to, { text: e.label ?? '', color: st.color ?? 'grey', dash: st.dash ?? 'solid', size: st.size ?? 's', kind: st.route === 'elbow' ? 'elbow' : 'arc', bend: st.bend ?? 0, head: st.head, anchors: st.anchors, labelAt: st.labelAt, meta: e.meta ?? {} })
+				edge(e.from, e.to, { text: e.label ?? '', color: st.color ?? 'grey', dash: st.dash ?? 'solid', size: st.size ?? 's', kind: st.route === 'elbow' ? 'elbow' : 'arc', bend: st.bend ?? 0, elbowMid: st.elbowMid, head: st.head, anchors: st.anchors, labelAt: st.labelAt, meta: e.meta ?? {} })
 				const r = raw[key] ?? raw[e.key]
 				if (r?.type === 'arrow') {
 					const { start, end, richText, ...rest } = r.props
@@ -586,6 +587,13 @@ export function makeHelpers(editor) {
 		}
 
 		for (const g of grown) if (get(g)) fitFrameToContent(editor, idFor(g), { padding: 40 })
+		// An arrow just drawn that runs through a box goes round it, judged on the arrow as tldraw draws it (lib/route.mjs).
+		const drawn = out.created.filter((k) => k.startsWith('edge:')).map(idFor).filter((id) => editor.getShape(id))
+		const rerouted = drawn.length ? api.tidy.rerouteBlocked({ only: drawn }) : 0
+		if (rerouted) out.rerouted = rerouted
+		// …and its label goes where no other arrow runs through it, unless the graph put it somewhere.
+		const placeable = tg.edges.filter((e) => e.label && e.style?.labelAt === undefined).map((e) => idFor(`edge:${e.from}->${e.to}`)).filter((id) => drawn.includes(id))
+		if (placeable.length) api.tidy.clearLabels({ only: placeable })
 
 		if (prune) {
 			const keep = new Set([...tg.groups.map((g) => g.key), ...tg.nodes.map((n) => n.key), ...tg.edges.map((e) => `edge:${e.from}->${e.to}`)])
