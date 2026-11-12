@@ -256,8 +256,8 @@ move through the canvas with ← and → in that card, and tells agents how to b
   how many connections run between them, and a frame opens on click. That's only what they see: `summary`, `graph`, `screenshot` and exports still have every shape.
 
 Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. `animate` (and **Animate** above the canvas) builds
-the diagram up in that same order as a GIF: from where it starts, each box with the arrows that join it to what's already there, lanes and frames
-first; nothing on the canvas changes. The **Air out** routine (`routine run air-out`, tldraw)
+the diagram up in that same order as a GIF: from where it starts, each box with the arrows that join it to what's already there, a fork's
+branches together, lanes and frames first; nothing on the canvas changes. The **Air out** routine (`routine run air-out`, tldraw)
 converts a dense diagram: long text moves to `meta.detail`, names get larger, and things spread a little. Run it only when asked. Region threads keep their position, so they may need re-anchoring afterwards.
 
 ## Files: what you write for a canvas

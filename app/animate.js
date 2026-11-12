@@ -6,10 +6,10 @@
 import { GIFEncoder, applyPalette, quantize } from 'gifenc'
 
 /**
- * The steps a diagram builds in, read from the scene (app/scene.js): each step a list of ids that appear together. A step is one
- * box, any frame it sits in that hasn't appeared yet (first), and the arrows that join it to boxes already shown. Boxes are
- * reached by following solid arrows from where the diagram starts (boxes nothing points to, in reading order), a branch at a
- * time; whatever no arrow reaches comes after, in reading order. Dotted arrows and proposals don't lead anywhere, as when walking
+ * The steps a diagram builds in, read from the scene (app/scene.js): each step a list of ids that appear together. Boxes are
+ * reached by following solid arrows from where the diagram starts (boxes nothing points to, in reading order). A box's branches
+ * appear together in one step (yes and no from a decision arrive at once), each with any frame it sits in that hasn't appeared
+ * yet and the arrows that join it to what's shown; whatever no arrow reaches comes after, in reading order. Dotted arrows and proposals don't lead anywhere, as when walking
  * the diagram with ← and →, but they still appear once both their ends have.
  */
 export function buildOrder(scene) {
@@ -27,27 +27,36 @@ export function buildOrder(scene) {
 		into.set(a.to, (into.get(a.to) ?? 0) + 1)
 	}
 	const shown = new Set(), steps = [], arrowShown = new Set()
-	const reveal = (box) => {
+	// One step: these boxes together (a box, or every branch of a fork at once), with the frames they sit in that haven't
+	// appeared yet first, and the arrows that join them to what's already there.
+	const reveal = (group) => {
 		const step = []
-		for (const id of scene.ancestors(box.id).filter((id) => byId.get(id)?.kind === 'frame' && !shown.has(id)).reverse()) shown.add(id), step.push(id)
-		shown.add(box.id)
-		step.push(box.id)
+		for (const box of group)
+			for (const id of scene.ancestors(box.id).filter((id) => byId.get(id)?.kind === 'frame' && !shown.has(id)).reverse()) shown.add(id), step.push(id)
+		for (const box of group) shown.add(box.id), step.push(box.id)
+		const now = new Set(group.map((b) => b.id))
 		for (const a of arrows) {
 			if (arrowShown.has(a.id)) continue
 			const ends = [a.from, a.to].filter(Boolean)
-			if (ends.includes(box.id) && ends.every((id) => shown.has(id) || !isBox.has(id))) arrowShown.add(a.id), shown.add(a.id), step.push(a.id)
+			if (ends.some((id) => now.has(id)) && ends.every((id) => shown.has(id) || !isBox.has(id))) arrowShown.add(a.id), shown.add(a.id), step.push(a.id)
 		}
 		steps.push(step)
 	}
-	const queue = boxes.filter((b) => !into.get(b.id)).sort(reading)
+	// Breadth first along the arrows: a box's branches arrive together, then each branch is followed in turn.
+	const expand = []
+	const sources = boxes.filter((b) => !into.get(b.id)).sort(reading)
 	const rest = [...boxes].sort(reading)
 	while (shown.size < items.length) {
-		let next = queue.shift()
-		if (!next) next = rest.find((b) => !shown.has(b.id))
-		if (!next) break
-		if (shown.has(next.id)) continue
-		reveal(next)
-		for (const to of (out.get(next.id) ?? []).map((id) => byId.get(id)).sort(reading)) if (!shown.has(to.id) && !queue.includes(to)) queue.push(to)
+		const from = expand.shift()
+		if (from) {
+			const next = (out.get(from.id) ?? []).map((id) => byId.get(id)).filter((b, i, all) => !shown.has(b.id) && all.indexOf(b) === i).sort(reading)
+			if (next.length) reveal(next), expand.push(...next)
+			continue
+		}
+		const start = sources.find((b) => !shown.has(b.id)) ?? rest.find((b) => !shown.has(b.id))
+		if (!start) break
+		reveal([start])
+		expand.push(start)
 	}
 	// Anything left (an empty frame, an arrow loose at one end) arrives with the last step.
 	const left = items.filter((i) => !shown.has(i.id)).map((i) => i.id)
