@@ -14,6 +14,7 @@ toucan --canvas NAME screenshot [OUT.png]       # look at it (<=1800px)
 toucan --canvas NAME animate [OUT.gif]          # a GIF of the diagram building up, box by box along the arrows
 toucan --canvas NAME script list|put NAME FILE|rm NAME   # persistent canvas scripts
 toucan canvases                                 # every canvas: title, description, shapes, open tabs
+toucan reload [--all]                           # make open tabs reload the page (this canvas's, or every one): after an upgrade
 toucan new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--canvas-format F]
 toucan --canvas NAME graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   # no tab needed
 toucan --canvas NAME import FILE|- [--format F] [--move] [--prune] [--propose] [--label T]   # keyed upsert of a graph file
@@ -45,6 +46,9 @@ toucan --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region
 `--canvas` can also come from `TOUCAN_CANVAS`. `exec`, `summary`, `screenshot` and `import` need a
 browser tab open on the canvas, unless the server runs in headless mode; `graph`, `canvases`, `new`,
 `meta`, `log`, `versions` and the routine bank work against the server alone; `routine run` needs a tab like `exec`.
+
+After toucan is upgraded, a tab that was open keeps running the old page: it shows **toucan was updated · Reload**, and code an agent runs
+in it may fail (the error says so). `toucan reload --all` reloads every open tab at once; the canvas is saved, so nothing is lost.
 
 ## Headless mode
 

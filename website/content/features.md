@@ -73,6 +73,7 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 |---|---|---|---:|
 | [History and restore](tour.html#go-back) | Every canvas keeps versions, whoever made the change. Step through them read-only over the live canvas and restore one; a restore can be undone. | **History**; CLI: `versions` · `versions save LABEL` · `versions restore N` | 0.3.0 |
 | [One undo per agent action](agents.html#what-people-see-presence-and-undo) | An agent's run, a routine or an accepted proposal is a single undo step. | **⌘Z** | 0.2.0 |
+| Upgrade-aware tabs | A tab left open across an upgrade says so and reloads in one click; `toucan reload --all` brings every open tab up to date at once. | **toucan was updated · Reload**; CLI: `reload [--all]` | 0.15.0 |
 | [While you were away](agents.html#headless-mode) | Edits agents made with no tab open are logged and announced when you come back. | **Banner**; CLI: `log [--since T]` | 0.2.0 |
 | [A folder per canvas](agents.html#files-what-you-write-for-a-canvas) | What agents write for a canvas goes in its own folder, archived with it, and nowhere else in the data directory. | CLI: `files` | 0.6.0 |
 
@@ -106,4 +107,4 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [A server that looks after itself](how-it-works.html) | Commands start a background server when needed, and never fight one you run yourself. | CLI: `start` · `stop` · `restart` · `start --take-over` | 0.8.0 |
 | [Remote and behind a proxy](how-it-works.html) | Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to. | **Sign-in page**; CLI: `--public-url` · `--allow-host` · `TOUCAN_URL` · `TOUCAN_TOKEN` | 0.11.0 |
 
-*55 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
+*56 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*

@@ -45,6 +45,7 @@
     "eval:agent": "node scripts/eval-agent.mjs",
     "test:presence": "node scripts/presence-e2e.mjs",
     "test:references": "node scripts/references-e2e.mjs",
+    "test:reload": "node scripts/reload-e2e.mjs",
     "test:routines": "node scripts/routines-e2e.mjs",
     "test:templates": "node scripts/templates-e2e.mjs",
     "check": "node scripts/check-repo.mjs",

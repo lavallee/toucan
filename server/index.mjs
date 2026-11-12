@@ -9,7 +9,7 @@
 // relay runs arbitrary JS in the canvas and the chat drives an agent with a shell, so
 // nothing here is safe to expose unauthenticated, even on a private network.
 
-import { randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createServer } from 'node:http'
 import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, rmSync, renameSync, statSync } from 'node:fs'
 import { hostname } from 'node:os'
@@ -36,6 +36,15 @@ import { CONFIG, ensureToken, readJson, resolveData, writeConfig } from '../lib/
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = join(ROOT, 'dist')
+/** Which build of the page this server serves: a tab that hears a different one after reconnecting is running old code. */
+const buildId = () => {
+	if (process.env.TOUCAN_BUILD_ID) return process.env.TOUCAN_BUILD_ID // tests stand in for an upgrade with this
+	try {
+		return createHash('sha256').update(readFileSync(join(DIST, 'index.html'))).digest('hex').slice(0, 12)
+	} catch {
+		return null
+	}
+}
 const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version
 
 const args = Object.fromEntries(
@@ -445,6 +454,13 @@ const server = createServer(async (req, res) => {
 			return json(res, 201, describe(name, idx))
 		}
 		if (route === 'formats') return json(res, 200, { formats: formatList() })
+		// Reload the page in every open tab (or one canvas's), headless pages too: after an upgrade, so they run the new code.
+		if (route === 'reload' && req.method === 'POST') {
+			if (canvas && !NAME.test(canvas)) return json(res, 400, { error: `bad canvas name ${canvas}` })
+			let n = 0
+			for (const [name, list] of tabs) if (!canvas || name === canvas) for (const w of list) if (w.readyState === 1) w.send(JSON.stringify({ type: 'reload' })), n++
+			return json(res, 200, { reloaded: n, ...(canvas && { canvas }) })
+		}
 		if (route === 'profiles' && !canvas && req.method === 'GET') return json(res, 200, await profiles.list())
 		if (route === 'profiles' && !canvas && req.method === 'POST') {
 			try {
@@ -935,11 +951,14 @@ function onCanvas(ws, canvas, nonce) {
 	const list = tabs.get(canvas) ?? []
 	list.push(ws)
 	tabs.set(canvas, list)
+	ws.send(JSON.stringify({ type: 'build', id: buildId() }))
 	ws.send(JSON.stringify({ type: 'scripts', scripts: listScripts(canvas) }))
 	ws.send(JSON.stringify({ type: 'threads', threads: threadsView(canvas) }))
 	ws.on('message', (raw) => {
 		const msg = JSON.parse(raw)
-		if (msg.type === 'focus') {
+		// The tab heard a newer build than the one it loaded (it reconnected across an upgrade) and runs old code.
+		if (msg.type === 'stale') ws.stale = true
+		else if (msg.type === 'focus') {
 			const l = tabs.get(canvas).filter((w) => w !== ws)
 			l.push(ws)
 			tabs.set(canvas, l)
@@ -964,7 +983,7 @@ function onCanvas(ws, canvas, nonce) {
 				if (p.before) saveBefore(canvas, p.before)
 				snapshotSoon(canvas, { label: p.label ?? 'Agent edit' })
 			}
-			msg.ok ? p.resolve(msg.result) : p.reject(new Error(msg.error))
+			msg.ok ? p.resolve(msg.result) : p.reject(new Error(ws.stale ? `${msg.error} (the tab that ran this has an older toucan page than the server: reload it, or run \`toucan reload\`)` : msg.error))
 			// Agent presence: the other tabs glow what this run added or changed (app/pulses.tsx).
 			const ids = msg.changes ? [...(msg.changes.added ?? []), ...(msg.changes.updated ?? [])].map((c) => c.id) : []
 			if (ids.length) for (const other of tabs.get(canvas) ?? []) if (other !== ws && other.readyState === 1) other.send(JSON.stringify({ type: 'agent-edit', ids, agent: p.agent }))
