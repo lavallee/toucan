@@ -8,6 +8,7 @@ import { getThreads, setThreads } from './threads-store'
 import { setFormatId } from './formats'
 import { openReference } from './references-store'
 import { activity, say, turn, setRunning } from './pulses'
+import { heardBuild } from './update-store'
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 
@@ -42,6 +43,13 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 		}
 		sock.onmessage = async (ev) => {
 			const msg = JSON.parse(ev.data)
+			// After an upgrade the server serves a newer page than this tab loaded: say so (and tell the server, so an agent's
+			// error from this tab says why). `toucan reload` makes every tab reload at once.
+			if (msg.type === 'build') {
+				if (heardBuild(msg.id)) sock.send(JSON.stringify({ type: 'stale' }))
+				return
+			}
+			if (msg.type === 'reload') return location.reload()
 			if (msg.type === 'scripts') return runScripts(msg.scripts)
 			if (msg.type === 'threads') return setThreads(msg.threads)
 			if (msg.type === 'format') return setFormatId(msg.format)

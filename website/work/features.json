@@ -469,6 +469,17 @@
    "who": "person"
   },
   {
+   "id": "reload",
+   "group": "history",
+   "name": "Upgrade-aware tabs",
+   "summary": "A tab left open across an upgrade says so and reloads in one click; `toucan reload --all` brings every open tab up to date at once.",
+   "app": "toucan was updated · Reload",
+   "cli": "reload [--all]",
+   "since": "0.15.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
    "id": "trail",
    "group": "history",
    "name": "While you were away",

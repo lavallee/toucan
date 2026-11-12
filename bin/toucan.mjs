@@ -37,6 +37,7 @@
 //     exec -e CODE | FILE | - [--label TEXT]   run JS in the live editor; `return` a JSON value (--label names it in the history)
 //     screenshot [OUT.png]        PNG of the page (or --keys a,b; --max px, default 1800)
 //     animate [OUT.gif]           GIF of the page building up, box by box along the arrows (--step ms, --hold ms, --max px)
+//     reload [--all]              make open tabs reload the page (this canvas's, or every one): after an upgrade
 //     script list | put NAME FILE | rm NAME     canvas scripts (persistent behaviour)
 //     proposals [accept|reject [KEY...]]   dashed = proposed: list, or accept (solid) / reject (remove)
 //     selection                   what people have selected (to resolve "this"), in the tab you run in and others
@@ -102,7 +103,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'reload']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -195,6 +196,13 @@ switch (cmd) {
 		const url = target.url(chosen)
 		const opened = wantOpen && (await openInBrowser(`${url}#token=${cfg.token}`))
 		print({ canvas: chosen, created: create, project: root, url, opened: !!opened, files: (await call(`/api/canvases/${encodeURIComponent(chosen)}/files`)).dir })
+		break
+	}
+	case 'reload': {
+		// Make open tabs reload the page: after an upgrade, so they run the new code. One canvas's tabs, or every tab with --all.
+		const all = flag('all')
+		if (!all && !canvas) die('reload which canvas? Name one with --canvas, or reload every open tab with --all')
+		print(await call(all ? '/api/reload' : `/api/reload/${encodeURIComponent(canvas)}`, { method: 'POST', body: '{}' }))
 		break
 	}
 	case 'canvases':

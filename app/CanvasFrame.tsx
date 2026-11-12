@@ -17,6 +17,7 @@ import { AgentStatus } from './pulses'
 import { ReferencesButton, ReferencesPanel } from './References'
 import { AddMenu } from './AddMenu'
 import { AnimateMenu } from './AnimateMenu'
+import { UpdateNotice } from './UpdateNotice'
 import { close as closeReferences, openReference, toggle as toggleReferences, useReferences } from './references-store'
 
 document.title = `${canvasName} · toucan`
@@ -89,6 +90,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 				<span className={cn('size-2 shrink-0 rounded-full', live ? 'bg-emerald-500' : 'bg-destructive')} role="status" aria-label={live ? 'synced' : 'offline'} title={live ? 'synced' : 'offline'} />
 				{engine !== 'tldraw' && <span className="shrink-0 rounded bg-muted px-1 font-mono text-[10px] text-muted-foreground max-sm:hidden">{engine}</span>}
 				{!headless && <AwayNotice />}
+				<UpdateNotice />
 				<span className="flex-1" />
 				<Popover>
 					<PopoverTrigger asChild>

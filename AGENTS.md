@@ -18,6 +18,7 @@ node bin/toucan.mjs --canvas NAME screenshot [OUT.png]     # look at it (prints 
 node bin/toucan.mjs --canvas NAME animate [OUT.gif] [--step MS] [--hold MS] [--max PX]   # a GIF of the diagram building up, box by box along the arrows
 node bin/toucan.mjs --canvas NAME script list|put NAME FILE|rm NAME   # persistent canvas scripts
 node bin/toucan.mjs canvases                               # every canvas: title, description, shapes, open tabs
+node bin/toucan.mjs reload [--all]                         # make open tabs reload the page (this canvas's, or every one): after an upgrade
 node bin/toucan.mjs new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--canvas-format F]   # make a canvas
 node bin/toucan.mjs --canvas NAME graph [--format tg|jsoncanvas|mermaid|dot|excalidraw] [OUT]   # export; no tab needed
 node bin/toucan.mjs --canvas NAME import FILE|- [--format F] [--move] [--prune] [--propose] [--label T]   # keyed upsert of a graph file
@@ -50,6 +51,9 @@ There can be many canvases, each on one engine (tldraw or Excalidraw); name one 
 that `init` has linked to one. From a terminal agent, start with `toucan init --open` and tell the person what you're drawing. `init` adds
 nothing to the repository; to keep a diagram there, write it out with `graph`. The server starts itself when a command needs it. In the chat
 panel, work on the canvas the chat belongs to unless the user names another. Never archive a canvas unless asked.
+
+After toucan is upgraded, a tab that was open keeps running the old page: it shows **toucan was updated · Reload**, and code an agent runs
+in it may fail (the error says so). `toucan reload --all` reloads every open tab at once; the canvas is saved, so nothing is lost.
 
 Any other command `X` runs an extension, `toucan-X`, from PATH. A deployment can add its own agent notes as `AGENTS.md`
 in its data directory; the chat agent is told where they are.
