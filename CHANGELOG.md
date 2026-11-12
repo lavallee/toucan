@@ -5,6 +5,8 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-11-12
+
 ### Added
 
 - **Animated builds.** **Animate** above the canvas, or `toucan animate [OUT.gif]`, makes a GIF of the diagram building up: from where it starts, box by box in the order the arrows go, a fork's branches (yes and no) arriving together, each with the arrows that join it to what's already there, then the whole diagram held. Slow, normal or fast (`--step`, `--hold`, `--max`), on both engines, and nothing on the canvas changes.

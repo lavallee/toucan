@@ -1,7 +1,7 @@
 {
  "product": "toucan",
- "version": "0.13.0",
- "updated": "2026-11-11",
+ "version": "0.14.0",
+ "updated": "2026-11-12",
  "note": "The full feature list. scripts/build-features.mjs renders it to website/content/features.md; keep it in step with CHANGELOG.md.",
  "groups": [
   {
