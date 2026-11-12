@@ -8,6 +8,26 @@ All notable changes to toucan are recorded here. The format follows
 ### Added
 
 - **Animated builds.** **Animate** above the canvas, or `toucan animate [OUT.gif]`, makes a GIF of the diagram building up: from where it starts, box by box in the order the arrows go, a fork's branches (yes and no) arriving together, each with the arrows that join it to what's already there, then the whole diagram held. Slow, normal or fast (`--step`, `--hold`, `--max`), on both engines, and nothing on the canvas changes.
+- TG arrows carry `elbowMid` (where an elbow's middle run sits across the gap, 0..1), read and written on both engines.
+  Excalidraw canvases made from a graph draw elbows and curves as routed, rather than straight lines.
+- `scene.setArrow` takes `labelAt` on tldraw, and `toucan.tidy.clearLabels()` moves labels other arrows run through.
+
+### Fixed
+
+- **Arrows go round boxes instead of through them.** An elbow only goes round the outside of its own two ends, so an arrow
+  that would run through a box now takes a route the engine can draw that clears it: out of other sides, with its middle run
+  (`elbowMid`) moved across the gap, or a gentle curve. One routine (`lib/route.mjs`) chooses, judged on the arrow as each
+  engine draws it, and it's used by `draw` and `add`, by an import onto a blank canvas, by applyGraph for the arrows it draws,
+  by Clean up (Tidy arrows keeps its own search), and before an Excalidraw canvas is made from a template on the server.
+- **A loop back against the flow goes round, not up the middle.** In a `draw` flow drawn in elbows, an arrow that closes a
+  loop leaves and arrives on the right (running down; the bottom, running across), and ELK puts its ends at the edge of what it
+  passes, so the elbow round them clears the rest. The example from the bug report went from 32 to 87.
+- Running down the page, a labelled arrow no longer gets a layer of its own (which stretched a chart until its text couldn't
+  be read whole); a gap where a labelled arrow turns gets room for its label instead, and a label another arrow runs through
+  slides along its own arrow, or its middle run moves, to where it reads clear (tldraw).
+- Elbows in a `draw` flow leave and arrive along the flow even when they go well across, and only a fork with two or more
+  labelled branches (yes / no) sends them out of its sides.
+- Even out the gaps no longer evens a row or column by pushing a box onto one in the next column or row.
 
 ## [0.13.0] — 2026-11-11
 

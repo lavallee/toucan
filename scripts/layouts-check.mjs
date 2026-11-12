@@ -92,6 +92,57 @@ console.log(`ok  layouts: ${TEMPLATES.length} templates`)
 	console.log('ok  layouts: where an import lands')
 }
 
+// A loop back up a flow goes round what's between, not through it: an elbow can only go round its own two ends, so the layout puts
+// the loop's ends at the edge of what it passes and sends it out of that side; and where an arrow would still run through a box, the
+// shared routing (lib/route.mjs) finds one that doesn't, as each engine draws it.
+{
+	const { routePath, runsThrough, chooseRoute, routeGraph, sampleCurve } = await import('../lib/route.mjs')
+	const { toExcalidrawElements } = await import('../lib/tg.mjs')
+	const spec = {
+		kind: 'flow', direction: 'DOWN', route: 'elbow',
+		nodes: [['ask', 'You ask'], ['read', 'Agent reads the canvas'], ['cli', 'Agent runs a command'], ['open', 'Canvas open in a tab?', 'diamond'], ['tab', 'Runs in your tab'], ['headless', 'Runs in a headless page'], ['others', 'Other tabs update'], ['store', 'Server saves it'], ['check', 'Agent checks the result'], ['review', 'You review it']].map(([id, text, shape]) => ({ id, text, ...(shape && { shape }) })),
+		edges: [['ask', 'read'], ['read', 'cli', 'plans'], ['cli', 'open'], ['open', 'tab', 'yes'], ['open', 'headless', 'no'], ['tab', 'others'], ['tab', 'store'], ['headless', 'store'], ['tab', 'check', 'result'], ['headless', 'check', 'result'], ['check', 'read', 'revise'], ['check', 'review', 'done']].map(([from, to, label]) => ({ from, to, ...(label && { label }) })),
+	}
+	const tg = await layOut(spec)
+	const box = (k) => ({ ...tg.nodes.find((n) => n.key === k).box, geo: tg.nodes.find((n) => n.key === k).style.geo })
+	const loop = tg.edges.find((e) => e.from === 'check' && e.to === 'read')
+	assert.deepEqual(loop.style.anchors, { from: { x: 1, y: 0.5 }, to: { x: 1, y: 0.5 } }, 'a loop down the page leaves and arrives on the right')
+	const span = tg.nodes.filter((n) => !['check', 'read'].includes(n.key) && n.box.y > box('read').y && n.box.y < box('check').y)
+	const reach = Math.max(box('check').x + box('check').w, box('read').x + box('read').w)
+	assert.ok(span.every((n) => n.box.x + n.box.w < reach + 20), `the loop's ends are at the edge of what it passes: ${span.filter((n) => n.box.x + n.box.w >= reach + 20).map((n) => n.key)}`)
+	const drawn = routePath(box('check'), box('read'), { kind: 'elbow', anchors: loop.style.anchors })
+	const others = tg.nodes.filter((n) => n.key !== 'check' && n.key !== 'read')
+	assert.deepEqual(others.filter((n) => runsThrough(drawn.points, n.box)).map((n) => n.key), [], 'the loop goes round, through no box')
+	// Running down the page, labels ride on their arrows: no layer of their own stretching the chart.
+	const rows = new Set(tg.nodes.map((n) => n.box.y)).size
+	assert.ok(rows <= 8, `${rows} rows for 8 steps down`)
+
+	// The routing itself: a loop up a column whose middle sticks out on the right can't go round on the right, and goes up the left.
+	const col = [{ x: 0, y: 0, w: 200, h: 100 }, { x: 0, y: 200, w: 400, h: 100 }, { x: 0, y: 400, w: 200, h: 100 }]
+	const tryRoute = (route) => {
+		const r = routePath(col[2], col[0], route)
+		return r.curve ? sampleCurve(r.points) : r.points
+	}
+	const right = { kind: 'elbow', anchors: { from: { x: 1, y: 0.5 }, to: { x: 1, y: 0.5 } } }
+	assert.ok(runsThrough(tryRoute(right), col[1]), 'round the right runs through the wide box')
+	const best = chooseRoute({ current: right, tryRoute, obstacles: [col[1]] })
+	assert.equal(best?.blocked, 0, 'a route round is found')
+	assert.deepEqual([best.route.kind, best.route.anchors.from.x, best.route.anchors.to.x], ['elbow', 0, 0], 'it goes up the left, still an elbow')
+	// A clear arrow is left as it is.
+	assert.equal(chooseRoute({ current: right, tryRoute, obstacles: [] }), null, 'nothing in the way, nothing changed')
+
+	// Before drawing (an Excalidraw canvas made on the server has no tab to check it in), a graph's arrows are routed the same way,
+	// and drawn as routed.
+	const graph = { tg: 1, groups: [], nodes: col.map((b, i) => ({ key: `n${i}`, text: `n${i}`, box: b, style: { geo: 'rectangle' } })), edges: [{ key: 'edge:n2->n0', from: 'n2', to: 'n0', style: { route: 'elbow', anchors: right.anchors } }] }
+	const els = toExcalidrawElements(graph)
+	const arrow = els.find((e) => e.type === 'arrow')
+	const pts = arrow.points.map(([x, y]) => ({ x: arrow.x + x, y: arrow.y + y }))
+	assert.ok(arrow.elbowed && !runsThrough(pts, col[1]), 'Excalidraw draws the elbow round the wide box')
+	assert.equal(graph.edges[0].style.anchors.from.x, 1, 'the graph given is left as it was')
+	assert.equal(routeGraph(graph), 1, 'routeGraph reroutes it in place')
+	console.log('ok  layouts: a loop goes round what it passes, and arrows go round boxes in their way')
+}
+
 // A flow written loosely still draws, and one that can't be drawn says why.
 {
 	const loose = await layOut({ kind: 'flow', nodes: [{ key: 'a', label: 'A' }, { name: 'The B' }], edges: [{ source: 'a', target: 'the-b' }] })

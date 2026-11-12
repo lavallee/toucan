@@ -151,13 +151,14 @@ selected proposals, or all of them. Leave that choice to them: run `toucan propo
 
 A canvas reads and writes as a *toucan graph* (TG, `lib/tg.mjs`): `groups` (frames), `nodes` (boxes) and
 `edges` (arrows), each with a stable `key`, optional `box` (page coordinates), `style` (tldraw's
-vocabulary: color, fill, dash, geo) and `meta`. Every engine's `toucan` has `graph()` and
+vocabulary: color, fill, dash, geo; an arrow's also route, anchors, bend, elbowMid) and `meta`. Every engine's `toucan` has `graph()` and
 `await applyGraph(tg, {move, prune})`, and the CLI's `graph`/`import` speak TG, JSON Canvas (Obsidian),
 Mermaid flowcharts, DOT (export only) and `.excalidraw`.
 
 - **Import is a keyed upsert.** Existing shapes get only the fields the file carries and keep their position unless `--move`; a missing field means "leave it" (a bare Mermaid reference `a --> b` doesn't relabel `a`; a node outside any subgraph keeps its frame). New shapes without a position are laid out with ELK beside the existing content, or below what they connect to. Arrows match by endpoints (`edge:<from>-><to>`). Nothing is deleted without `--prune`.
 - **Mermaid is a good edit language** for structure: write a small flowchart of what to add or relabel and `import` it. Use `exec` with the engine's own API for styling or anything TG can't say.
 - `graph` reads the server's copy, which can trail an edit a tab made a moment ago.
+- **Arrows go round boxes.** An arrow an import or a `draw` adds that would run through a box is routed round it, as the engine draws it (`lib/route.mjs`): an elbow out of other sides, or with its middle run (`elbowMid`, 0..1 across the gap) moved, or a gentle curve; a label another arrow crosses slides along its own arrow (tldraw). An elbow only goes round the outside of its own two ends, so in a `draw` flow a loop back against the flow leaves and arrives on the right (running down) or the bottom (running across), with its ends put at the edge of what it passes. Arrows already on the canvas are left alone; `routine run tidy-arrows` or `clean-up` reroutes those.
 
 ## Engines
 
