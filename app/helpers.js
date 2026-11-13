@@ -471,11 +471,18 @@ export function makeHelpers(editor) {
 	 * matched by endpoints (edge:<from>-><to>). Nothing is deleted unless `prune`, which removes keyed
 	 * boxes, frames and arrows the graph doesn't mention.
 	 */
-	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction } = {}) {
+	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction, history } = {}) {
 		editor.markHistoryStoppingPoint('apply graph')
 		// A graph may leave out what it has none of.
 		tg = { ...tg, groups: tg?.groups ?? [], nodes: tg?.nodes ?? [], edges: tg?.edges ?? [] }
 		tg = await layoutMissing(tg, { existing: graph(), elk, direction })
+		// `history: 'ignore'` (a plan's sync): the edit isn't a step in this tab's undo, so Cmd-Z never undoes what upstream said.
+		if (!history) return upsertGraph(tg, { move, prune, asProposal })
+		let result
+		editor.run(() => (result = upsertGraph(tg, { move, prune, asProposal })), { history })
+		return result
+	}
+	function upsertGraph(tg, { move, prune, asProposal }) {
 		const raw = tg.extra?.tldraw ?? {}
 		const out = { created: [], updated: 0, pruned: 0, skippedEdges: [] }
 		// A style tldraw doesn't have falls back to its default, and the run says which, rather than failing the whole import.
@@ -505,7 +512,7 @@ export function makeHelpers(editor) {
 			const existing = get(g.key)
 			if (existing) {
 				const update = { id: existing.id, type: 'frame', props: { name: g.label ?? existing.props.name }, meta: { ...existing.meta, ...g.meta, key: g.key } }
-				if (move && g.box) Object.assign(update, { x: g.box.x, y: g.box.y, props: { ...update.props, w: g.box.w, h: g.box.h } })
+				if (move && g.box) update.props = { ...update.props, w: g.box.w, h: g.box.h }
 				editor.updateShape(update)
 				out.updated++
 			} else {
@@ -516,6 +523,8 @@ export function makeHelpers(editor) {
 			// TG boxes are page coordinates; reparenting keeps a shape's page position.
 			const parentId = g.parent && get(g.parent) ? idFor(g.parent) : pageId
 			if (get(g.key).parentId !== parentId) editor.reparentShapes([idFor(g.key)], parentId)
+			// A frame inside a frame is placed within it: the graph's box is where it goes on the page.
+			if (existing && move && g.box) editor.updateShape({ id: existing.id, type: 'frame', ...pagePointToParent(parentId, g.box) })
 		}
 
 		for (const n of tg.nodes) {
@@ -605,6 +614,54 @@ export function makeHelpers(editor) {
 		// `propose`: what this import adds arrives as a proposal (dashed) for a person to accept or reject.
 		if (asProposal) propose(...out.created)
 		return { ...out, created: out.created.length }
+	}
+
+	/**
+	 * Internal (a plan's sync, server/plan.mjs): draws a plan's views and takes away what they no longer show. `tg` is every view,
+	 * placed; `remove` and `release` are keys of managed shapes (carrying meta.plan) to delete or to leave as ordinary boxes.
+	 * Nothing without meta.plan is touched, what already matches is left alone (so only real changes glow), none of it goes on
+	 * this tab's undo, and it doesn't run while the person is in the middle of a drag or typing.
+	 */
+	async function _planRender({ tg, remove = [], release = [], rev, reveal = false }) {
+		if (!walkView.isIdle()) return { busy: true }
+		const page = (s) => {
+			const b = editor.getShapePageBounds(s)
+			return b ? [Math.round(b.x), Math.round(b.y)] : [NaN, NaN]
+		}
+		const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+		const parentKey = (s) => (s.parentId.startsWith('shape:') ? keyOf(editor.getShape(s.parentId)) : null)
+		const groupSame = (g) => {
+			const s = get(g.key)
+			if (!s || s.type !== 'frame' || !g.box) return false
+			const [x, y] = page(s)
+			return x === g.box.x && y === g.box.y && s.props.w === g.box.w && s.props.h === g.box.h && s.props.name === g.label && parentKey(s) === (g.parent ?? null) && same(s.meta?.plan, g.meta?.plan)
+		}
+		const nodeSame = (n) => {
+			const s = get(n.key)
+			if (!s || s.type !== 'geo' || !n.box) return false
+			const [x, y] = page(s)
+			return x === n.box.x && y === n.box.y && s.props.w === n.box.w && s.props.h === n.box.h && text(s) === (n.text ?? '') && parentKey(s) === (n.group ?? null) && s.props.color === n.style?.color && s.props.fill === n.style?.fill && s.props.geo === n.style?.geo && same(s.meta?.plan, n.meta?.plan) && (s.meta?.detail ?? '') === (n.meta?.detail ?? '')
+		}
+		const changed = { tg: 1, groups: tg.groups.filter((g) => !groupSame(g)), nodes: tg.nodes.filter((n) => !nodeSame(n)), edges: tg.edges.filter((e) => !get(`edge:${e.from}->${e.to}`)) }
+		const out = changed.groups.length || changed.nodes.length || changed.edges.length ? await applyGraph(changed, { move: true, history: 'ignore' }) : { created: 0, updated: 0 }
+		let removed = 0, released = 0
+		editor.run(() => {
+			// A height the render gives is the height: growth tldraw added for longer text would otherwise stay on top of it.
+			editor.updateShapes(changed.nodes.map((n) => get(n.key)).filter((s) => s?.type === 'geo' && s.props.growY).map((s) => ({ id: s.id, type: 'geo', props: { growY: 0 } })))
+			const managed = (key) => {
+				const s = get(key)
+				return s?.meta?.plan ? s : null
+			}
+			const gone = remove.map(managed).filter(Boolean)
+			editor.deleteShapes(gone.map((s) => s.id))
+			removed = gone.length
+			const freed = release.map(managed).filter(Boolean)
+			editor.updateShapes(freed.map((s) => ({ id: s.id, type: s.type, meta: { ...s.meta, plan: null } })))
+			released = freed.length
+			// Last, so that once the server sees this number, it has seen everything above.
+			editor.updateShapes(tg.groups.map((g) => get(g.key)).filter(Boolean).slice(0, 1).map((s) => ({ id: s.id, type: s.type, meta: { ...s.meta, planRev: rev } })))
+		}, { history: 'ignore', ignoreShapeLock: true })
+		return { created: out.created, updated: out.updated, removed, released, _quiet: !reveal }
 	}
 
 	/** If a frame's child lies outside the frame, move it to a free row below the frame's other children. */
@@ -711,7 +768,7 @@ export function makeHelpers(editor) {
 
 	// The canvas as the tidying and the diagram check see it, the same on both engines (app/scene.js).
 	const scene = tldrawScene(editor, { keyOf, text, toRichText })
-	const api = { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, screenshot, animate, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
+	const api = { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, _planRender, screenshot, animate, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
 		const m = measureDiagram(scene)
 		return { ...m, score: scoreDiagram(m) }
 	}, tidy: makeTidy(scene) }

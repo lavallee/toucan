@@ -127,7 +127,7 @@ export function makeExcalidrawHelpers(api, ex) {
 	 * or a grid spot below the scene for formats without positions. Arrows match by endpoints.
 	 * `prune` deletes keyed elements the graph doesn't mention.
 	 */
-	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction } = {}) {
+	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction, history } = {}) {
 		// A graph may leave out what it has none of.
 		tg = { ...tg, groups: tg?.groups ?? [], nodes: tg?.nodes ?? [], edges: tg?.edges ?? [] }
 		tg = await layoutMissing(tg, { existing: graph(), elk, direction })
@@ -201,8 +201,42 @@ export function makeExcalidrawHelpers(api, ex) {
 				out.pruned++
 			}
 		}
-		commit(ex.restoreElements([...next.values()], null, { refreshDimensions: true, repairBindings: true }))
+		// `history: 'ignore'` (a plan's sync): not a step in this tab's undo.
+		const restored = ex.restoreElements([...next.values()], null, { refreshDimensions: true, repairBindings: true })
+		if (history === 'ignore') api.updateScene({ elements: restored, captureUpdate: ex.CaptureUpdateAction.NEVER })
+		else commit(restored)
 		return out
+	}
+
+	/**
+	 * Internal (a plan's sync, server/plan.mjs): draws a plan's views and takes away what they no longer show. Only elements
+	 * carrying meta.plan are removed or released; none of it goes on this tab's undo; and it waits while the person is mid-gesture.
+	 */
+	async function _planRender({ tg, remove = [], release = [], rev, reveal = false }) {
+		if (!threadView.isIdle()) return { busy: true }
+		const out = await applyGraph(tg, { move: true, history: 'ignore' })
+		const gone = new Set(remove), freed = new Set(release), frames = new Set(tg.groups.map((g) => g.key).filter((k) => get(k)).slice(0, 1)) // one frame carries the number: enough to know it all arrived
+		const els = all()
+		const live_ = els.filter((e) => !e.isDeleted)
+		const managed = (e) => !!e.customData?.meta?.plan
+		const container = (e) => (e.containerId ? live_.find((c) => c.id === e.containerId) : null)
+		let removed = 0, released = 0
+		// applyGraph leaves an element in the frame it was in; a card that changed column or lane belongs to another now.
+		const frameOf = new Map(tg.nodes.map((n) => [n.key, n.group ? get(n.group)?.id ?? null : null]))
+		const next = els.map((e) => {
+			if (e.isDeleted) return e
+			const host = e.type === 'text' && e.containerId ? container(e) : e
+			if (!host) return e
+			const key = keyOf(host)
+			if (gone.has(key) && managed(host)) return (host === e && removed++, ex.newElementWith(e, { isDeleted: true }))
+			if (frameOf.has(key) && managed(host) && (e.frameId ?? null) !== frameOf.get(key)) return ex.newElementWith(e, { frameId: frameOf.get(key) })
+			if (host !== e) return e
+			if (freed.has(key) && managed(e)) return (released++, ex.newElementWith(e, { customData: { ...e.customData, meta: { ...e.customData.meta, plan: null } } }))
+			if (frames.has(key) && e.type === 'frame') return ex.newElementWith(e, { customData: { ...e.customData, meta: { ...e.customData?.meta, planRev: rev } } })
+			return e
+		})
+		api.updateScene({ elements: next, captureUpdate: ex.CaptureUpdateAction.NEVER })
+		return { created: out.created, updated: out.updated, removed, released, _quiet: !reveal }
 	}
 
 	function remove(...keys) {
@@ -416,5 +450,5 @@ export function makeExcalidrawHelpers(api, ex) {
 		return { ...m, score: scoreDiagram(m) }
 	}
 
-	return { engine: 'excalidraw', scene, measure, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
+	return { engine: 'excalidraw', scene, measure, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, _planRender, remove, zoomTo, screenshot, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
 }
