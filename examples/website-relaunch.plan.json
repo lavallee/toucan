@@ -1,0 +1,58 @@
+{
+  "plan": 1,
+  "source": { "title": "Website relaunch", "description": "A made-up project to try plan views with: `toucan new relaunch --plan file examples/website-relaunch.plan.json --views board,gantt`." },
+  "fields": [
+    { "id": "title", "label": "Title", "type": "text", "writable": true },
+    { "id": "stage", "label": "Stage", "type": "option", "writable": true, "options": [
+      { "id": "todo", "label": "To do", "color": "grey" },
+      { "id": "doing", "label": "In progress", "color": "blue" },
+      { "id": "review", "label": "In review", "color": "violet" },
+      { "id": "done", "label": "Done", "color": "green", "done": true }
+    ] },
+    { "id": "assignee", "label": "Owner", "type": "option", "writable": true, "options": [
+      { "id": "ada", "label": "Ada" },
+      { "id": "grace", "label": "Grace" },
+      { "id": "linus", "label": "Linus" }
+    ] },
+    { "id": "start", "label": "Start", "type": "date", "writable": true },
+    { "id": "end", "label": "End", "type": "date", "writable": true },
+    { "id": "priority", "label": "Priority", "type": "option", "writable": true, "options": [
+      { "id": "high", "label": "High", "color": "red" },
+      { "id": "normal", "label": "Normal", "color": "blue" },
+      { "id": "low", "label": "Low", "color": "grey" }
+    ] },
+    { "id": "labels", "label": "Labels", "type": "options", "writable": false, "options": [
+      { "id": "content", "label": "Content" },
+      { "id": "design", "label": "Design" },
+      { "id": "build", "label": "Build" },
+      { "id": "launch", "label": "Launch" }
+    ] }
+  ],
+  "items": [
+    { "id": "audit", "version": 1, "title": "Audit the current site", "detail": "Every page, who owns it, and whether it survives the move.", "stage": "done", "assignee": "ada", "start": "2026-11-02", "end": "2026-11-06", "priority": "normal", "labels": ["content"] },
+    { "id": "goals", "version": 1, "title": "Agree goals and measures", "stage": "done", "assignee": "grace", "start": "2026-11-02", "end": "2026-11-04", "priority": "high", "labels": ["launch"] },
+    { "id": "sitemap", "version": 1, "title": "Draft the sitemap", "detail": "Top-level sections first; redirects come later.", "stage": "done", "assignee": "ada", "start": "2026-11-09", "end": "2026-11-13", "priority": "high", "labels": ["content"], "dependsOn": ["audit", "goals"] },
+    { "id": "voice", "version": 1, "title": "Write the voice guide", "stage": "review", "assignee": "ada", "start": "2026-11-09", "end": "2026-11-18", "priority": "normal", "labels": ["content"], "dependsOn": ["goals"] },
+    { "id": "wireframes", "version": 1, "title": "Wireframe key pages", "stage": "review", "assignee": "grace", "start": "2026-11-16", "end": "2026-11-25", "priority": "high", "labels": ["design"], "dependsOn": ["sitemap"] },
+    { "id": "design-system", "version": 1, "title": "Set up the design system", "stage": "doing", "assignee": "grace", "start": "2026-11-18", "end": "2026-12-02", "priority": "normal", "labels": ["design"] },
+    { "id": "home-design", "version": 1, "title": "Design the home page", "stage": "doing", "assignee": "grace", "start": "2026-11-26", "end": "2026-12-04", "priority": "high", "labels": ["design"], "dependsOn": ["wireframes"] },
+    { "id": "pricing-design", "version": 1, "title": "Design the pricing page", "stage": "todo", "assignee": "grace", "start": "2026-12-07", "end": "2026-12-11", "priority": "normal", "labels": ["design"], "dependsOn": ["wireframes"] },
+    { "id": "cms", "version": 1, "title": "Choose the CMS", "detail": "Shortlist of three; decide with whoever will edit the site every week.", "stage": "done", "assignee": "linus", "start": "2026-11-09", "end": "2026-11-12", "priority": "high", "labels": ["build"] },
+    { "id": "scaffold", "version": 1, "title": "Scaffold the new site", "stage": "doing", "assignee": "linus", "start": "2026-11-16", "end": "2026-11-27", "priority": "normal", "labels": ["build"], "dependsOn": ["cms"] },
+    { "id": "templates", "version": 1, "title": "Build page templates", "stage": "todo", "assignee": "linus", "start": "2026-11-30", "end": "2026-12-11", "priority": "high", "labels": ["build"], "dependsOn": ["scaffold", "design-system"] },
+    { "id": "home-build", "version": 1, "title": "Build the home page", "stage": "todo", "assignee": "linus", "start": "2026-12-07", "end": "2026-12-15", "priority": "high", "labels": ["build"], "dependsOn": ["templates", "home-design"] },
+    { "id": "copy-home", "version": 1, "title": "Write home page copy", "stage": "doing", "assignee": "ada", "start": "2026-11-23", "end": "2026-12-01", "priority": "high", "labels": ["content"], "dependsOn": ["voice"] },
+    { "id": "copy-product", "version": 1, "title": "Write product pages", "stage": "todo", "assignee": "ada", "start": "2026-12-02", "end": "2026-12-14", "priority": "normal", "labels": ["content"], "dependsOn": ["voice"] },
+    { "id": "migrate-blog", "version": 1, "title": "Migrate the blog", "detail": "About 180 posts. Keep the URLs.", "stage": "todo", "assignee": "linus", "start": "2026-12-14", "end": "2026-12-22", "priority": "low", "labels": ["build", "content"], "dependsOn": ["templates"] },
+    { "id": "redirects", "version": 1, "title": "Map the redirects", "stage": "todo", "assignee": "ada", "start": "2026-12-15", "end": "2026-12-18", "priority": "normal", "labels": ["launch"], "dependsOn": ["sitemap"] },
+    { "id": "analytics", "version": 1, "title": "Set up analytics", "stage": "todo", "assignee": "linus", "start": "2026-12-16", "end": "2026-12-18", "priority": "normal", "labels": ["build"] },
+    { "id": "a11y", "version": 1, "title": "Accessibility pass", "stage": "todo", "assignee": "grace", "start": "2026-12-14", "end": "2026-12-21", "priority": "high", "labels": ["design", "build"], "dependsOn": ["home-build"] },
+    { "id": "perf", "version": 1, "title": "Performance budget", "stage": "todo", "assignee": "linus", "start": "2027-01-04", "end": "2027-01-08", "priority": "normal", "labels": ["build"], "dependsOn": ["home-build"] },
+    { "id": "legal", "version": 1, "title": "Legal review of claims", "stage": "todo", "start": "2027-01-04", "end": "2027-01-07", "priority": "normal", "labels": ["launch"], "dependsOn": ["copy-home", "copy-product"] },
+    { "id": "freeze", "version": 1, "title": "Content freeze", "stage": "todo", "assignee": "ada", "end": "2027-01-08", "priority": "high", "milestone": true, "labels": ["launch"] },
+    { "id": "rehearsal", "version": 1, "title": "Launch rehearsal", "stage": "todo", "assignee": "grace", "start": "2027-01-11", "end": "2027-01-12", "priority": "high", "labels": ["launch"], "dependsOn": ["redirects", "a11y", "perf"] },
+    { "id": "launch", "version": 1, "title": "Launch", "stage": "todo", "assignee": "grace", "end": "2027-01-14", "priority": "high", "milestone": true, "labels": ["launch"], "dependsOn": ["rehearsal", "legal"] },
+    { "id": "press", "version": 1, "title": "Announce to customers", "stage": "todo", "priority": "normal", "labels": ["launch"], "dependsOn": ["launch"] },
+    { "id": "retire", "version": 1, "title": "Retire the old site", "stage": "todo", "priority": "low", "labels": ["build"], "dependsOn": ["launch"] }
+  ]
+}
