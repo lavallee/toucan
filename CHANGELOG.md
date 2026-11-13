@@ -19,6 +19,10 @@ All notable changes to toucan are recorded here. The format follows
   column is the frame a card is in, dates are read against the view's own axis), so moving, resizing or nesting a view, restoring a
   version, or running a routine is never an edit; routines, `import --move`, `draw --update` and `toucan.layout()` leave plan views as
   they are. What someone is dragging or typing in is left alone until they let go, and everything else syncs meanwhile.
+  Several cards moved at once end in the order they were dropped in; a rotated shape is stood up again; a duplicated view is the
+  person's own ordinary copy; only a card-sized rectangle a person draws in a column becomes an item. Views are placed clear of
+  each other and move down out of the way of one that grows. `plan` reports `drawn` apart from `state`, so data that is current
+  while the drawing waits for a page reads as that.
   `toucan plan bind SOURCE REF`, `plan sync`, `plan unbind`, and `toucan new NAME --plan SOURCE REF --views board,gantt`.
 - **Views are specs.** Agents compose and reshape views with `plan view add|set|put|rm` from a typed catalog (`plan catalog`):
   `groupBy`, `lanes`, `filter`, `sort`, `fields`, `rollup` (count, percent done, the sum of a number field, in column and lane
@@ -32,8 +36,9 @@ All notable changes to toucan are recorded here. The format follows
   (`server/plugins.mjs`), so a new kind of plugin is a registry entry. `toucan plugins` (and `/api/plugins`) lists every plugin by
   kind with its path and what it says of itself (an optional `describe` verb), and, for one found on PATH but refused, why: its
   folder is writable by others, it's inside the data directory, it isn't executable. Existing `toucan-profiles-NAME` sources work unchanged.
-  The trust rule now also looks at every folder above a plugin (owned by you or root, not writable by others unless sticky) and
-  never trusts one under `node_modules`, so a plugin installed with `npm install -g` is refused: install it as a file on PATH.
+  The trust rule: a plugin's folder and file must be yours or root's and not writable by anyone else (your own private group is
+  fine), with nothing above them world-writable or someone else's; plugins installed with `npm i -g` work. `TOUCAN_PLUGIN_PATH`
+  (or `toucan start --plugin-path`) names folders you vouch for, such as a Homebrew prefix. Every refusal says why and what to do.
   A plugin that runs past its time limit is killed with everything it started.
 - A plan control in the app bar (state, Sync now, views, group-by, add and remove), and the Details card of a plan's card shows
   the item's fields, with stage, owner and dates editable there.

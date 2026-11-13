@@ -45,9 +45,10 @@ Every kind works the same way, so one written for either looks like the other:
   `not_found`, `invalid`, `conflict`, `forbidden` or `unavailable`. Plain text is tolerated and treated as `unavailable`.
 - **`describe` is optional**: `{"name": "…", "description": "…", "version": "…"}`, shown by `toucan plugins`. A plugin that doesn't
   answer it is listed all the same.
-- **Arguments are the verb, then options, then `--`, then what the verb is about.** Whatever follows `--` is never an option,
-  however it looks, and a plugin must read it that way: a plan's `REF` comes from whoever bound the canvas. toucan also
-  refuses a `REF`, or a plugin name, that starts with `-`.
+- **A plan source's arguments are the verb, then options, then `--`, then the `REF`** (`read -- REF`). Whatever follows `--`
+  is never an option, however it looks, and a plan source must read it that way: a `REF` comes from whoever bound the canvas.
+  toucan also refuses a `REF`, or a plugin name, that starts with `-`. A profile source is called as it always was, with no
+  `--` (`list`, `get ID`): toucan only passes it an `ID` made of letters, digits, `-` and `_` that starts with a letter or digit.
 - **Every call has a time limit**: `describe` 4 seconds; for plan sources `list` 15, `read` 30, `changes` 8 and `write` 30; for
   profile sources 15. A plugin runs in a process group of its own, and one that runs out of time is killed with everything
   it started (the whole group), and the call fails as `unavailable`.
@@ -57,37 +58,62 @@ Every kind works the same way, so one written for either looks like the other:
   program's file changes.
 - A plugin can be written in anything. `NAME` is letters, digits, `-` and `_`; an extension (`.mjs`, `.py`, `.sh`) is ignored.
 
-**Where toucan looks.** The server runs plugins outside any agent's sandbox, so it only trusts ones an agent, or another user,
-couldn't have put there. The folder must be on PATH as an absolute path, and:
+**Where toucan looks.** The server runs plugins outside any agent's sandbox, so it only trusts a program that you, or root,
+put there: not one an agent could have written, and not one another user of the machine could have. For a program in a
+PATH folder, all of this must hold:
 
-- outside toucan's own folder and its data directory;
-- not a `node_modules` folder or anywhere inside one (`node_modules/.bin` included): that is where installing a package puts
-  programs;
-- owned by you or by root, and not writable by your group or by everyone;
-- under folders of which the same is true, every one up to the root. A folder above that anyone can write to is accepted
-  only if it is sticky, as `/tmp` is, since nobody can replace another user's folder there.
+- The folder is on PATH as an absolute path, and is outside toucan's own folder and its data directory. Agents write in
+  those, so nothing inside them is ever trusted, toucan's own `node_modules/.bin` included.
+- The folder belongs to you or to root, and so does the program.
+- Neither can be written to by everyone. (A sticky folder, as `/tmp` is, is the exception: nobody can replace another
+  user's file there, and the program must still be yours or root's.)
+- Neither can be written to by a group, unless the group is your own private one: your primary group, with no other
+  member and no other account that has it as its primary group. That is the `775` a umask of `002` leaves on
+  `~/.local/bin` where each user has a group to themselves, and it is fine. A group shared with anyone else is not, and
+  neither is one toucan can't check: it reads `/etc/group` and `/etc/passwd`, and where those don't hold your account
+  and group (macOS, accounts kept in a directory service) the answer is no.
+- No folder above, up to the root, belongs to another user, or can be written to by everyone without being sticky. A group
+  that can write to a folder above is let be.
+- The program is executable and, once links are followed, a file. Where a link leads, the file and its folder must pass
+  the same checks; what the folder is called doesn't matter. So an adapter installed with `npm i -g` works: the link in
+  the prefix's `bin` leads to a file under its `node_modules`, and both are yours.
 
-The program itself, once links are followed, must be a file under the same rule, in a folder under the same rule. So a
-program that is a link into a `node_modules` (what a package manager's global install leaves in its `bin`) is refused: put a
-copy, or a two-line wrapper script, in a folder of your own such as `~/.local/bin`. The first of a name on PATH wins. The
-server reads PATH as it was when the server started, so put the folder on PATH for the server, not just your shell
-(`toucan restart` from a shell that has it).
+Where there are no user ids (Windows), the questions about owners, groups and modes aren't asked.
+
+**Folders you vouch for.** Some ordinary installs don't pass: a package manager's prefix that a shared group can write
+to (Homebrew on macOS), or one that belongs to an account of its own (Linuxbrew). Name such a folder in `TOUCAN_PLUGIN_PATH` (a list like PATH), or start the
+server with `--plugin-path`, and toucan takes your word for it:
+
+```sh
+TOUCAN_PLUGIN_PATH=/opt/homebrew/bin toucan restart
+```
+
+These folders are looked in as well as PATH, and first, so a program there wins a name over one on PATH. Owners and modes
+aren't checked there. What still is: the folder is given as an absolute path, it and the file a link leads to are outside
+toucan's own folder and its data, and the program is executable and a file. The rule for PATH is narrow on purpose, and
+this variable is the only way to widen it. Whoever sets it is saying that everyone who can write to those folders may run
+programs as the server.
+
+The first of a name wins. The server reads PATH and `TOUCAN_PLUGIN_PATH` as they were when it started, so set them for
+the server, not just your shell (`toucan restart` from a shell that has them).
 
 **When one isn't found.** `toucan plugins` lists every kind, the plugins found for it (with what each says of itself), and
-any that were on PATH but refused, with the reason and usually the fix:
+any that were seen but refused. Each refusal says exactly what is wrong and what fixes it: the folder or file to change, and,
+where vouching for the folder would work, that too:
 
 ```sh
 $ toucan plugins
 …
   "refused": [{ "name": "acme", "path": "/opt/tools/toucan-source-acme",
-                "reason": "its folder can be written to by other users (chmod go-w /opt/tools)" }]
+                "reason": "its folder can be written to by group 50, which isn't your own (chmod g-w /opt/tools, or add /opt/tools to TOUCAN_PLUGIN_PATH if you trust it)" }]
 ```
 
-The reasons are: the folder is a relative PATH entry, is inside toucan's folder or data, is or is inside a `node_modules`,
-belongs to another user, is writable by others, or is under a folder that is one of the last two (the reason names that
-folder); the program isn't executable, isn't a file, belongs to another user, or links to somewhere not trusted; another of the
-same name comes first on PATH; or the name is taken by a built-in (`local` for profiles, `file` for plan sources).
-`toucan plugins` also lists extension commands, below.
+The reasons are: the folder is given as a relative path, or is inside toucan's folder or data; the folder, the program or
+the folder a link leads to belongs to another user, or can be written to by everyone (`chmod o-w`) or by a group that isn't
+yours alone (`chmod g-w`); a folder above belongs to another user or can be written to by everyone (the reason names it);
+the program isn't executable or isn't a file; another of the same name comes first; or the name is taken by a built-in
+(`local` for profiles, `file` for plan sources). Vouching is never offered for a program inside toucan's folder or data,
+or one that isn't executable, since it wouldn't help. `toucan plugins` also lists extension commands, below.
 
 A new kind of plugin is an entry in `server/plugins.mjs` and the code that calls it; finding, trusting, running and listing
 come with the entry. Plugins are published with the systems they speak for, not with toucan.
@@ -239,7 +265,9 @@ and is answered with:
 
 - `set` carries only the fields that changed, in the plan's own ids and value forms; `null` clears one.
 - `place` is optional: put the item directly after `after` in the source's order (`null`: first). A source may also accept
-  `{"before": ID}` (`null`: last); toucan sends `after`. How rank is kept is the source's business.
+  `{"before": ID}` (`null`: last); toucan sends `after`. How rank is kept is the source's business. **Places within one write are
+  applied in the order they are given**, and one may name an item placed earlier in the same write: when a person moves several
+  cards at once, toucan sends them top to bottom, each after a card that isn't moving or after the one placed just before it.
 - `version` is the one the person's card showed. If the item has moved on, answer `conflict` with the item as it stands.
 - `mutation` is an idempotency key: toucan retries a write it couldn't complete with the same key, and the same change
   again must get the same answer and be applied once.
@@ -290,6 +318,7 @@ to describe your house canvases and extension commands without forking toucan.
 | `--allow-host` / `TOUCAN_HOSTS` | — | more names the server answers to, comma-separated; `.example.com` allows every name under it, `*` turns the check off |
 | `TOUCAN_PLAN_POLL` | `4000` | how often, in ms, a canvas someone has open asks its plan source whether anything changed; `0` turns polling off (`plan sync` still works) |
 | `TOUCAN_PLAN_DEBUG` | none | `1` logs what each plan sync saw on the canvas and why it redrew |
+| `--plugin-path` / `TOUCAN_PLUGIN_PATH` | none | folders of plugins you vouch for, as a PATH-style list, searched as well as PATH ([Plugins](#plugins)) |
 | `TOUCAN_CANVAS` | none | default canvas for the CLI |
 | `TOUCAN_URL` | from `~/.config/toucan/server.json` | server the CLI talks to; it won't start one |
 | `TOUCAN_TOKEN` | from `~/.config/toucan/server.json` | with `TOUCAN_URL`: for a server on another machine or outside a container |

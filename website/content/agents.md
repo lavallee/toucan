@@ -306,7 +306,9 @@ is written upstream. A canvas has one plan and any number of views of it, beside
 - `toucan --canvas NAME plan bind SOURCE REF [--views board,gantt]` binds the canvas (`--copy` copies a file plan given by path into
   the canvas's files, under a free name); `toucan new NAME --plan SOURCE REF --views board,gantt` makes a canvas that way. `plan`
   shows the source, when it last synced, the views and any problems; `plan sync` pulls now; `plan unbind` lets go, leaving the shapes
-  as ordinary ones. `plan` and `plan items` ask the source whether it has moved before they answer, so they are current with no tab open.
+  as ordinary ones. `plan`, `plan items` and `plan views` ask the source whether it has moved and wait for the answer, so what they
+  say is current with no tab open. `state` is about the data (`synced`: read and written); `drawn` says whether the views on the
+  canvas show it yet, which with nobody there and no headless mode waits for the canvas to be opened.
 - **You compose views by writing small specs, never by placing shapes.** The kinds are `board` (columns by an option field,
   optionally rows by another with `--lanes`), `gantt` (bars on a date axis, optionally lanes), `timeline` (dated items in order),
   `graph` (boxes and `dependsOn` arrows) and `table` (a row per item, a column per field). `plan view add KIND --group-by FIELD
@@ -325,7 +327,10 @@ is written upstream. A canvas has one plan and any number of views of it, beside
   delete them with `exec`: a move that means something is written upstream as if a person made it, and anything else is undone by
   the next sync. `import`, `draw --update`, `toucan.layout()`, `toucan.tidy.*` and every routine leave them, and whatever is inside
   a view's frames, exactly as they are (an import says how many under `planKept`; a routine's summary ends "left the plan views
-  as they are"); `measure()` still measures them.
+  as they are"); `measure()` still measures them. That holds while the canvas is bound: after `plan unbind`, shapes that still
+  carry `meta.plan` (from a restored version, say) are ordinary shapes.
+- Views are placed clear of each other and of what's on the canvas, and each view's frame holds everything drawn in it. A view
+  that grows into the one below moves that one down, unless a person has moved it: then it stays, and a notice says they overlap.
 - **What a sync never touches:** anything that doesn't carry `meta.plan`. Arrows, notes and boxes drawn around or inside a view are
   the person's. When a view, a column, a lane or the Unscheduled strip goes away, what a person put inside it is moved out to
   where it stood, not removed with it. A view stays on the page, and inside any frame, a person put it.
@@ -334,20 +339,28 @@ is written upstream. A canvas has one plan and any number of views of it, beside
   sets those dates in whole days; a card dragged out of Unscheduled onto the chart starts on that day (for a day, or a day per 8
   hours of its `estimate`); text sets the title (in a table, a cell's text sets its field). A bar's title stands beside it when it
   doesn't fit inside, and is edited there. Dates are read against the view's own axis, and a card's column is the frame it is in,
-  so moving or resizing a view, its frames or its axis is never an edit.
-- **A box a person draws in a board column, with text, becomes a new item**, and a notice says so. There is no undo for that from
-  the canvas (the protocol has no delete): the item is removed in the system of record. A box an agent's run adds there (`exec`,
-  `import`, a routine), a copy of a card, and boxes pasted several at once stay ordinary boxes: to make an item, use `plan add`.
+  so moving or resizing a view, its frames or its axis is never an edit. A bar moves once it has gone a third of a day (and 4 px),
+  and then by at least a day in that direction, so a nudge with the arrow keys counts at any scale. Several cards moved together
+  end in the order they were dropped in. A shape that has been rotated is not an edit: it is stood up again.
+- **A box a person draws in a board column becomes a new item** when it is a plain rectangle about the size of a card, with text,
+  and a notice says so. There is no undo for that from the canvas (the protocol has no delete): the item is removed in the system
+  of record. Anything else there is an annotation and stays one: an ellipse, a sticky note, a banner, a box an agent's run adds
+  (`exec`, `import`, a routine), a copy of a card, boxes pasted several at once. To make an item, use `plan add`. A copy of a
+  whole view (its frame duplicated) is the person's own ordinary shapes, frames and all.
 - Not edits upstream: a deleted card (it comes back); a bar dropped into Unscheduled (it goes back: clear dates in the Details card
   or with `plan set ITEM start= end=`); a restored version (`versions restore` redraws the views from upstream and writes nothing).
   A person's undo of their own drag writes the previous value back; if the item has changed upstream since, the undo writes
-  nothing and a notice says so.
+  nothing and a notice says so. Bars dragged together with the date boxes above them change no dates: they go back, with a notice.
 - A write quotes the version the card showed. If upstream had moved on, or refuses the value, the canvas goes back to what
   upstream says and people see a notice; `plan` lists these under `problems` and `plan dismiss` clears them.
 - The server syncs, one sync per canvas however many tabs are open: it asks the source for changes every few seconds while a person
   has the canvas open, and redraws when something moved. A shape someone is dragging or typing in is left alone until they let go
   (their edit is then read against what they saw); everything else carries on meanwhile. With nobody there and no headless
-  mode, the views are drawn when the canvas is next opened.
+  mode, the views are drawn when the canvas is next opened. Two safeguards: if the views keep differing from what was drawn with
+  nothing in the difference to save, more than twelve times in twenty seconds, the canvas is left alone for a minute and a notice
+  says which shapes kept changing (`plan sync` starts it again; something that changes them more slowly is simply drawn over each
+  time); and a binding file that can't be read is kept aside, the canvas says so, and `plan bind` again takes up the shapes
+  already there by their keys.
 - On Excalidraw: a view with columns or lanes has no frame of its own (frames don't nest there), so a gantt without lanes has
   only its axis, bars and Unscheduled strip; a gantt's titles always stand beside their bars; and a view is always drawn on the
   one scene (there are no pages). Everything above is otherwise the same there and is tested there, except undo, which has no
