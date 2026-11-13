@@ -5,6 +5,16 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.15.1] — 2026-11-13
+
+### Fixed
+
+- **Plugins are found again when the server runs sandboxed.** A server started by a service manager that gives it its own view
+  of users (a systemd user unit with `PrivateTmp`, a rootless container) sees root's folders, `/home` among them, as belonging to
+  "nobody", and 0.15.0's plugin trust rule took that for another user and refused every plugin, including profile sources that
+  0.14 had found. Where root can't be seen, nobody's folders now count as root's. `toucan plugins` showed the refusal and
+  `TOUCAN_PLUGIN_PATH` worked round it.
+
 ## [0.15.0] — 2026-11-13
 
 ### Added

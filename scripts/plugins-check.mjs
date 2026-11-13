@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
-import { KINDS, ask, createPlugins, privateGroup, scan } from '../server/plugins.mjs'
+import { KINDS, ask, createPlugins, privateGroup, scan, unmappedRoot } from '../server/plugins.mjs'
 import { createSources } from '../server/sources.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -337,6 +337,19 @@ else process.exit(1)
 				assert.equal(judge('mine/bin', stranger), `its folder belongs to another user, uid ${uid} (add /mine/bin to TOUCAN_PLUGIN_PATH if you trust it)`)
 				assert.equal(judge('stickybin', stranger), `its folder belongs to another user, uid ${uid} (add /stickybin to TOUCAN_PLUGIN_PATH if you trust it)`)
 			}
+
+			// A sandboxed service (a user unit with PrivateTmp, a rootless container) can't see root: root's folders read as
+			// nobody's. There, nobody's are taken as root's, or every plugin would be refused; a named stranger's still isn't.
+			if (uid !== 0) {
+				const sandboxed = { who: { uid: uid + 1, gid: gid + 1, groupIsPrivate: () => true, nobody: uid } }
+				assert.equal(judge('mine/bin', sandboxed), 'found', 'root seen as nobody')
+				assert.equal(judge('mine/bin', { who: { ...sandboxed.who, nobody: uid + 7 } }), `its folder belongs to another user, uid ${uid} (add /mine/bin to TOUCAN_PLUGIN_PATH if you trust it)`)
+			}
+			assert.equal(unmappedRoot('         0          0 4294967295\n', '65534\n'), null, 'the whole range mapped: root is root')
+			assert.equal(unmappedRoot('      1000       1000          1\n', '65534\n'), 65534, 'only this user mapped')
+			assert.equal(unmappedRoot('      1000       1000          1\n', null), 65534)
+			assert.equal(unmappedRoot('         0       1000          1\n', '65534\n'), null, 'root inside the namespace')
+			assert.equal(unmappedRoot(null, null), null, 'no /proc: nothing assumed')
 
 			// What the operator vouches for is asked none of that…
 			chmodSync(join(t, 'loose'), 0o777)
