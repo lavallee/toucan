@@ -5,6 +5,36 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Plans: a canvas over a system of record.** A canvas can bind to a project kept somewhere else and show it as views that stay
+  in step both ways: a kanban **board** (columns by any option field, optional swimlanes), a **gantt** with a real date axis, a today
+  marker, milestones as diamonds, an Unscheduled strip and optional lanes and dependency arrows, a **timeline**, a dependency
+  **graph**, and a **table**. Upstream changes redraw the views; a person's edits are written back as field changes (a card into
+  another column sets the grouped field, a bar moved or stretched sets its dates in whole days, text sets the title, a box drawn
+  in a column makes an item). A write quotes the version the card showed; on a conflict or a refusal the canvas goes back to what
+  upstream says and a notice says so. Only shapes carrying `meta.plan` are ever touched; what people draw around a view is left alone.
+  `toucan plan bind SOURCE REF`, `plan sync`, `plan unbind`, and `toucan new NAME --plan SOURCE REF --views board,gantt`.
+- **Views are specs.** Agents compose and reshape views with `plan view add|set|put|rm` from a typed catalog (`plan catalog`):
+  `groupBy`, `lanes`, `filter`, `sort`, `fields`, `rollup` (count, percent done, the sum of a number field, in column and lane
+  headers), gantt `scale`, `from`, `to` and `dependencies`. Fields are whatever the plan declares, including a system's own. A spec
+  that doesn't fit is refused with what would. `plan items`, `plan set ITEM field=value` and `plan add --title T` change the work
+  itself through the same write as a person's gesture.
+- **Plan sources.** A built-in `file` source (a plan as one JSON file in the canvas's files or its project; edits rewrite it), and
+  `toucan-source-NAME` plugins speaking a four-verb protocol (`list`, `read`, `changes`, `write`), documented in full in Extending.
+  `examples/website-relaunch.plan.json` is a plan to try and `examples/toucan-source-example.mjs` a source to copy. `toucan sources`.
+- **One plugin mechanism.** Agent profile sources and plan sources are found, trusted, run and listed by the same code
+  (`server/plugins.mjs`), so a new kind of plugin is a registry entry. `toucan plugins` (and `/api/plugins`) lists every plugin by
+  kind with its path and what it says of itself (an optional `describe` verb), and, for one found on PATH but refused, why: its
+  folder is writable by others, it's inside the data directory, it isn't executable. Existing `toucan-profiles-NAME` sources work unchanged.
+- A plan control in the app bar (state, Sync now, views, group-by, add and remove), and the Details card of a plan's card shows
+  the item's fields, with stage, owner and dates editable there.
+
+### Fixed
+
+- `import --move` (and applyGraph with `move`) put a frame nested in another frame at its page position counted from the parent's
+  corner, so it landed offset by wherever the parent was. A nested frame now goes where the graph says (tldraw).
+
 ## [0.14.0] — 2026-11-12
 
 ### Added
