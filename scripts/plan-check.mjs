@@ -3,7 +3,8 @@
 // source, and an adapter on PATH speaking the protocol. No browser and no server: scripts/plan-e2e.mjs has those.
 //   node scripts/plan-check.mjs
 import assert from 'node:assert/strict'
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, copyFileSync, existsSync, readdirSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -133,9 +134,9 @@ const VIEWS = [
 
 	const gantt = await draw(VIEWS[2])
 	const axis = gantt.groups[0].meta.plan.axis
-	assert.deepEqual(axis, { from: '2026-11-02', ppd: 16, x0: 40 }, 'the axis starts on a Monday')
+	assert.deepEqual(axis, { from: '2026-10-26', ppd: 16, x0: 40 }, 'the axis starts on a Monday, a week before the first day of work')
 	const head = gantt.nodes.find((n) => n.key === 'plan:g:axis:2026-11-16')
-	assert.deepEqual([head.text, head.meta.plan.axis, head.meta.plan.from, head.meta.plan.ppd, head.box.x], ['Nov 16', '2026-11-16', '2026-11-02', 16, 100 + 40 + 14 * 16], 'header boxes keyed by date, each saying which day its left edge is')
+	assert.deepEqual([head.text, head.meta.plan.axis, head.meta.plan.from, head.meta.plan.ppd, head.box.x], ['Nov 16', '2026-11-16', '2026-10-26', 16, 100 + 40 + 21 * 16], 'header boxes keyed by date, each saying which day its left edge is')
 	assert.ok(gantt.nodes.some((n) => n.key === 'plan:g:mark:today' && n.text === 'Today'), 'a today marker')
 	// Every bar is exactly as long as its item, at every scale; a title that doesn't fit stands beside it, whole.
 	for (const view of [VIEWS[2], VIEWS[3], VIEWS[4], { id: 'ga', kind: 'gantt' }]) {
@@ -226,6 +227,8 @@ const VIEWS = [
 	const made = moved((a) => a.nodes.push({ key: 'xYz12', text: 'Book the photographer', group: 'plan:b:col:todo', box: { x: group(a, 'plan:b:col:todo').box.x + 30, y: 5000, w: 200, h: 80 }, style: { geo: 'rectangle' } }))
 	assert.deepEqual(made, [{ op: 'create', set: { title: 'Book the photographer', stage: 'todo' }, place: { after: 'retire' }, shape: 'xYz12' }])
 	assert.deepEqual(moved((a) => a.nodes.push({ key: 'n1', text: 'a sticky', group: 'plan:b:col:todo', box: { x: 0, y: 0, w: 200, h: 200 }, style: { geo: 'note' } })), [], 'a sticky note is a message, not an item')
+	for (const [why, shape] of [['an ellipse', { style: { geo: 'ellipse' } }], ['a diamond', { style: { geo: 'diamond' } }], ['a mark too small to be a card', { box: { x: 0, y: 0, w: 40, h: 40 } }], ['a banner across the column', { box: { x: 0, y: 0, w: 900, h: 80 } }], ['a tall panel', { box: { x: 0, y: 0, w: 220, h: 600 } }], ['a turned box', { rotation: 0.3 }], ['a box with nothing in it', { text: '  ' }]])
+		assert.deepEqual(moved((a) => a.nodes.push({ key: 'x1', text: '!', group: 'plan:b:col:todo', box: { x: 0, y: 0, w: 200, h: 80 }, style: { geo: 'rectangle' }, ...shape })), [], `${why} in a column is an annotation, not an item`)
 	assert.deepEqual(moved((a) => a.nodes.push({ key: 'c1', text: 'a copy', group: 'plan:b:col:todo', box: { x: 0, y: 0, w: 200, h: 80 }, style: { geo: 'rectangle' }, meta: { plan: null } })), [], 'a released copy of a card is not a new item')
 	// What changes nothing upstream.
 	assert.deepEqual(moved((a) => a.nodes.splice(a.nodes.findIndex((n) => n.key === 'plan:b:item:sitemap'), 1)), [], 'a deleted card is not a change')
@@ -272,7 +275,7 @@ const VIEWS = [
 	assert.equal(gm((a) => bars(a).forEach((n) => (n.box.x += 7 * ppd)), plain, p0).length, 23, 'likewise on a chart without lanes')
 	// Dropped out of Unscheduled onto the chart: it starts that day, in that lane, for a day, or for as long as it is estimated to take.
 	const lane = group(g0, 'plan:g:lane:grace').box
-	const dropOn = (a) => Object.assign(node(a, 'plan:g:item:press'), { group: 'plan:g:lane:grace', box: { x: 100 + 40 + 20 * ppd + 3, y: lane.y + 20, w: 220, h: 70 } })
+	const dropOn = (a) => Object.assign(node(a, 'plan:g:item:press'), { group: 'plan:g:lane:grace', box: { x: 100 + 40 + 27 * ppd + 3, y: lane.y + 20, w: 220, h: 70 } })
 	assert.deepEqual(gm(dropOn), [{ op: 'update', id: 'press', version: 1, set: { start: '2026-11-22', end: '2026-11-22', assignee: 'grace' } }])
 	assert.deepEqual(gm(dropOn, { ...gv, days: 5 })[0].set, { start: '2026-11-22', end: '2026-11-26', assignee: 'grace' }, 'the view says how long, when the item doesn\'t')
 	const estimated = { ...plan, items: plan.items.map((it) => (it.id === 'press' ? { ...it, estimate: 3 * 480 + 60 } : it)) }
@@ -297,7 +300,42 @@ const VIEWS = [
 		node(a, 'plan:g:item:templates').meta.plan.version = 0
 		return a
 	})())[0].drawn, 0, 'an update says which version its shape carries, so a reverted shape can be told from a moved one')
-	ok('inverse, gantt: move, stretch, shrink, lane, milestone, label, unscheduled, and what is refused')
+	// A nudge with the arrow keys (10 px with Shift) moves a bar a day at any scale, forward or back; a pixel's wobble moves nothing.
+	for (const scale of ['day', 'week', 'month', 'auto']) {
+		const nv = { id: 'g', kind: 'gantt', scale }
+		const n0 = await draw(nv), day = n0.groups[0].meta.plan.axis.ppd
+		const nudge = (px) => {
+			const a = clone(n0)
+			node(a, 'plan:g:item:templates').box.x += px
+			return changesOf(plan, nv, n0, a)[0]?.set
+		}
+		const far = day <= 10 ? day : Math.max(10, Math.ceil(day / 3))
+		assert.deepEqual([nudge(far), nudge(-far), nudge(2), nudge(-3)], [{ start: '2026-12-01', end: '2026-12-12' }, { start: '2026-11-29', end: '2026-12-10' }, undefined, undefined], `${scale} (${day} px a day): ${far} px is a day in the direction of travel`)
+		assert.deepEqual(nudge(day * 3 + 2), { start: '2026-12-03', end: '2026-12-14' }, 'and a longer move is as many days as it is long')
+	}
+	// A bar that has been turned is nobody's edit: where it seems to be says nothing, and the next redraw stands it up.
+	assert.deepEqual(gm((a) => Object.assign(node(a, 'plan:g:item:templates'), { rotation: 0.4 }).box.x += 5 * ppd), [], 'a rotated bar changes no dates')
+	assert.ok(!P.sameObserved(g0, (() => {
+		const a = clone(g0)
+		node(a, 'plan:g:item:templates').rotation = 0.4
+		return a
+	})()), 'but it is seen, so it is redrawn')
+	// Bars dragged together with the date boxes above them: against the axis nothing moved. Put back, and said.
+	const both = P.changesFrom(plan, plain, p0, (() => {
+		const a = clone(p0)
+		for (const n of a.nodes.filter((x) => x.meta.plan.axis || (x.meta.plan.item && x.group === 'plan:g'))) n.box.x += 5 * ppd
+		return a
+	})())
+	assert.deepEqual([both.length, both[0].op, both[0].id], [1, 'note', null])
+	assert.match(both[0].message, /moved together with the date boxes/)
+	// A plan of three weeks: read in weeks, with a week of room either side, no narrower than its own Unscheduled strip.
+	const brief = P.checkPlan({ plan: 1, fields: plan.fields, items: [{ id: 'a', title: 'Kick off', start: '2026-11-16', end: '2026-11-18' }, { id: 'b', title: 'Build the thing', start: '2026-11-19', end: '2026-12-03' }, { id: 'c', title: 'Ship', end: '2026-12-04' }, { id: 'd', title: 'Someday' }, { id: 'e', title: 'Maybe' }] })
+	const short = await P.render(brief, { id: 's', kind: 'gantt' }, { today: '2026-11-20' })
+	const heads = short.nodes.filter((n) => n.meta.plan.axis)
+	assert.deepEqual([short.groups[0].meta.plan.axis.ppd >= 16, heads[0].meta.plan.axis, heads.at(-1).meta.plan.axis, heads.every((h) => h.box.w >= 98 && /^[A-Z][a-z]{2} \d+$/.test(h.text))], [true, '2026-11-09', '2026-12-21', true], 'week boxes wide enough for their dates, from the week before, on until the chart is as wide as its waiting strip')
+	const strip = short.groups.find((g) => g.key === 'plan:s:frame:unscheduled'), chartEnd = Math.max(...heads.map((h) => h.box.x + h.box.w))
+	assert.ok(chartEnd - heads[0].box.x >= 3 * 220 && strip.box.x + strip.box.w <= short.groups[0].box.x + short.groups[0].box.w, 'the chart is as wide as the room three waiting cards need')
+	ok('inverse, gantt: move, stretch, shrink, lane, milestone, label, unscheduled, nudges, a turned bar, bars moved with the axis, and what is refused; a short plan')
 
 	const tv = { id: 'tb', kind: 'table' }
 	const t0 = await draw(tv)
@@ -321,11 +359,75 @@ const VIEWS = [
 	now.nodes.push({ ...clone(node(before, 'plan:b:item:voice')), key: 'copyOfVoice' })
 	const fewer = await P.render({ ...plan, items: plan.items.filter((it) => it.id !== 'audit') }, view, { origin: { x: 100, y: 60 }, today: TODAY })
 	assert.deepEqual(P.leftovers(now, fewer), { remove: ['plan:b:item:audit'], release: ['copyOfVoice'] })
+	// A whole view duplicated (Cmd-D on its frame): every copy keeps meta.plan under a key of its own. The copy is released
+	// whole, frames, cards, labels and all, and nothing of it is removed; its arrows join copies, so they aren't the plan's.
+	for (const dv of [{ id: 'b', kind: 'board', lanes: 'assignee' }, { id: 'g', kind: 'gantt', groupBy: 'assignee', dependencies: true, scale: 'week' }, { id: 'tb', kind: 'table' }]) {
+		const one = await draw(dv), two = clone(one)
+		const copyKey = (k) => `copy-${k.replace(/[^\w]/g, '_')}`
+		for (const x of [...one.groups, ...one.nodes]) two[one.groups.includes(x) ? 'groups' : 'nodes'].push({ ...clone(x), key: copyKey(x.key), ...(x.parent && { parent: copyKey(x.parent) }), ...(x.group && { group: copyKey(x.group) }), box: { ...x.box, x: x.box.x + 4000 } })
+		for (const e of one.edges) two.edges.push({ ...clone(e), from: copyKey(e.from), to: copyKey(e.to), key: `edge:${copyKey(e.from)}->${copyKey(e.to)}` })
+		const left = P.leftovers(two, one)
+		assert.deepEqual([left.remove, left.release.length], [[], one.groups.length + one.nodes.length], `${dv.kind}: a copy of a view is released whole`)
+		assert.deepEqual(changesOf(plan, dv, one, two), [], 'and nothing in it is read as an edit')
+	}
 	assert.ok(P.sameObserved(before, clone(before)) && !P.sameObserved(before, fewer))
 	const taller = clone(before)
 	taller.nodes[3].box.h += 40
 	assert.ok(P.sameObserved(before, taller), 'a box grown to fit its text is not an edit')
 	ok('leftovers: only managed shapes, and a person\'s copy is released, not removed')
+}
+
+// ---- cards moved several at once: whatever the person arranged is what the source ends up with -------------------------------
+{
+	// A small random generator with a seed, so a failure can be run again.
+	let seed = 20261113
+	const rnd = (n) => ((seed = (seed * 1103515245 + 12345) % 2147483648), Math.floor((seed / 2147483648) * n))
+	const view = { id: 'b', kind: 'board' }
+	const columns = (tg) => Object.fromEntries(tg.groups.filter((g) => g.meta.plan.frame === 'col').map((g) => [g.meta.plan.group, tg.nodes.filter((n) => n.group === g.key && n.meta.plan.item).sort((a, b) => a.box.y - b.box.y).map((n) => n.meta.plan.item)]))
+	const stateFile = join(tmpdir(), `toucan-plan-places-${process.pid}.json`)
+	let cases = 0
+	for (let round = 0; round < 120; round++) {
+		const tg = await draw(view)
+		const cols = columns(tg), ids = Object.keys(cols)
+		// The person's arrangement: reverse a column, or take a few cards (from one column or several) and drop them together somewhere.
+		const want = Object.fromEntries(ids.map((c) => [c, [...cols[c]]]))
+		if (round % 4 === 0) want[ids[rnd(ids.length)]].reverse()
+		else {
+			const picked = new Set()
+			for (let k = 1 + rnd(4); k > 0; k--) picked.add(plan.items[rnd(plan.items.length)].id)
+			for (const c of ids) want[c] = want[c].filter((id) => !picked.has(id))
+			const to = ids[rnd(ids.length)]
+			want[to].splice(rnd(want[to].length + 1), 0, ...[...picked].sort(() => rnd(3) - 1))
+		}
+		const after = clone(tg)
+		for (const c of ids) {
+			const frame = after.groups.find((g) => g.meta.plan.group === c)
+			want[c].forEach((id, i) => Object.assign(after.nodes.find((n) => n.key === `plan:b:item:${id}`), { group: frame.key, box: { x: frame.box.x + 30, y: frame.box.y + 30 + i * 90, w: 220, h: 70 } }))
+		}
+		const changes = P.changesFrom(plan, view, tg, after).map(({ drawn, ...c }, i) => ({ ...c, mutation: `m${round}-${i}` }))
+		// Each place is anchored on a card that isn't moving, or on one placed earlier in the same write.
+		const placing = new Set(changes.filter((c) => c.place).map((c) => c.id)), done = new Set()
+		for (const c of changes.filter((x) => x.place)) {
+			assert.ok(c.place.after === null || !placing.has(c.place.after) || done.has(c.place.after), `round ${round}: ${c.id} is placed after ${c.place.after}, which is placed later`)
+			done.add(c.id)
+		}
+		// The file source's rules, applied in order…
+		const wrote = P.applyChanges(plan, changes)
+		assert.ok(wrote.results.every((r) => r.ok), `round ${round}: ${JSON.stringify(wrote.results.find((r) => !r.ok))}`)
+		assert.deepEqual(columns(await P.render(wrote.plan, view, { origin: { x: 100, y: 60 }, today: TODAY })), want, `round ${round} (seed 20261113): the board upstream is the board the person made`)
+		// …and, every tenth round, the example adapter's, through its own program.
+		if (round % 10 === 0) {
+			writeFileSync(stateFile, JSON.stringify({ rev: 1, seen: {}, projects: { p: { title: 'P', readonly: false, items: plan.items } } }))
+			// (Its projects have fields of their own, so only the places are sent: the order it ends with must be the order the rules give.)
+			const places = changes.filter((c) => c.place).map(({ set, ...c }) => c)
+			const out = JSON.parse(execFileSync(process.execPath, [join(ROOT, 'examples/toucan-source-example.mjs'), 'write', '--', 'p'], { input: JSON.stringify({ changes: places }), env: { ...process.env, TOUCAN_SOURCE_EXAMPLE_FILE: stateFile }, encoding: 'utf8' }))
+			assert.ok(out.results.every((r) => r.ok), `round ${round}, example adapter: ${JSON.stringify(out.results.find((r) => !r.ok))}`)
+			assert.deepEqual(JSON.parse(readFileSync(stateFile, 'utf8')).projects.p.items.map((it) => it.id), P.applyChanges(plan, places).plan.items.map((it) => it.id), `round ${round}: the example adapter applies places in order, as the rules do`)
+		}
+		cases++
+	}
+	rmSync(stateFile, { force: true })
+	ok(`places: ${cases} random moves of several cards at once (within a column, across columns, reversals) end as the person arranged them, on the file source's rules and through the example adapter`)
 }
 
 // ---- the fixed point: a canvas that was only drawn, or only rearranged as a whole, means no change ---------------------------
@@ -344,7 +446,12 @@ const VIEWS = [
 		}
 		const inFrame = (a, key) => [...a.groups.filter((g) => g.parent === key), ...a.nodes.filter((n) => n.group === key)]
 		const deep = (a, key) => inFrame(a, key).flatMap((x) => [x, ...(a.groups.includes(x) ? deep(a, x.key) : [])])
+		if (nest) {
+			const root = tg.groups[0].box
+			for (const x of [...tg.groups, ...tg.nodes]) assert.ok(x.box.x >= root.x && x.box.y >= root.y && x.box.x + x.box.w <= root.x + root.w && x.box.y + x.box.h <= root.y + root.h, `${view.id}, ${name}: ${x.key} is inside the view's frame`)
+		}
 		same('drawn and read back', () => {})
+		same('a card turned', (a) => a.nodes.filter((n) => n.meta.plan.item).slice(0, 3).forEach((n) => ((n.rotation = 0.5), (n.box.x += 77))))
 		same('the whole view moved', (a) => [...a.groups, ...a.nodes].forEach((x) => ((x.box.x += 437), (x.box.y -= 290))))
 		same('the view nested in a person\'s frame', (a) => {
 			a.groups.push({ key: 'theirs', label: 'Q4', box: { x: -500, y: -500, w: 9000, h: 9000 } })
@@ -552,7 +659,7 @@ else console.log('<html>')
 		await assert.rejects(plans.bind('c', { name: 'file', ref: REF, views: [{ kind: 'kanban' }] }), /unknown view kind "kanban"/)
 		assert.equal(plans.has('c'), false, 'a binding that can\'t be made leaves nothing behind')
 		const st = await plans.bind('c', { name: 'file', ref: REF, views: [{ kind: 'board' }, { kind: 'gantt', groupBy: 'assignee' }] })
-		assert.deepEqual([st.state, st.items, st.views.map((v) => v.id), st.views[1].title], ['waiting', 25, ['board', 'gantt'], 'Website relaunch: Gantt by Owner'])
+		assert.deepEqual([st.state, st.drawn, st.waiting, st.items, st.views.map((v) => v.id), st.views[1].title], ['synced', false, 'the views are drawn when someone opens the canvas', 25, ['board', 'gantt'], 'Website relaunch: Gantt by Owner'], 'with no page to draw in, the data is current and the drawing waits: said as that')
 		assert.ok(existsSync(join(data, 'c.plan.json')), 'the binding is a file beside the canvas')
 		const brief = plans.brief('c').join('\n')
 		assert.match(brief, /shows a plan: "Website relaunch" from the file source \(files\/relaunch\.plan\.json\), 25 items\. Views: board \(board\), gantt \(gantt by assignee\)/)
@@ -680,11 +787,38 @@ else console.log('<html>')
 		await plans.bind('c', { name: 'file', ref: REF })
 		assert.deepEqual(canvas.tg.nodes.filter((n) => n.meta?.plan?.view === 'board' && n.meta.plan.item === made[0].id).map((n) => n.key), ['drawn1'])
 
-		// Someone reading the plan from the command line is told what upstream says now.
-		await new Promise((r) => setTimeout(r, 1600))
-		elsewhere('goals', { title: 'Agree goals' })
-		await plans.fresh('c')
-		assert.equal(plans.items('c').items.find((it) => it.id === 'goals').title, 'Agree goals')
+		// Someone reading the plan from the command line is told what upstream says now: the read waits for the answer, every time.
+		for (const title of ['Agree goals', 'Agree the goals', 'Goals, agreed']) {
+			elsewhere('goals', { title })
+			await plans.fresh('c')
+			assert.equal(plans.items('c').items.find((it) => it.id === 'goals').title, title, 'the first read after an upstream edit has it')
+		}
+		assert.deepEqual([plans.status('c').state, plans.status('c').drawn], ['synced', true])
+
+		// Views don't run into each other. One that grows pushes the next one down while that one is where the sync put it…
+		const rootBox = (id) => canvas.tg.groups.find((g) => g.key === `plan:${id}`).box
+		const clear = () => rootBox('board').y + rootBox('board').h <= rootBox('gantt').y || rootBox('gantt').y + rootBox('gantt').h <= rootBox('board').y
+		assert.ok(clear(), 'two views drawn one after the other stand clear of each other')
+		const grow = (n) => {
+			const p = onDisk()
+			for (let i = 0; i < n; i++) p.items.push({ id: `more-${p.items.length}`, version: 1, title: `More work ${p.items.length}`, stage: 'todo' })
+			writeFileSync(file, JSON.stringify(p, null, 2))
+		}
+		const [upper, lower] = rootBox('board').y < rootBox('gantt').y ? ['board', 'gantt'] : ['gantt', 'board']
+		const was = rootBox(lower).y
+		grow(upper === 'board' ? 30 : 60)
+		await plans.reconcile('c', { pull: true })
+		assert.ok(clear() && rootBox(lower).y > was, `the ${upper} view grew, and the ${lower} view moved down out of its way`)
+		for (const g of canvas.tg.groups.filter((x) => x.parent)) assert.ok(g.box.y + g.box.h <= rootBox(g.meta.plan.view).y + rootBox(g.meta.plan.view).h, `${g.key} is inside its view's frame`)
+		// …and when a person has moved that one, it is theirs to place: it stays, and the overlap is said.
+		for (const x of [...canvas.tg.groups, ...canvas.tg.nodes].filter((x) => x.meta?.plan?.view === lower)) x.box.x += 60
+		await plans.reconcile('c')
+		const moved = { ...rootBox(lower) }
+		grow(40)
+		await plans.reconcile('c', { pull: true })
+		assert.deepEqual([rootBox(lower).x, rootBox(lower).y, plans.status('c').problems.map((p) => p.kind)], [moved.x, moved.y, ['overlap']], 'a view the person moved is not moved again; the overlap is reported')
+		assert.match(plans.status('c').problems[0].text, /was moved by hand, so it is left where it is/)
+		plans.dismiss('c')
 
 		// A canvas that keeps drifting from what was drawn, with nothing in it to save: the sync stops redrawing it, really stops,
 		// keeps what upstream says as the record, and writes down what kept differing.
@@ -704,7 +838,27 @@ else console.log('<html>')
 		await plans.sync('c')
 		assert.ok(canvas.draws > paused && /^To do/.test(canvas.tg.groups.find((g) => g.key === 'plan:board:col:todo').label), 'Sync now starts it again, and the canvas is put right')
 		plans.close()
-		ok('sync: held shapes, undo and stale undo, restore, agent boxes, a write that timed out after applying (across a restart), fresh reads, and a canvas that fights back')
+
+		// The binding file is damaged, and the server restarts: the file is kept aside, the person is told, and binding again
+		// takes up the shapes that are there.
+		const cards = canvas.tg.nodes.filter((n) => n.meta?.plan?.item).length
+		writeFileSync(join(data, 'c.plan.json'), '{"source": {"name": "file", "ref"')
+		const said = []
+		const after = createPlans({ data, sources: through, graphOf: () => canvas.tg, engineOf: () => 'tldraw', exec, people: () => 1, canDraw: () => true, busy: () => [], changedAt: () => 0, broadcast: (c, m) => said.push(m), pollMs: 0 })
+		const told = after.status('c')
+		assert.deepEqual([told.bound, told.problems.length, told.problems[0].kind, after.has('c')], [false, 1, 'binding', false])
+		assert.match(told.problems[0].text, /plan binding could not be read.*kept as c\.plan\.json\.bad-.*bind it again/s)
+		assert.ok(readdirSync(data).some((f) => /^c\.plan\.json\.bad-/.test(f)) && !existsSync(join(data, 'c.plan.json')), 'the unreadable file is kept, under another name')
+		assert.match(after.brief('c')[0], /could not be read/)
+		const again2 = createPlans({ data, sources: through, graphOf: () => canvas.tg, engineOf: () => 'tldraw', exec, people: () => 1, canDraw: () => true, busy: () => [], changedAt: () => 0, broadcast: () => {}, pollMs: 0 })
+		assert.equal(again2.status('c').problems?.[0].kind, 'binding', 'and it is still said after another restart')
+		again2.close()
+		const draws = canvas.draws
+		await after.bind('c', { name: 'file', ref: REF, views: [{ kind: 'board' }, { kind: 'gantt', scale: 'week' }] })
+		assert.deepEqual([after.status('c').bound, after.status('c').problems.filter((p) => p.kind === 'binding').length, canvas.tg.nodes.filter((n) => n.meta?.plan?.item).length], [true, 0, cards], 'bound again: the same shapes, taken up by their keys')
+		assert.ok(canvas.draws <= draws + 1)
+		after.close()
+		ok('sync: held shapes, undo and stale undo, restore, agent boxes, a write that timed out after applying (across a restart), fresh reads, a canvas that fights back, views kept clear of each other, and a binding that cannot be read')
 	}
 
 	// The docs name what the catalog has.

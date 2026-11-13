@@ -50,6 +50,11 @@ const json = async (...args) => JSON.parse(await toucan(...args))
 const refused = (...args) => toucan(...args).then(() => assert.fail(`${args.join(' ')} should fail`), (e) => String(e.stderr))
 const step = (msg) => console.log(`ok  ${msg}`)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+/** Is a plan's status settled: its data current, and the canvas showing it? If not, says what it is waiting on. */
+const settledIn = (s) => {
+	if (s.state === 'synced' && s.drawn) return true
+	throw new Error(JSON.stringify({ state: s.state, drawn: s.drawn, error: s.error, problems: (s.problems ?? []).map((p) => p.text) }))
+}
 /** Waits for `test()` to hold (it may be async), or fails saying what it was waiting for. */
 async function until(what, test, ms = 15000) {
 	const t0 = Date.now()
@@ -85,12 +90,14 @@ try {
 		}
 		const graph = () => j('exec', '-e', 'return toucan.graph()')
 		const nodeOf = async (key) => (await graph()).nodes.find((n) => n.key === key)
-		const synced = () => until('the plan to settle', async () => (await j('plan')).state === 'synced')
+		const synced = () => until('the plan to settle', async () => settledIn(await j('plan')))
 
 		// ---- a canvas over a plan, with nobody watching: the server's own page draws it ------------------------------------
 		await toucan('new', C, '--engine', engine, '--plan', 'file', EXAMPLE, '--views', 'board,gantt')
 		assert.ok(existsSync(planFile), 'the plan was copied into the canvas\'s files')
 		let status = await j('plan', 'sync')
+		// With nobody at the canvas the data is current at once; the server's own page draws it, and then it says so.
+		await until('the views to be drawn with no tab open', async () => settledIn(await j('plan')))
 		assert.deepEqual([status.source.name, status.source.ref, status.source.title, status.items], ['file', 'files/website-relaunch.plan.json', 'Website relaunch', 25])
 		assert.deepEqual(status.views.map((v) => [v.id, v.kind]), [['board', 'board'], ['gantt', 'gantt']])
 		let g = await graph()
@@ -396,7 +403,7 @@ try {
 		await unchanged('the Unscheduled strip dragged', () => moveFrame('plan:gantt:frame:unscheduled', 160, 60))
 		await unchanged('a column dragged', () => moveFrame('plan:board:col:doing', 0, 140))
 		if (isTl) {
-			await unchanged('the whole gantt dragged', () => moveFrame('plan:gantt', 300, -200))
+			await unchanged('the whole gantt dragged', () => moveFrame('plan:gantt', 2600, -200))
 			await unchanged('the gantt\'s frame resized from the left with its contents left where they are (cmd-resize)', () =>
 				page.evaluate(() => {
 					const { editor, toucan } = window
@@ -527,6 +534,63 @@ try {
 			await quiet()
 			assert.deepEqual((await graph()).nodes.filter((x) => x.meta?.plan?.view === 'board' && x.meta.plan.item === adopted.meta.plan.item).map((x) => x.key), [adopted.key], 'binding again draws no second card for it')
 			step(`${engine}: a duplicated card, its copy moved, two pasted boxes: no items; binding again made no second card for a box that became one`)
+		}
+
+		// Several cards moved together land in the order they were dropped in; three reversed in place end reversed.
+		if (isTl) {
+			const column = (stage) => upstream().items.filter((it) => it.stage === stage).map((it) => it.id)
+			const dropAll = (keys, col, y0) => page.evaluate(([keys, col, y0]) => {
+				const { editor, toucan } = window
+				editor.markHistoryStoppingPoint('drag several')
+				editor.reparentShapes(keys.map((k) => toucan.get(k).id), toucan.get(col).id)
+				keys.forEach((k, i) => editor.updateShape({ id: toucan.get(k).id, type: 'geo', x: 30, y: y0 + i * 90 }))
+			}, [keys, col, y0])
+			const doing = column('doing'), three = column('todo').slice(1, 4)
+			await dropAll(three.map((id) => `plan:board:item:${id}`), 'plan:board:col:doing', 3000)
+			await until('the three cards to reach the file', () => three.every((id) => item(id).stage === 'doing'))
+			await quiet()
+			assert.deepEqual(column('doing'), [...doing, ...three], 'three cards dragged together to the bottom of a column are there, in the order they were dropped')
+			const order = column('doing'), last3 = order.slice(-3)
+			const ys = await page.evaluate((keys) => keys.map((k) => window.toucan.get(k).y), last3.map((id) => `plan:board:item:${id}`))
+			await page.evaluate(([keys, ys]) => keys.forEach((k, i) => window.editor.updateShape({ id: window.toucan.get(k).id, type: 'geo', y: ys[2 - i] })), [last3.map((id) => `plan:board:item:${id}`), ys])
+			await until('the reversal to reach the file', () => JSON.stringify(column('doing')) === JSON.stringify([...order.slice(0, -3), ...last3.reverse()]))
+			await quiet()
+			step(`${engine}: three cards moved at once, then reversed in place: upstream has them in the order the person made`)
+		}
+
+		// A bar that is turned is nobody's edit, and is stood up again; a shape that isn't a card-sized box is an annotation.
+		{
+			const n = upstream().items.length
+			await unchanged('a gantt bar rotated', () => page.evaluate((isTl) => {
+				if (isTl) window.editor.rotateShapesBy([window.toucan.get('plan:gantt:item:templates').id], 0.5)
+				else {
+					const api = window.editor, s = window.toucan.get('plan:gantt:item:templates')
+					api.updateScene({ elements: api.getSceneElementsIncludingDeleted().map((e) => (e.id === s.id ? window.__bump(e, { angle: 0.5, x: e.x + 40 }) : e)), captureUpdate: 'IMMEDIATELY' })
+				}
+			}, isTl))
+			assert.equal(await page.evaluate((isTl) => (isTl ? window.toucan.get('plan:gantt:item:templates').rotation : window.toucan.get('plan:gantt:item:templates').angle), isTl), 0, 'and the redraw stood it up again')
+			await unchanged('an ellipse with "!" in a column', () => page.evaluate(async (isTl) => {
+				if (isTl) window.editor.createShape({ id: 'shape:bang', type: 'geo', parentId: window.toucan.get('plan:board:col:doing').id, x: 60, y: 2600, props: { geo: 'ellipse', w: 80, h: 80, richText: window.__rich('!') } })
+				else {
+					const col = window.toucan.get('plan:board:col:doing')
+					await window.toucan.applyGraph({ nodes: [{ key: 'bang', text: '!', group: 'plan:board:col:doing', style: { geo: 'ellipse' }, box: { x: col.x + 60, y: col.y + 2600, w: 80, h: 80 } }] })
+				}
+			}, isTl))
+			assert.equal(upstream().items.length, n)
+			step(`${engine}: a rotated bar changed no dates and was stood up again; an ellipse in a column made no item`)
+		}
+
+		// A whole view duplicated (Cmd-D on its frame): the copy is the person's, intact, and nothing of it is the plan's.
+		if (isTl) {
+			const before = (await graph())
+			const managedBefore = before.nodes.filter((x) => x.meta?.plan).length, framesBefore = before.groups.length, nodesBefore = before.nodes.length
+			const cards = before.nodes.filter((x) => x.meta?.plan?.view === 'board').length, frames = before.groups.filter((x) => x.meta?.plan?.view === 'board').length
+			await unchanged('the board duplicated', () => page.evaluate(() => void window.editor.duplicateShapes([window.toucan.get('plan:board').id], { x: 6000, y: 0 })))
+			const after = await graph()
+			// (The copy also holds copies of whatever else stood in the board: an agent's note, the pasted boxes.)
+			assert.deepEqual([after.nodes.filter((x) => x.meta?.plan).length, after.groups.length, after.nodes.length >= nodesBefore + cards, after.nodes.filter((x) => x.meta?.plan === null).length >= cards], [managedBefore, framesBefore + frames, true, true], 'every frame and card of the copy is still there, and none of it is managed')
+			assert.equal(after.groups.filter((x) => x.meta?.plan === null).length >= frames, true, 'the copy\'s frames are ordinary frames')
+			step(`${engine}: a duplicated view stayed whole (${frames} frames, ${cards} boxes) as the person's own ordinary shapes`)
 		}
 
 		// A version restored: the old drawings are not edits. Upstream keeps what it has, and the views are drawn from it.
@@ -683,15 +747,19 @@ try {
 
 		// Excalidraw: a conflict, a drawn box, two tabs, and undo.
 		if (!isTl) {
-			// Upstream changes a card, and before the canvas has caught up someone drops it in another column: their drop was made on
-			// what they saw, so it is refused, whichever of the two the server hears of first.
-			editUpstream('cms', { title: 'Choose the CMS (decided: Kirby)' })
+			// Someone drops a card in another column, and upstream changes that card before the drop is written: the drop was made on
+			// what they saw, so it is refused. (The write quotes the version that was drawn, so this holds whichever the server reads first.)
 			await page.evaluate(() => {
 				const api = window.editor, card = window.toucan.get('plan:board:item:cms'), col = window.toucan.get('plan:board:col:review')
 				const dx = col.x + 44 - card.x, dy = col.y + 900 - card.y
 				api.updateScene({ elements: api.getSceneElementsIncludingDeleted().map((e) => (e.id === card.id || e.containerId === card.id ? window.__bump(e, { x: e.x + dx, y: e.y + dy, frameId: col.id }) : e)), captureUpdate: 'IMMEDIATELY' })
 			})
-			await until('the conflict to be recorded', async () => (await j('plan')).problems.some((p) => p.kind === 'conflict'))
+			editUpstream('cms', { title: 'Choose the CMS (decided: Kirby)' })
+			await until('the conflict to be recorded', async () => {
+				const st = await j('plan')
+				if (st.problems.some((p) => p.kind === 'conflict')) return true
+				throw new Error(JSON.stringify({ state: st.state, problems: st.problems, cms: item('cms') }))
+			})
 			await until('the card to go back to upstream', async () => {
 				const n = await nodeOf('plan:board:item:cms')
 				return n.text === '✓ Choose the CMS (decided: Kirby)' && n.group === 'plan:board:col:done'
@@ -741,7 +809,26 @@ try {
 		editUpstream('audit', { title: 'Changed after unbinding' })
 		await sleep(1500)
 		assert.equal((await nodeOf('plan:board:item:audit')).text, '✓ Audit the current site', 'an unbound canvas no longer follows')
-		step(`${engine}: plan unbind left ${total} boxes on the canvas as ordinary shapes`)
+		{
+			const versions = await j('versions')
+			const boundEra = versions.find((v) => v.label === 'before the change')
+			const restored = await j('versions', 'restore', String(boundEra.n))
+			assert.match(restored.plan ?? '', /shapes drawn from a plan, and the canvas is no longer bound to one: they are ordinary shapes now/, 'the restore says what its plan shapes are now')
+			await page.waitForFunction(() => window.toucan?.get('plan:board:item:audit'), null, { timeout: 30000 })
+			await sleep(1200)
+			const moved = await page.evaluate(async (isTl) => {
+				const { toucan } = window
+				const at = () => {
+					const s = toucan.get('plan:board:item:audit')
+					return Math.round(isTl ? window.editor.getShapePageBounds(s).x : s.x)
+				}
+				const was = at(), box = toucan.graph().nodes.find((n) => n.key === 'plan:board:item:audit').box
+				const out = await toucan.applyGraph({ nodes: [{ key: 'plan:board:item:audit', box: { ...box, x: box.x + 70 } }] }, { move: true })
+				return [at() - was, out.planKept ?? 0, toucan.isPlanShape('plan:board:item:audit')]
+			}, isTl)
+			assert.deepEqual([moved[0] !== 0, moved[1], moved[2]], [true, 0, false], 'on an unbound canvas a shape that still carries meta.plan is an ordinary shape: an import may move it')
+		}
+		step(`${engine}: plan unbind left ${total} boxes on the canvas as ordinary shapes; a bound-era version restored afterwards is ordinary too, and says so`)
 		await context.close()
 	}
 	// ---- a source that is a plugin, with fields of its own ---------------------------------------------------------------------
@@ -761,7 +848,7 @@ try {
 		const page = await context.newPage()
 		await page.goto(`http://127.0.0.1:${port}/?canvas=${C}#token=${token}`)
 		await page.waitForFunction(() => window.toucan?.get('plan:board:col:south'), null, { timeout: 30000 })
-		await until('the plan to settle', async () => (await j('plan')).state === 'synced')
+		await until('the plan to settle', async () => settledIn(await j('plan')))
 		let g = await j('exec', '-e', 'return toucan.graph()')
 		assert.deepEqual(g.groups.filter((x) => x.key.startsWith('plan:board:col:')).sort((a, b) => a.box.x - b.box.x).map((x) => x.label), ['North bed (2, 7 hours)', 'South bed (1, 5 hours)', 'Pots (1, 2 hours)', 'No bed (2, 3 hours)'])
 		assert.equal(g.nodes.find((n) => n.key === 'plan:board:item:g4').text, 'Build the bean frame\n4')
@@ -778,8 +865,9 @@ try {
 		await j('plan', 'bind', 'example', 'demo/archive', '--views', 'board')
 		assert.match(await refused('--canvas', C, 'plan', 'set', 'a1', 'stage=todo'), /Last year \(read-only\) is read-only/)
 		await context.close()
-		// With nobody at the canvas, an agent asking for the plan is told what upstream says now, without being asked to sync first.
-		await sleep(1600)
+		// With nobody at the canvas, an agent asking for the plan is told what upstream says now, on the first read after the
+		// change, however soon after another read it comes.
+		await toucan('--canvas', C, 'plan', 'items')
 		const elsewhere = JSON.parse(readFileSync(env.TOUCAN_SOURCE_EXAMPLE_FILE, 'utf8'))
 		elsewhere.rev++
 		Object.assign(elsewhere.projects['demo/archive'].items[0], { title: 'Harvest, weighed', version: 2 })
@@ -821,7 +909,7 @@ try {
 		const page = await context.newPage()
 		await page.goto(`http://127.0.0.1:${port}/?canvas=${C}#token=${token}`)
 		await page.waitForFunction(() => window.toucan?.get('plan:gantt:summary:e1'), null, { timeout: 30000 })
-		const synced = () => until('the plan to settle', async () => (await j('plan')).state === 'synced')
+		const synced = () => until('the plan to settle', async () => settledIn(await j('plan')))
 		await synced()
 		const seen = await page.evaluate(() => {
 			const { editor, toucan } = window
@@ -851,6 +939,76 @@ try {
 		const bad = await fetch(`http://127.0.0.1:${port}/api/canvases/${C}/plan/views`, { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: '{"kind": "board"' })
 		assert.deepEqual([bad.status, /isn't JSON/.test((await bad.json()).error)], [400, true])
 		step('a gantt grouped by parent: a lane per parent with a roll-up, headed by a bar spanning its children, drawn soundly; the bar is not a handle')
+	}
+	// ---- four views made one after another stand clear of each other, each inside its own frame; a short plan reads well ------
+	{
+		const C = 'stack'
+		const j = (...args) => json('--canvas', C, ...args)
+		const settled = () => until('the plan to settle', async () => settledIn(await j('plan')))
+		await toucan('new', C, '--plan', 'file', EXAMPLE, '--views', 'board')
+		await j('plan', 'view', 'add', 'gantt')
+		await j('plan', 'view', 'add', 'board', '--id', 'lanes', '--lanes', 'assignee', '--group-by', 'stage')
+		await j('plan', 'view', 'add', 'gantt', '--id', 'byprio', '--group-by', 'priority')
+		const token = JSON.parse(readFileSync(join(home, '.config/toucan/server.json'), 'utf8')).token
+		const context = await human.newContext({ viewport: { width: 1500, height: 950 } })
+		const page = await context.newPage()
+		await page.goto(`http://127.0.0.1:${port}/?canvas=${C}#token=${token}`)
+		await page.waitForFunction(() => window.toucan?.get('plan:byprio'), null, { timeout: 30000 })
+		await settled()
+		const layout = () => page.evaluate(() => {
+			const { editor, toucan } = window
+			const views = ['board', 'gantt', 'lanes', 'byprio'].map((id) => ({ id, b: editor.getShapePageBounds(toucan.get(`plan:${id}`)) }))
+			const overlaps = [], outside = []
+			for (const [i, a] of views.entries()) for (const b of views.slice(i + 1)) if (a.b.x < b.b.maxX && b.b.x < a.b.maxX && a.b.y < b.b.maxY && b.b.y < a.b.maxY) overlaps.push(`${a.id}/${b.id}`)
+			for (const v of views) for (const id of editor.getShapeAndDescendantIds([toucan.get(`plan:${v.id}`).id])) {
+				const b = editor.getShapePageBounds(id)
+				if (b.x < v.b.x - 1 || b.y < v.b.y - 1 || b.maxX > v.b.maxX + 1 || b.maxY > v.b.maxY + 1) outside.push(toucan.keyOf(editor.getShape(id)))
+			}
+			return { overlaps, outside, gaps: views.slice(1).map((v, i) => Math.round(v.b.y - views[i].b.maxY)), bad: toucan.measure().findings.filter((f) => ['overlap', 'text outgrew its box', 'cut off by its frame'].includes(f.kind)) }
+		})
+		let seen = await layout()
+		assert.deepEqual([seen.overlaps, seen.outside, seen.bad], [[], [], []], 'four views: none overlaps another, and nothing is drawn outside its view\'s frame')
+		assert.ok(seen.gaps.every((g) => g >= 150), `with clear room between them (${seen.gaps.join(', ')} px)`)
+		if (shots) await toucan('--canvas', C, 'screenshot', join(shots, 'four-views.png'), '--max', '2600')
+		// The first views grow (more cards, a longer Unscheduled strip): the ones below move down out of their way.
+		for (let i = 0; i < 9; i++) await j('plan', 'add', '--title', `Something else to do, number ${i + 1}`, 'stage=todo')
+		await sleep(1500)
+		await settled()
+		await sleep(800)
+		seen = await layout()
+		assert.deepEqual([seen.overlaps, seen.outside, seen.bad], [[], [], []], 'after the upper views grew: still clear of each other, still inside their frames')
+		await context.close()
+		step(`four views made one after another stand clear of each other (${seen.gaps.join(', ')} px apart), each inside its frame, before and after the upper ones grew`)
+
+		const S = 'short'
+		const file = join(home, 'short.plan.json')
+		const fields = JSON.parse(readFileSync(EXAMPLE, 'utf8')).fields
+		writeFileSync(file, JSON.stringify({ plan: 1, source: { title: 'Three weeks' }, fields, items: [
+			{ id: 'a', title: 'Kick off', stage: 'done', start: '2026-11-16', end: '2026-11-18' },
+			{ id: 'b', title: 'Build the first version', stage: 'doing', start: '2026-11-19', end: '2026-11-30' },
+			{ id: 'c', title: 'Try it with five people', stage: 'todo', start: '2026-11-26', end: '2026-12-02' },
+			{ id: 'd', title: 'Ship', stage: 'todo', end: '2026-12-04', milestone: true },
+			{ id: 'e', title: 'Write it up', stage: 'todo' },
+			{ id: 'f', title: 'Thank everyone', stage: 'todo' },
+		] }))
+		await toucan('new', S, '--plan', 'file', file, '--views', 'gantt')
+		const ctx2 = await human.newContext({ viewport: { width: 1500, height: 950 } })
+		const p2 = await ctx2.newPage()
+		await p2.goto(`http://127.0.0.1:${port}/?canvas=${S}#token=${token}`)
+		await p2.waitForFunction(() => window.toucan?.get('plan:gantt:frame:unscheduled'), null, { timeout: 30000 })
+		await until('the short plan to settle', async () => settledIn(await json('--canvas', S, 'plan')))
+		const short = await p2.evaluate(() => {
+			const { editor, toucan } = window
+			const heads = editor.getCurrentPageShapes().filter((s) => typeof s.meta?.plan?.axis === 'string')
+			const b = (k) => editor.getShapePageBounds(toucan.get(k))
+			return { heads: heads.map((s) => [toucan.text(s), s.props.w, s.props.growY ?? 0]), chart: Math.max(...heads.map((s) => editor.getShapePageBounds(s).maxX)) - Math.min(...heads.map((s) => editor.getShapePageBounds(s).x)), strip: b('plan:gantt:frame:unscheduled').w, frame: b('plan:gantt').w, bad: toucan.measure().findings.filter((f) => ['overlap', 'text outgrew its box', 'cut off by its frame'].includes(f.kind)) }
+		})
+		assert.ok(short.heads.length >= 5 && short.heads.every(([text, w, grew]) => /^[A-Z][a-z]{2} \d+$/.test(text) && w >= 98 && grew === 0), `week boxes hold their dates on one line (${JSON.stringify(short.heads.slice(0, 3))})`)
+		assert.ok(short.chart >= 660 && short.strip <= short.frame, 'the chart is as wide as the room its waiting cards need')
+		assert.deepEqual(short.bad, [])
+		if (shots) await toucan('--canvas', S, 'screenshot', join(shots, 'gantt-short.png'), '--keys', 'plan:gantt', '--max', '2400')
+		await ctx2.close()
+		step(`a three-week plan as a gantt: ${short.heads.length} week boxes with their dates on one line, a chart ${Math.round(short.chart)} px wide`)
 	}
 	console.log('\nplan e2e passed')
 } catch (e) {
