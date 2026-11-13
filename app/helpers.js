@@ -14,6 +14,7 @@ import { makeTidy } from './tidy'
 import { buildOrder, makeGif } from './animate'
 import { tldrawScene } from './scene'
 import { refsOfShape } from './reference-links'
+import { planBusy, planRender } from './plan-render'
 
 const elk = new ELK()
 
@@ -422,6 +423,11 @@ export function makeHelpers(editor) {
 		if (keys?.length) shapes = keys.map(get).filter(Boolean)
 		else if (within) shapes = editor.getSortedChildIdsForParent(idFor(within)).map((id) => editor.getShape(id)).filter((s) => s.type !== 'arrow')
 		else shapes = editor.getCurrentPageShapes().filter((s) => s.type === 'geo' && s.parentId.startsWith('page:'))
+		// A plan's shapes stay where the plan drew them (a move would be written to the plan), and so does a frame holding some.
+		const asked = shapes.length
+		shapes = shapes.filter((s) => !scene.skipPlan(s.id) && !scene.skipHolder(s.id))
+		const planKept = asked - shapes.length
+		if (!shapes.length) return { nodes: 0, edges: 0, width: 0, height: 0, ...(planKept && { planKept }) }
 		const ids = new Set(shapes.map((s) => s.id))
 		const edges = editor.getCurrentPageShapes().filter((s) => s.type === 'arrow').flatMap((arrow) => {
 			const bs = editor.getBindingsFromShape(arrow, 'arrow')
@@ -438,12 +444,15 @@ export function makeHelpers(editor) {
 			edges,
 		}
 		const res = await elk.layout(graph)
-		const origin = within ? { x: 0, y: 0 } : editor.getShapePageBounds(shapes[0]) ?? { x: 0, y: 0 }
+		// Inside a frame, what stayed (a plan's view) keeps its place, and the rest is laid out below it.
+		const stayed = within && planKept ? editor.getSortedChildIdsForParent(idFor(within)).map((id) => editor.getShape(id)).filter((s) => s.type !== 'arrow' && !ids.has(s.id)).map((s) => ({ x: s.x, y: s.y, ...(({ w, h }) => ({ w, h }))(editor.getShapeGeometry(s).bounds) })) : []
+		const origin = within ? { x: 0, y: stayed.length ? Math.max(...stayed.map((b) => b.y + b.h)) + 40 : 0 } : editor.getShapePageBounds(shapes[0]) ?? { x: 0, y: 0 }
 		const updates = res.children.map((c) => ({ id: c.id, type: editor.getShape(c.id).type, x: origin.x + c.x, y: origin.y + c.y }))
 		if (animate && updates.length < 300) editor.animateShapes(updates, { animation: { duration: 300 } })
 		else editor.updateShapes(updates)
-		if (within && res.width > 0 && res.height > 0) editor.updateShape({ id: idFor(within), type: 'frame', props: { w: res.width, h: res.height } })
-		return { nodes: updates.length, edges: edges.length, width: Math.round(res.width), height: Math.round(res.height) }
+		// The frame takes the layout's size, unless it's the plan's own, which stays the size the plan drew it.
+		if (within && res.width > 0 && res.height > 0 && !scene.skipPlan(idFor(within))) editor.updateShape({ id: idFor(within), type: 'frame', props: { w: Math.max(res.width, ...stayed.map((b) => b.x + b.w + 40)), h: origin.y + res.height } })
+		return { nodes: updates.length, edges: edges.length, width: Math.round(res.width), height: Math.round(res.height), ...(planKept && { planKept }) }
 	}
 
 	/** Find shapes whose text or key contains `q`. */
@@ -470,21 +479,26 @@ export function makeHelpers(editor) {
 	 * New shapes take the graph's box; ones without (text formats) are laid out with ELK. Arrows are
 	 * matched by endpoints (edge:<from>-><to>). Nothing is deleted unless `prune`, which removes keyed
 	 * boxes, frames and arrows the graph doesn't mention.
+	 * A plan's shapes (meta.plan, or in a frame with it) are the plan's to change: a graph that names one, or a prune, leaves
+	 * it exactly as it is, and the result says how many (`planKept`). Only the plan's own drawing passes `plan: true`.
 	 */
-	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction, history } = {}) {
+	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction, history, plan = false } = {}) {
 		editor.markHistoryStoppingPoint('apply graph')
 		// A graph may leave out what it has none of.
 		tg = { ...tg, groups: tg?.groups ?? [], nodes: tg?.nodes ?? [], edges: tg?.edges ?? [] }
 		tg = await layoutMissing(tg, { existing: graph(), elk, direction })
 		// `history: 'ignore'` (a plan's sync): the edit isn't a step in this tab's undo, so Cmd-Z never undoes what upstream said.
-		if (!history) return upsertGraph(tg, { move, prune, asProposal })
+		if (!history) return upsertGraph(tg, { move, prune, asProposal, plan })
 		let result
-		editor.run(() => (result = upsertGraph(tg, { move, prune, asProposal })), { history })
+		editor.run(() => (result = upsertGraph(tg, { move, prune, asProposal, plan })), { history })
 		return result
 	}
-	function upsertGraph(tg, { move, prune, asProposal }) {
+	function upsertGraph(tg, { move, prune, asProposal, plan }) {
 		const raw = tg.extra?.tldraw ?? {}
 		const out = { created: [], updated: 0, pruned: 0, skippedEdges: [] }
+		// The plan's shapes this graph named, or a prune would have removed: left as they are, and counted.
+		const kept = new Set()
+		const keeps = (s) => !plan && !!s && scene.skipPlan(s.id) && (kept.add(s.id), true)
 		// A style tldraw doesn't have falls back to its default, and the run says which, rather than failing the whole import.
 		const clean = (x) => {
 			if (!x.style) return x
@@ -510,6 +524,7 @@ export function makeHelpers(editor) {
 
 		for (const g of [...tg.groups].sort((a, b) => depth(a) - depth(b))) {
 			const existing = get(g.key)
+			if (keeps(existing)) continue
 			if (existing) {
 				const update = { id: existing.id, type: 'frame', props: { name: g.label ?? existing.props.name }, meta: { ...existing.meta, ...g.meta, key: g.key } }
 				if (move && g.box) update.props = { ...update.props, w: g.box.w, h: g.box.h }
@@ -529,6 +544,7 @@ export function makeHelpers(editor) {
 
 		for (const n of tg.nodes) {
 			const existing = get(n.key)
+			if (keeps(existing)) continue
 			const parentId = n.group && get(n.group) ? idFor(n.group) : pageId
 			if (existing) {
 				const props = styleProps(n.style, existing.type)
@@ -570,6 +586,7 @@ export function makeHelpers(editor) {
 			}
 			const key = `edge:${e.from}->${e.to}`
 			const existing = get(key)
+			if (keeps(existing)) continue
 			const st = e.style ?? {}
 			if (existing) {
 				const props = { ...styleProps(st, 'arrow'), ...(e.label !== undefined && { richText: toRichText(e.label ?? '') }) }
@@ -596,7 +613,8 @@ export function makeHelpers(editor) {
 			}
 		}
 
-		for (const g of grown) if (get(g)) fitFrameToContent(editor, idFor(g), { padding: 40 })
+		// Never a plan's frame, nor one holding a plan's shapes: fitting moves a frame's edges, and what's in it to match.
+		for (const g of grown) if (get(g) && !scene.isPlan(idFor(g)) && !scene.holdsPlan(idFor(g))) fitFrameToContent(editor, idFor(g), { padding: 40 })
 		// An arrow just drawn that runs through a box goes round it, judged on the arrow as tldraw draws it (lib/route.mjs).
 		const drawn = out.created.filter((k) => k.startsWith('edge:')).map(idFor).filter((id) => editor.getShape(id))
 		const rerouted = drawn.length ? api.tidy.rerouteBlocked({ only: drawn }) : 0
@@ -607,62 +625,20 @@ export function makeHelpers(editor) {
 
 		if (prune) {
 			const keep = new Set([...tg.groups.map((g) => g.key), ...tg.nodes.map((n) => n.key), ...tg.edges.map((e) => `edge:${e.from}->${e.to}`)])
-			const gone = editor.getCurrentPageShapes().filter((s) => s.meta?.key && !keep.has(s.meta.key) && ['geo', 'frame', 'arrow', 'note', 'text'].includes(s.type))
+			const gone = editor.getCurrentPageShapes().filter((s) => s.meta?.key && !keep.has(s.meta.key) && ['geo', 'frame', 'arrow', 'note', 'text'].includes(s.type) && !keeps(s))
 			editor.deleteShapes(gone.map((s) => s.id))
 			out.pruned = gone.length
 		}
 		// `propose`: what this import adds arrives as a proposal (dashed) for a person to accept or reject.
 		if (asProposal) propose(...out.created)
+		if (kept.size) out.planKept = kept.size
 		return { ...out, created: out.created.length }
 	}
 
-	/**
-	 * Internal (a plan's sync, server/plan.mjs): draws a plan's views and takes away what they no longer show. `tg` is every view,
-	 * placed; `remove` and `release` are keys of managed shapes (carrying meta.plan) to delete or to leave as ordinary boxes.
-	 * Nothing without meta.plan is touched, what already matches is left alone (so only real changes glow), none of it goes on
-	 * this tab's undo, and it doesn't run while the person is in the middle of a drag or typing.
-	 */
-	async function _planRender({ tg, remove = [], release = [], rev, reveal = false }) {
-		if (!walkView.isIdle()) return { busy: true }
-		const page = (s) => {
-			const b = editor.getShapePageBounds(s)
-			return b ? [Math.round(b.x), Math.round(b.y)] : [NaN, NaN]
-		}
-		const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
-		const parentKey = (s) => (s.parentId.startsWith('shape:') ? keyOf(editor.getShape(s.parentId)) : null)
-		const groupSame = (g) => {
-			const s = get(g.key)
-			if (!s || s.type !== 'frame' || !g.box) return false
-			const [x, y] = page(s)
-			return x === g.box.x && y === g.box.y && s.props.w === g.box.w && s.props.h === g.box.h && s.props.name === g.label && parentKey(s) === (g.parent ?? null) && same(s.meta?.plan, g.meta?.plan)
-		}
-		const nodeSame = (n) => {
-			const s = get(n.key)
-			if (!s || s.type !== 'geo' || !n.box) return false
-			const [x, y] = page(s)
-			return x === n.box.x && y === n.box.y && s.props.w === n.box.w && s.props.h === n.box.h && text(s) === (n.text ?? '') && parentKey(s) === (n.group ?? null) && s.props.color === n.style?.color && s.props.fill === n.style?.fill && s.props.geo === n.style?.geo && same(s.meta?.plan, n.meta?.plan) && (s.meta?.detail ?? '') === (n.meta?.detail ?? '')
-		}
-		const changed = { tg: 1, groups: tg.groups.filter((g) => !groupSame(g)), nodes: tg.nodes.filter((n) => !nodeSame(n)), edges: tg.edges.filter((e) => !get(`edge:${e.from}->${e.to}`)) }
-		const out = changed.groups.length || changed.nodes.length || changed.edges.length ? await applyGraph(changed, { move: true, history: 'ignore' }) : { created: 0, updated: 0 }
-		let removed = 0, released = 0
-		editor.run(() => {
-			// A height the render gives is the height: growth tldraw added for longer text would otherwise stay on top of it.
-			editor.updateShapes(changed.nodes.map((n) => get(n.key)).filter((s) => s?.type === 'geo' && s.props.growY).map((s) => ({ id: s.id, type: 'geo', props: { growY: 0 } })))
-			const managed = (key) => {
-				const s = get(key)
-				return s?.meta?.plan ? s : null
-			}
-			const gone = remove.map(managed).filter(Boolean)
-			editor.deleteShapes(gone.map((s) => s.id))
-			removed = gone.length
-			const freed = release.map(managed).filter(Boolean)
-			editor.updateShapes(freed.map((s) => ({ id: s.id, type: s.type, meta: { ...s.meta, plan: null } })))
-			released = freed.length
-			// Last, so that once the server sees this number, it has seen everything above.
-			editor.updateShapes(tg.groups.map((g) => get(g.key)).filter(Boolean).slice(0, 1).map((s) => ({ id: s.id, type: s.type, meta: { ...s.meta, planRev: rev } })))
-		}, { history: 'ignore', ignoreShapeLock: true })
-		return { created: out.created, updated: out.updated, removed, released, _quiet: !reveal }
-	}
+	/** Internal (a plan's sync, server/plan.mjs): draws a plan's views. All of it is in app/plan-render.js. */
+	const _planRender = (payload) => planRender(editor, { idFor, get, keyOf, text, edge }, payload)
+	/** Internal: the keys of the shapes this tab's person is dragging, resizing or typing in right now. */
+	const _busyKeys = () => planBusy(editor, keyOf)
 
 	/** If a frame's child lies outside the frame, move it to a free row below the frame's other children. */
 	function placeInsideFrame(id, frameId) {
@@ -768,7 +744,9 @@ export function makeHelpers(editor) {
 
 	// The canvas as the tidying and the diagram check see it, the same on both engines (app/scene.js).
 	const scene = tldrawScene(editor, { keyOf, text, toRichText })
-	const api = { engine: 'tldraw', idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, _planRender, screenshot, animate, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
+	/** Is this shape (or key, or id) a plan's: carrying meta.plan, or in a frame that does? Then leave it to the plan. */
+	const isPlanShape = (shapeOrKey) => scene.isPlan(typeof shapeOrKey === 'string' ? (shapeOrKey.startsWith('shape:') ? shapeOrKey : idFor(shapeOrKey)) : shapeOrKey?.id)
+	const api = { engine: 'tldraw', isPlanShape, idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, _planRender, _busyKeys, screenshot, animate, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
 		const m = measureDiagram(scene)
 		return { ...m, score: scoreDiagram(m) }
 	}, tidy: makeTidy(scene) }

@@ -37,7 +37,7 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 		ws = new WebSocket(wsUrl('/ws/canvas') + (headless && `&headless=${headless}`))
 		const sock = ws
 		sock.onopen = () => {
-			busy = false // a new socket: the server takes this tab as idle until told otherwise
+			busy = '' // a new socket: the server takes this tab as idle until told otherwise
 			setStatus('live')
 		}
 		sock.onclose = () => {
@@ -86,16 +86,19 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 		}
 	}
 	connect()
-	// A plan's sync (server/plan.mjs) waits for a drag or typing to finish, in any tab: say when one starts and ends.
-	let busy = false
+	// A plan's sync (server/plan.mjs) leaves alone what someone is dragging or typing in, in any tab: say which shapes those
+	// are when that changes, and again every couple of seconds while it lasts, since the server forgets a claim that isn't renewed.
+	let busy = '', said = 0
 	const watchBusy = setInterval(() => {
-		let now = false
+		let keys: string[] = []
 		try {
-			now = scope.toucan.isIdle ? !scope.toucan.isIdle() : false
+			keys = scope.toucan._busyKeys?.() ?? []
 		} catch {}
-		if (now === busy || ws?.readyState !== 1) return
+		const now = keys.join('\n')
+		if (ws?.readyState !== 1 || (now === busy && (!now || Date.now() - said < 2000))) return
 		busy = now
-		ws.send(JSON.stringify({ type: 'busy', busy }))
+		said = Date.now()
+		ws.send(JSON.stringify({ type: 'busy', keys }))
 	}, 200)
 	const onFocus = () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: 'focus' }))
 	window.addEventListener('focus', onFocus)

@@ -11,7 +11,13 @@ export function makeTidy(scene) {
 	const GRID = 10
 	const snap = (n) => Math.round(n / GRID) * GRID
 	const isMarker = (b) => b.w < 30 || b.h < 30 // dots and lifelines belong to a layout, and aren't boxes to rearrange
-	const movable = () => scene.items().filter((s) => s.kind === 'box' && !isMarker(s.local))
+	// A plan's shapes (app/scene.js) are never arranged: moving one would be written to the plan as a person's edit. They stay
+	// where they are, in the way of what does move. A frame with a plan's shapes in it stays put too, as they'd go with it.
+	const allBoxes = () => scene.items().filter((s) => s.kind === 'box' && !isMarker(s.local))
+	const movable = () => allBoxes().filter((s) => !scene.skipPlan(s.id))
+	const fixed = (s) => scene.skipPlan(s.id) || (s.kind === 'frame' && scene.skipHolder(s.id))
+	/** The plan's boxes beside these ones (in the same parent). */
+	const planBeside = (group) => (group.length ? allBoxes().filter((s) => s.parent === group[0].parent && scene.isPlan(s.id)) : [])
 	// Positions are worked out in each parent's own coordinates, so lining up to the grid means the same inside a frame as outside,
 	// and they're written back as they are.
 	const local = (s) => s.local
@@ -107,6 +113,7 @@ export function makeTidy(scene) {
 				for (const [id, pos] of next) {
 					const s = line.find((x) => x.id === id), box = { ...at(s), ...pos }
 					if (group.some((o) => o.id !== id && !next.has(o.id) && hits(box, at(o)) && !hits(at(s), at(o)))) return
+					if (planBeside(group).some((o) => hits(box, local(o)) && !hits(at(s), local(o)))) return
 				}
 				for (const [id, pos] of next) updates.set(id, { s: line.find((x) => x.id === id), ...updates.get(id), ...pos })
 			}
@@ -158,11 +165,14 @@ export function makeTidy(scene) {
 	function fixOverlaps({ gap = 24, rounds = 400, framesOnly = false } = {}) {
 		let changed = 0
 		// Frames on the page are kept clear of each other, and of the boxes on the page beside them.
-		const frames = () => [...scene.items().filter((s) => s.kind === 'frame' && !s.parent), ...movable().filter((s) => !s.parent)]
-		for (let group of framesOnly ? [frames()] : [...groups(), 'frames']) {
+		const frames = () => [...scene.items().filter((s) => s.kind === 'frame' && !s.parent), ...allBoxes().filter((s) => !s.parent)]
+		// Each group of boxes with the plan's boxes beside it: those don't move, and what overlaps one moves all the way clear.
+		const withPlan = () => groups().map((group) => [...group, ...planBeside(group)])
+		for (let group of framesOnly ? [frames()] : [...withPlan(), 'frames']) {
 			// Read when it's reached, so the boxes on the page are where the pass before put them.
 			if (group === 'frames') group = frames()
-			const items = group.map((s) => ({ ...local(s), s }))
+			const items = group.map((s) => ({ ...local(s), s, fixed: fixed(s) }))
+			if (items.every((p) => p.fixed)) continue
 			// Moving one pair apart can crowd a third, and rounding to the grid can too, so it runs until nothing is within reach.
 			for (let round = 0; round < rounds; round++) {
 				let any = false
@@ -171,20 +181,22 @@ export function makeTidy(scene) {
 						const a = items[i], b = items[j]
 						const dx = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + gap, dy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + gap
 						// Push apart to the full gap, but only when they're within half of it, so rounding can't set it off again.
-						if (dx <= gap / 2 || dy <= gap / 2) continue
+						if (dx <= gap / 2 || dy <= gap / 2 || (a.fixed && b.fixed)) continue
 						any = true
 						const [front, back] = a.x + a.w / 2 <= b.x + b.w / 2 ? [a, b] : [b, a]
 						const [top, low] = a.y + a.h / 2 <= b.y + b.h / 2 ? [a, b] : [b, a]
+						// Each goes half the way, unless one of them can't move: then the other goes all of it.
+						const share = (p, q) => (p.fixed ? 0 : q.fixed ? 2 : 1)
 						// On a timeline two things at once stack up, as the layout draws them: sideways would change their dates.
-						if (dx <= dy && !timed()) (back.x += dx / 2 + 1, front.x -= dx / 2 + 1)
-						else (low.y += dy / 2 + 1, top.y -= dy / 2 + 1)
+						if (dx <= dy && !timed()) (back.x += (dx / 2 + 1) * share(back, front), front.x -= (dx / 2 + 1) * share(front, back))
+						else (low.y += (dy / 2 + 1) * share(low, top), top.y -= (dy / 2 + 1) * share(top, low))
 					}
 				}
-				for (const p of items) (p.x = moved(p.s, p.x, p.y) && !timed() ? snap(p.x) : p.x), (p.y = moved(p.s, p.x, p.y) ? snap(p.y) : p.y)
+				for (const p of items) if (!p.fixed) (p.x = moved(p.s, p.x, p.y) && !timed() ? snap(p.x) : p.x), (p.y = moved(p.s, p.x, p.y) ? snap(p.y) : p.y)
 				if (!any) break
 			}
 			// A frame takes what's in it along.
-			for (const p of items) if (moved(p.s, p.x, p.y)) (scene.place(p.s.id, { x: p.x, y: p.y }, { carry: true, local: true }), changed++)
+			for (const p of items) if (!p.fixed && moved(p.s, p.x, p.y)) (scene.place(p.s.id, { x: p.x, y: p.y }, { carry: true, local: true }), changed++)
 		}
 		return changed
 	}
@@ -195,7 +207,8 @@ export function makeTidy(scene) {
 	 */
 	function fitFrames({ pad = 30 } = {}) {
 		let changed = 0
-		const frames = scene.items().filter((s) => s.kind === 'frame')
+		// A plan's frames are the size the plan drew them, and a frame round a plan's shapes would move them as its edges moved.
+		const frames = scene.items().filter((s) => s.kind === 'frame' && !fixed(s))
 		// Innermost first, so an outer frame fits the inner one's new size.
 		const depth = (s) => scene.ancestors(s.id).length
 		for (const f of frames.sort((a, b) => depth(b) - depth(a))) {
@@ -216,13 +229,13 @@ export function makeTidy(scene) {
 	function neatArrows() {
 		let changed = 0
 		// A diagram drawn in elbows stays in elbows: an arrow added later comes in straight.
-		const all = scene.arrows()
+		const all = scene.arrows().filter((a) => !scene.skipPlan(a.id))
 		const elbows = all.filter((a) => a.kind === 'elbow'), straight = all.filter((a) => a.kind !== 'elbow' && !a.bend)
 		if (elbows.length > straight.length && straight.length) {
 			for (const a of straight) scene.setArrow(a.id, { kind: 'elbow' })
 			changed += straight.length
 		}
-		const arrows = scene.arrows().filter((a) => a.from && a.to)
+		const arrows = scene.arrows().filter((a) => a.from && a.to && !scene.isPlan(a.id))
 		const items = new Map(arrows.flatMap((a) => [a.from, a.to]).map((id) => [id, scene.get(id)]))
 		// Every arrow's sides at once, so a fork's branches and a loop back are seen as such (lib/boxes.mjs flowSides).
 		const want = flowSides(arrows, (id) => items.get(id), mainDirection(), { loops: false })
@@ -252,7 +265,7 @@ export function makeTidy(scene) {
 		const paths = new Map(arrows.map((a) => [a.id, scene.arrowPath(a.id)]))
 		let changed = 0
 		for (const a of arrows) {
-			if (only && !only.includes(a.id)) continue
+			if ((only && !only.includes(a.id)) || scene.skipPlan(a.id)) continue
 			const ends = new Set([a.from, a.to])
 			for (const id of [a.from, a.to]) for (const anc of scene.ancestors(id)) ends.add(anc)
 			const sa = scene.get(a.from), sb = scene.get(a.to)
@@ -297,7 +310,7 @@ export function makeTidy(scene) {
 		const labels = new Map(arrows.filter((a) => a.text.trim()).map((a) => [a.id, scene.arrowLabelBox(a.id)]))
 		let changed = 0
 		for (const a of arrows) {
-			if ((only && !only.includes(a.id)) || !labels.get(a.id)) continue
+			if ((only && !only.includes(a.id)) || !labels.get(a.id) || scene.skipPlan(a.id)) continue
 			const ends = new Set([a.from, a.to].filter(Boolean))
 			for (const id of [...ends]) for (const anc of scene.ancestors(id)) ends.add(anc)
 			const boxes = solid.filter((s) => !ends.has(s.id))
@@ -341,7 +354,7 @@ export function makeTidy(scene) {
 		const used = new Set()
 		let n = 0
 		for (const f of scene.items().filter((s) => s.kind === 'frame')) {
-			const kids = scene.children(f.id).filter((s) => s.kind === 'box')
+			const kids = scene.children(f.id).filter((s) => s.kind === 'box' && !scene.skipPlan(s.id))
 			if (!kids.length) continue
 			const counts = new Map()
 			for (const s of kids) if (s.color !== 'black') counts.set(s.color, (counts.get(s.color) ?? 0) + 1)
@@ -366,8 +379,13 @@ export function makeTidy(scene) {
 		const everything = scene.items()
 		const root = within ? everything.find((s) => s.kind === 'frame' && (s.key === within || s.id === within)) : null
 		if (within && !root) throw new Error(`no frame ${within} (keys come from toucan.summary())`)
+		// A plan's own frame isn't laid out, and nor is anything of the plan's inside the frame asked for.
+		if (root && scene.skipPlan(root.id)) return 0
 		const inside = (s) => !root || scene.ancestors(s.id).includes(root.id)
-		const boxes = everything.filter((s) => s.kind === 'box' && !isMarker(s.local) && inside(s))
+		// A frame holding a plan's shapes can't move, so what else is in it stays as arranged, unless it's the frame asked for.
+		const held = (s) => scene.ancestors(s.id).some((id) => id !== root?.id && scene.skipHolder(id))
+		const boxes = everything.filter((s) => s.kind === 'box' && !isMarker(s.local) && inside(s) && !scene.skipPlan(s.id) && !held(s))
+		if (!boxes.length && everything.some((s) => s.kind === 'box' && inside(s) && (scene.isPlan(s.id) || held(s)))) return 0
 		const known = new Set(boxes.map((s) => s.id))
 		const frameOf = (s) => (s.frame && s.frame !== root?.id ? s.frame : undefined)
 		const frames = everything.filter((s) => s.kind === 'frame' && s.id !== root?.id && boxes.some((b) => frameOf(b) === s.id))
@@ -388,6 +406,19 @@ export function makeTidy(scene) {
 		})
 		// Inside a frame, the layout starts at its top left, below its name; otherwise where the diagram was.
 		const origin = root ? { x: root.x + 30, y: root.y + 50 } : scene.bounds() ?? { x: 0, y: 0 }
+		// What stays where it is (a plan's views, and frames holding them) is in the way: the layout starts where what it lays out
+		// was, and goes below anything of those it would land on.
+		const stays = everything.filter((s) => (s.kind === 'box' || s.kind === 'frame') && inside(s) && s.id !== root?.id && (scene.isPlan(s.id) || scene.holdsPlan(s.id)))
+		if (stays.length) {
+			const laid = [...placed.groups, ...placed.nodes].map((p) => p.box)
+			const size = { w: Math.max(...laid.map((b) => b.x + b.w)), h: Math.max(...laid.map((b) => b.y + b.h)) }
+			if (!root) Object.assign(origin, { x: Math.min(...[...boxes, ...frames].map((s) => s.x)), y: Math.min(...[...boxes, ...frames].map((s) => s.y)) })
+			for (let i = 0; i < stays.length; i++) {
+				const hit = stays.find((s) => origin.x < s.maxX + 40 && s.x < origin.x + size.w + 40 && origin.y < s.maxY + 40 && s.y < origin.y + size.h + 40)
+				if (!hit) break
+				origin.y = hit.maxY + 80
+			}
+		}
 		return scene.batch(() => {
 			// Outer frames first: a frame takes what's in it along, and an inner frame is then put where it goes.
 			const depth = (id) => scene.ancestors(id).length

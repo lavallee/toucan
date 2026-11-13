@@ -29,6 +29,8 @@ const out = (p) => ({ x: p.x * FACTOR, y: p.y * FACTOR })
 let shortened = 0, moved = 0
 scene.batch(() => {
 	for (const s of scene.items()) {
+		// A plan's views stay exactly as the plan drew them, and so does a frame holding one, with what's in it.
+		if (scene.skipPlan(s.id) || scene.skipHolder(s.id) || scene.ancestors(s.id).some((id) => scene.skipHolder(id))) continue
 		// An arrow's bound ends follow what they're bound to, and a free end moves with everything else.
 		if (s.kind === 'arrow') {
 			const a = scene.arrows().find((x) => x.id === s.id)

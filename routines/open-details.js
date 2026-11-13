@@ -10,7 +10,12 @@ const panelKey = (k) => `detail:${k}`
 const open = new Set(g.nodes.filter((n) => n.key.startsWith('detail:')).map((n) => n.key))
 const selected = new Set(toucan.selection().here.map((r) => r.key))
 const chosen = (n) => (args.keys ? args.keys.includes(n.key) : !selected.size || selected.has(n.key))
-const withDetail = g.nodes.filter((n) => !n.key.startsWith('detail:') && typeof n.meta?.detail === 'string' && n.meta.detail.trim() && n.box && chosen(n))
+// Not a plan's boxes: a panel would land in the plan's view, and their details are the record, which their card shows.
+const ofPlan = (key) => {
+	const s = toucan.get(key)
+	return !!s && toucan.scene.skipPlan(s.id)
+}
+const withDetail = g.nodes.filter((n) => !n.key.startsWith('detail:') && typeof n.meta?.detail === 'string' && n.meta.detail.trim() && n.box && chosen(n) && !ofPlan(n.key))
 // Panels already out for these boxes: this run puts them away.
 const showing = withDetail.filter((n) => open.has(panelKey(n.key)))
 if (showing.length) {

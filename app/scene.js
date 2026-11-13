@@ -24,6 +24,13 @@
 //   saveArrow(id) / restoreArrow(id, saved)          to try routes and put one back
 //   batch(fn), fit()
 //
+// A canvas can show a plan kept somewhere else (server/plan.mjs): its shapes carry meta.plan, and a sync writes any change to
+// them upstream as if a person had made it. So nothing here changes one: place, restyle, setArrow, moveEnds and restoreArrow do
+// nothing to a shape that is the plan's (isPlan: it carries meta.plan, or sits in a frame that does, like a person's note in a
+// board column), and place doesn't move a shape with the plan's shapes inside it (holdsPlan), since they would move with it.
+// Reads still give all of them. What was left alone is counted: skipPlan(id) is isPlan and counts it (skipHolder likewise),
+// and planSkipped() is how many shapes were skipped since planSkipped(true) last set it to nothing.
+//
 // tldraw writes at once, and the exec relay makes one run one undo step. Excalidraw keeps changes in a working copy until the
 // outermost batch ends (the exec relay holds one open for the whole run), then makes them in one updateScene, so a run is one
 // undo step there too. On Excalidraw, moving a box moves its label with it and redraws the arrows bound to it.
@@ -33,6 +40,28 @@ import { GAP, endAt as endOn, outline as outlineOf, routePath } from '../lib/rou
 
 const FONT = { s: 18, m: 22, l: 26, xl: 32 } // tldraw's label sizes
 const withEdges = (b) => ({ x: b.x, y: b.y, w: b.w, h: b.h, maxX: b.x + b.w, maxY: b.y + b.h })
+/** Is this meta a plan shape's? A shape let go by its plan keeps `plan: null`, and is an ordinary shape again. */
+const managed = (meta) => !!meta?.plan && typeof meta.plan === 'object'
+/** The plan's part of a scene, from the engine's two ways of asking: which shapes are left alone, and how many were. */
+function planGuard(isPlan, holdsPlan) {
+	const skipped = new Set()
+	const skipPlan = (id) => isPlan(id) && (skipped.add(id), true)
+	const skipHolder = (id) => holdsPlan(id) && (skipped.add(id), true)
+	return {
+		isPlan,
+		holdsPlan,
+		skipPlan,
+		/** holdsPlan, counted: for a frame left where it is because the plan's shapes would go with it. */
+		skipHolder,
+		/** For place: a shape that can't go to `box`, because it's the plan's or would take the plan's shapes along. Counted. */
+		pinned: (id, moves) => skipPlan(id) || (moves && skipHolder(id)),
+		planSkipped: (reset) => {
+			const n = skipped.size
+			if (reset) skipped.clear()
+			return n
+		},
+	}
+}
 
 // ---- tldraw -------------------------------------------------------------------------------------------------------------
 
@@ -66,9 +95,21 @@ export function tldrawScene(editor, { keyOf, text: textOf, toRichText }) {
 		return { start: at('start'), end: at('end') }
 	}
 	const anchorOf = (b) => (b?.props.isPrecise ? { ...b.props.normalizedAnchor } : null)
+	const { pinned, ...plan } = planGuard(
+		(id) => {
+			const s = editor.getShape(id)
+			return !!s && (managed(s.meta) || editor.getShapeAncestors(s).some((a) => managed(a.meta)))
+		},
+		(id) => {
+			if (!editor.getSortedChildIdsForParent(id).length) return false
+			for (const d of editor.getShapeAndDescendantIds([id])) if (d !== id && managed(editor.getShape(d)?.meta)) return true
+			return false
+		},
+	)
 
 	const scene = {
 		engine: 'tldraw',
+		...plan,
 		items: () => editor.getCurrentPageShapes().map(itemOf),
 		get: (id) => {
 			const s = editor.getShape(id)
@@ -117,6 +158,7 @@ export function tldrawScene(editor, { keyOf, text: textOf, toRichText }) {
 			// Given in the parent's coordinates, the position is used as it is, so a tidy number stays tidy.
 			const to = (k) => (box[k] === undefined ? s[k] : local ? box[k] : s[k] + box[k] - was[k])
 			const nx = to('x'), ny = to('y'), dx = nx - s.x, dy = ny - s.y
+			if (pinned(id, Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01)) return
 			const props = {}
 			if ((s.type === 'geo' || s.type === 'frame') && box.w !== undefined) props.w = box.w
 			if ((s.type === 'geo' || s.type === 'frame') && box.h !== undefined) props.h = box.h
@@ -128,7 +170,7 @@ export function tldrawScene(editor, { keyOf, text: textOf, toRichText }) {
 		},
 		restyle(id, { color, size, text, meta } = {}) {
 			const s = editor.getShape(id)
-			if (!s) return
+			if (!s || plan.skipPlan(id)) return
 			const props = {}
 			if (color !== undefined && 'color' in s.props) props.color = color
 			if (size !== undefined && 'size' in s.props) props.size = size
@@ -137,7 +179,7 @@ export function tldrawScene(editor, { keyOf, text: textOf, toRichText }) {
 		},
 		setArrow(id, { kind, bend, elbowMid, anchors, labelAt } = {}) {
 			const a = editor.getShape(id)
-			if (!a) return
+			if (!a || plan.skipPlan(id)) return
 			const props = {}
 			if (kind !== undefined) props.kind = kind
 			if (bend !== undefined) props.bend = bend
@@ -152,7 +194,7 @@ export function tldrawScene(editor, { keyOf, text: textOf, toRichText }) {
 		},
 		moveEnds(id, map) {
 			const a = editor.getShape(id)
-			if (!a) return
+			if (!a || plan.skipPlan(id)) return
 			const t = editor.getShapePageTransform(a)
 			const bound = editor.getBindingsFromShape(a, 'arrow').map((b) => b.props.terminal)
 			const origin = map(t.applyToPoint({ x: 0, y: 0 }))
@@ -172,6 +214,7 @@ export function tldrawScene(editor, { keyOf, text: textOf, toRichText }) {
 			return { kind, bend, elbowMidPoint, labelPosition, ends: editor.getBindingsFromShape(a, 'arrow').map((b) => ({ id: b.id, props: { ...b.props } })) }
 		},
 		restoreArrow: (id, saved) => {
+			if (plan.skipPlan(id)) return
 			const { ends, ...props } = saved
 			editor.updateShape({ id, type: 'arrow', props })
 			const now = new Map(editor.getBindingsFromShape(id, 'arrow').map((b) => [b.id, b]))
@@ -217,6 +260,17 @@ export function excalidrawScene(api, ex) {
 		return t?.type === 'text' ? t : null
 	}
 	const isLabel = (e) => e.type === 'text' && e.containerId && element(e.containerId)
+	const metaOf = (e) => e?.customData?.meta
+	const { pinned, ...plan } = planGuard(
+		(id) => {
+			const e = element(id)
+			if (!e) return false
+			// A label is its box's, or its arrow's.
+			const own = isLabel(e) ? element(e.containerId) : e
+			return managed(metaOf(own)) || managed(metaOf(own.frameId && element(own.frameId)))
+		},
+		(id) => live().some((e) => e.frameId === id && managed(metaOf(e))),
+	)
 	const KIND = { rectangle: 'box', ellipse: 'box', diamond: 'box', frame: 'frame', magicframe: 'frame', text: 'text', arrow: 'arrow' }
 	const boxOf = (e) => {
 		if (e.type === 'arrow' || e.type === 'line' || e.type === 'freedraw') {
@@ -431,6 +485,7 @@ export function excalidrawScene(api, ex) {
 
 	const scene = {
 		engine: 'excalidraw',
+		...plan,
 		items,
 		get: (id) => {
 			const e = element(id)
@@ -479,6 +534,7 @@ export function excalidrawScene(api, ex) {
 				const was = boxOf(e)
 				const dx = box.x === undefined ? 0 : box.x - was.x, dy = box.y === undefined ? 0 : box.y - was.y
 				const resized = (box.w !== undefined && Math.abs(box.w - was.w) > 0.01) || (box.h !== undefined && Math.abs(box.h - was.h) > 0.01)
+				if (pinned(id, Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01)) return
 				if (e.type === 'arrow') return void moveElement(e, dx, dy)
 				if (!dx && !dy && !resized) return
 				const moved = new Set([e.id])
@@ -498,7 +554,7 @@ export function excalidrawScene(api, ex) {
 		restyle(id, { color, size, text, meta } = {}) {
 			scene.batch(() => {
 				const e = element(id)
-				if (!e) return
+				if (!e || plan.skipPlan(id)) return
 				const patch = {}
 				if (color !== undefined && COLORS[color]) {
 					const hex = COLORS[color], old = e.strokeColor
@@ -525,7 +581,7 @@ export function excalidrawScene(api, ex) {
 		setArrow(id, { kind, bend, elbowMid, anchors } = {}) {
 			scene.batch(() => {
 				const a = element(id)
-				if (!a) return
+				if (!a || plan.skipPlan(id)) return
 				open()
 				const r = routes.get(id) ?? routeOf(a)
 				const next = {
@@ -542,7 +598,7 @@ export function excalidrawScene(api, ex) {
 		moveEnds(id, map) {
 			scene.batch(() => {
 				const a = element(id)
-				if (!a || a.type !== 'arrow') return
+				if (!a || a.type !== 'arrow' || plan.skipPlan(id)) return
 				const pts = pointsOf(a)
 				const bound = { 0: a.startBinding && element(a.startBinding.elementId), [pts.length - 1]: a.endBinding && element(a.endBinding.elementId) }
 				if (bound[0] && bound[pts.length - 1]) return redrawArrow(id)
@@ -561,7 +617,7 @@ export function excalidrawScene(api, ex) {
 		/** Back as it was: the very element if what it joins hasn't moved since, else drawn again from its route. */
 		restoreArrow(id, saved) {
 			scene.batch(() => {
-				if (!saved?.element) return
+				if (!saved?.element || plan.skipPlan(id)) return
 				open()
 				if (saved.route) routes.set(id, saved.route)
 				const a = element(id)
