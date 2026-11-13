@@ -366,6 +366,8 @@ function restoreVersion(n, version) {
 	saveVersion(n, { label: due?.label ?? `Before restoring v${version.n}`, source: due?.label ? 'agent' : 'edit' })
 	const undo = versions.list(CANVASES, n)[0]?.n ?? null
 	const label = `Restored v${version.n}${version.label ? ` (${version.label})` : ''}`
+	// On a canvas that shows a plan, the old version's views are old drawings, not edits: nothing of them is written upstream.
+	plans.reset(n)
 	if (engineOf(n) === 'excalidraw') restoreScene(n, version.data.elements)
 	else if (rooms.has(n)) rooms.get(n).room.loadSnapshot(version.data.room)
 	else writeFileSync(docPath(n), JSON.stringify({ room: version.data.room }))
@@ -758,8 +760,16 @@ const server = createServer(async (req, res) => {
 		// A plan: the system of record this canvas shows views of (server/plan.mjs).
 		if (sub === 'plan') {
 			const action = subName, id = url.pathname.split('/')[6]
-			const input = ['POST', 'PATCH', 'PUT'].includes(req.method) ? JSON.parse((await body(req)) || '{}') : {}
+			let input = {}
 			try {
+				if (['POST', 'PATCH', 'PUT'].includes(req.method)) input = JSON.parse((await body(req)) || '{}')
+			} catch (e) {
+				return json(res, 400, { error: `the request body isn't JSON: ${e.message}` })
+			}
+			if (!input || typeof input !== 'object' || Array.isArray(input)) return json(res, 400, { error: 'the request body must be a JSON object' })
+			try {
+				// Whoever reads the plan from here is told what upstream says now, not what it said when a tab was last open.
+				if (req.method === 'GET' && (!action || action === 'items' || action === 'views')) await plans.fresh(canvas)
 				if (!action && req.method === 'GET') return json(res, 200, plans.status(canvas))
 				if (!canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` })
 				if (action === 'bind' && req.method === 'POST') {
@@ -846,7 +856,7 @@ const plans = createPlans({
 	exec: (canvas, code, { label, doing }) => exec(canvas, code, 60000, label, { agent: 'toucan', doing, internal: true }),
 	people: (canvas) => personTabs(canvas).length,
 	canDraw: (canvas) => personTabs(canvas).length > 0 || headless.enabled,
-	busy: (canvas) => personTabs(canvas).some((w) => w.busy),
+	busy: (canvas) => personTabs(canvas).flatMap((w) => (w.busyKeys?.length && Date.now() - w.busyAt < 6000 ? w.busyKeys : [])),
 	changedAt: (canvas) => rooms.get(canvas)?.changed ?? scenes.get(canvas)?.changed ?? 0,
 	broadcast,
 })
@@ -1022,7 +1032,12 @@ function onCanvas(ws, canvas, nonce) {
 	}
 	ws.on('message', (raw) => {
 		const msg = JSON.parse(raw)
-		if (msg.type === 'busy') ws.busy = !!msg.busy // mid-drag or typing: a plan's redraw waits (server/plan.mjs)
+		if (msg.type === 'busy') {
+			// What this tab's person is dragging or typing in: a plan's sync leaves those shapes alone (server/plan.mjs). A claim
+			// lasts a few seconds unless renewed, so a tab that went to sleep mid-edit doesn't hold them for ever.
+			ws.busyKeys = Array.isArray(msg.keys) ? msg.keys.filter((k) => typeof k === 'string').slice(0, 2000) : []
+			ws.busyAt = Date.now()
+		}
 		else if (msg.type === 'focus') {
 			const l = tabs.get(canvas).filter((w) => w !== ws)
 			l.push(ws)
@@ -1045,6 +1060,8 @@ function onCanvas(ws, canvas, nonce) {
 			// Nobody watched a headless edit land, so it goes on the canvas's trail.
 			// (A plan's own redraws aren't an agent's edits: the plan control says when it last synced.)
 			if (ws.headless && !p.internal) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
+			// A box an agent's run put in a plan's board column is an annotation, not a new item (server/plan.mjs).
+			if (!p.internal && msg.changes?.added?.length) plans.agentAdded(canvas, msg.changes.added.map((c) => c.key))
 			if (msg.changes && (msg.changes.added?.length || msg.changes.updated?.length || msg.changes.removed?.length)) {
 				unlanded.set(canvas, { sentAt: p.sentAt, changes: msg.changes })
 				if (p.before) saveBefore(canvas, p.before)

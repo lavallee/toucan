@@ -2,43 +2,66 @@
 //
 // The binding lives beside the canvas in <data>/NAME.plan.json:
 //   { source: { name, ref }, views: [...], cursor, schema: { source, fields }, items (the last known upstream state),
-//     rendered (what was last drawn, as lib/plan.mjs observes it), keys, problems: [...], syncedAt }
+//     rendered (what was last drawn, as lib/plan.mjs observes it), keys, pages, pending, own, skip, problems: [...], syncedAt }
 //
 // One sync per canvas runs here, on the server, so several open tabs never multiply writes. It does two things, in order,
 // and never at once (everything for a canvas goes through one queue):
 //   push: when the canvas no longer matches what was drawn, the difference is read as field changes (lib/plan.mjs
-//         changesFrom) and written upstream, each quoting the version its shape showed. Whatever upstream answers, the views
+//         changesFrom) and written upstream, each quoting the version that was drawn. Whatever upstream answers, the views
 //         are drawn again from upstream's state: a refused or conflicting change goes back, and the person is told.
 //   pull: while a person has the canvas open (or when asked), `changes` is polled; when the cursor moves the plan is read
 //         again and the views redrawn.
-// A redraw touches only shapes carrying meta.plan, and waits while anyone is dragging or typing.
+// A redraw touches only shapes carrying meta.plan. What someone is dragging or typing in at that moment is left out of
+// both, and caught up with when they let go; everything else carries on.
 
 import { randomUUID } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { PlanError, changesFrom, checkPlan, diffObserved, coerceValue, fieldOf, freeViewId, leftovers, observe, originsOf, render, resolveView, sameObserved, validateView, viewTitle, KINDS } from '../lib/plan.mjs'
+import { PlanError, cardKeys, changesFrom, checkPlan, coerceValue, diffObserved, fieldOf, freeViewId, leftovers, observe, originsOf, render, sameObserved, validateView, viewTitle } from '../lib/plan.mjs'
 import { writeAtomic } from '../lib/paths.mjs'
 
 const NAME = /^[a-z0-9][a-z0-9-_]{0,63}$/i
 export const sidecarPath = (data, canvas) => join(data, `${canvas}.plan.json`)
 
 const POLL_MS = Number(process.env.TOUCAN_PLAN_POLL ?? 4000)
-const QUIET_MS = 450 // edits must have paused this long before the canvas is read: a drag changes the document many times a second
+const QUIET_MS = 450 // edits should have paused this long before the canvas is read: a drag changes the document many times a second
+const QUIET_MAX = 3000 // …but someone drawing steadily elsewhere on the canvas doesn't hold a sync up for longer than this
 const RETRY_MS = 300
 const SETTLE_MS = 6000 // how long to wait to see a redraw arrive in the server's copy before taking the canvas as it is
+const PAUSE_MS = 60000
 const MAX_PROBLEMS = 20
 // TOUCAN_PLAN_DEBUG=1: say on stderr what each sync saw, to find out why a canvas keeps being redrawn.
 const debug = (canvas, what, lines) => process.env.TOUCAN_PLAN_DEBUG && console.error(`plan ${canvas}: ${what}${lines ? `\n  ${lines().slice(0, 12).join('\n  ')}` : ''}`)
+const hex = () => randomUUID().replace(/-/g, '')
+
+/** An observation with what people are in the middle of put back as it was drawn: a half-made gesture is nobody's change yet. */
+function withoutBusy(now, base, busy) {
+	if (!busy.size) return now
+	const out = { ...now, frames: { ...now.frames }, nodes: { ...now.nodes }, loose: { ...now.loose } }
+	const hold = (part, key) => {
+		if (base?.[part]?.[key]) out[part][key] = base[part][key]
+		else delete out[part][key]
+	}
+	for (const key of busy) {
+		if (now.frames[key] || base?.frames?.[key]) hold('frames', key)
+		if (now.nodes[key] || base?.nodes?.[key]) hold('nodes', key)
+		delete out.loose[key]
+	}
+	// What's inside a frame that is being dragged is carried along with it.
+	for (const [key, n] of Object.entries(now.nodes)) if (busy.has(n.g)) hold('nodes', key)
+	for (const [key, n] of Object.entries(now.loose)) if (busy.has(n.g)) delete out.loose[key]
+	return out
+}
 
 /**
  * `deps`: sources (server/sources.mjs); graphOf(canvas) → the whole canvas as a toucan graph; engineOf(canvas);
  * exec(canvas, code, { label, doing }) → runs in a tab or the headless page; people(canvas) → open tabs that are people;
- * canDraw(canvas) → is there, or can there be, a page to draw in; busy(canvas) → is anyone mid-gesture; changedAt(canvas) →
- * when the document last changed (ms); broadcast(canvas, msg).
+ * canDraw(canvas) → is there, or can there be, a page to draw in; busy(canvas) → the keys of shapes people are dragging or
+ * typing in right now; changedAt(canvas) → when the document last changed (ms); broadcast(canvas, msg).
  */
-export function createPlans({ data, sources, graphOf, engineOf, exec, people, canDraw, busy, changedAt, broadcast, pollMs = POLL_MS }) {
+export function createPlans({ data, sources, graphOf, engineOf, exec, people, canDraw, busy = () => [], changedAt, broadcast, pollMs = POLL_MS }) {
 	const bound = new Set(existsSync(data) ? readdirSync(data).map((f) => /^(.+)\.plan\.json$/.exec(f)?.[1]).filter((n) => n && NAME.test(n)) : [])
-	const live = new Map() // canvas -> { st, queue, poll, retry, settling, dirty, rev, error, skip, working }
+	const live = new Map() // canvas -> { st, queue, poll, retry, settling, dirty, rev, error, working, churn, pausedUntil, waitingSince, pulledAt }
 
 	const has = (canvas) => bound.has(canvas)
 	function load(canvas) {
@@ -51,7 +74,7 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 				console.error(`plan of ${canvas}: ${e.message}`)
 				return null
 			}
-			live.set(canvas, { canvas, st: { views: [], problems: [], keys: {}, ...st }, queue: Promise.resolve(), dirty: true, rev: Date.now() % 1e9, skip: new Set(), churn: [] })
+			live.set(canvas, { canvas, st: { views: [], problems: [], keys: {}, pages: {}, pending: {}, own: {}, skip: [], ...st }, queue: Promise.resolve(), dirty: true, rev: Date.now() % 1e9, churn: [] })
 		}
 		return live.get(canvas)
 	}
@@ -68,6 +91,9 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		rt.queue = next.catch(() => {})
 		return next
 	}
+	const busyNow = (canvas) => new Set(busy(canvas) ?? [])
+	/** Boxes in a column that are never to become items: an agent's, a group that was pasted, one the source refused. */
+	const skipping = (rt, keys) => (rt.st.skip = [...new Set([...rt.st.skip, ...keys])].slice(-400))
 
 	// ---- what people are told ---------------------------------------------------------------------------------------------
 	function status(canvas) {
@@ -75,7 +101,8 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		if (!rt) return { bound: false }
 		const { st } = rt
 		const plan = planOf(rt)
-		const state = rt.working ? 'syncing' : rt.error ? 'problem' : !st.items ? 'waiting' : rt.dirty || rt.settling ? (canDraw(canvas) ? 'syncing' : 'waiting') : st.problems.length ? 'problem' : 'synced'
+		const wrong = st.problems.some((p) => p.kind !== 'created')
+		const state = rt.working ? 'syncing' : rt.error ? 'problem' : !st.items ? 'waiting' : rt.pausedUntil > Date.now() ? 'problem' : rt.dirty || rt.settling ? (canDraw(canvas) ? 'syncing' : 'waiting') : wrong ? 'problem' : 'synced'
 		return {
 			bound: true,
 			source: { name: st.source.name, ref: st.source.ref, title: st.schema?.source?.title ?? st.source.ref, readonly: !!st.schema?.source?.readonly },
@@ -98,6 +125,7 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	// ---- pull -------------------------------------------------------------------------------------------------------------
 	async function pull(rt, force = false) {
 		const { st } = rt
+		rt.pulledAt = Date.now()
 		try {
 			const source = sources.get(st.source.name)
 			if (!force && st.items) {
@@ -125,30 +153,61 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	}
 
 	// ---- push -------------------------------------------------------------------------------------------------------------
+	const titleOf = (rt, id) => rt.st.items?.find((it) => it.id === id)?.title ?? id
+	/** Did we ourselves take this item from `drawn` to `version`, write by write, with nobody else's change in between? */
+	function ownChain(rt, id, drawn, version) {
+		const writes = rt.st.own[id] ?? []
+		for (let cur = version, n = 0; n < 12; n++) {
+			const w = writes.find((x) => String(x.to) === String(cur))
+			if (!w) return false
+			if (String(w.from) === String(drawn)) return true
+			cur = w.from
+		}
+		return false
+	}
+
 	/** The changes between two observations, across every view: one per item, however many views showed the gesture. */
 	function collect(rt, base, now, fresh) {
 		const plan = planOf(rt)
 		const byItem = new Map(), creates = new Map()
+		const skip = new Set(rt.st.skip)
 		for (const view of rt.st.views) {
 			if (!validateView(view, plan).ok) continue
 			for (const c of changesFrom(plan, view, base, now)) {
-				if (c.op === 'create') {
-					if (!rt.skip.has(c.shape) && !creates.has(c.shape)) creates.set(c.shape, { ...c, view: view.id })
-					continue
-				}
-				const have = byItem.get(c.id)
-				if (!have) byItem.set(c.id, { ...c, ...(c.set && { set: { ...c.set } }) })
-				else {
-					if (c.set) have.set = { ...have.set, ...c.set }
-					if (c.place) have.place = c.place
+				if (c.op === 'note') {
+					if (!rt.st.problems.some((p) => p.kind === 'unread' && p.item === c.id)) problem(rt, { kind: 'unread', item: c.id, title: titleOf(rt, c.id), text: c.message })
+				} else if (c.op === 'create') {
+					if (!skip.has(c.shape) && !creates.has(c.shape)) creates.set(c.shape, { ...c, view: view.id })
+				} else {
+					const have = byItem.get(c.id)
+					if (!have) byItem.set(c.id, { ...c, ...(c.set && { set: { ...c.set } }) })
+					else {
+						if (c.set) have.set = { ...have.set, ...c.set }
+						if (c.place) have.place = c.place
+					}
 				}
 			}
 		}
-		const version = (c) => (fresh ? plan.items.find((it) => it.id === c.id)?.version ?? c.version : c.version)
-		return [...[...byItem.values()].map((c) => ({ ...c, version: version(c) })), ...creates.values()]
+		// Several boxes arriving in columns in one go were pasted or duplicated, not drawn: they stay ordinary boxes.
+		if (creates.size > 1) {
+			skipping(rt, creates.keys())
+			problem(rt, { kind: 'created', text: `${creates.size} boxes arrived in the board at once, so they were left as ordinary boxes. Draw one at a time to add items.` })
+			creates.clear()
+		}
+		const updates = []
+		for (const c of byItem.values()) {
+			const { drawn, ...change } = c
+			// A shape carrying an older version than was drawn has been put back by undo or redo. That is the person's to do when
+			// nothing else touched the item since their own edit; when something did, their old value would overwrite it, so it isn't written.
+			if (!fresh && drawn !== undefined && String(drawn) !== String(c.version) && !ownChain(rt, c.id, drawn, c.version)) {
+				problem(rt, { kind: 'stale', item: c.id, title: titleOf(rt, c.id), text: `"${titleOf(rt, c.id)}" has changed upstream since that edit, so undoing it changed nothing there. Showing the upstream version.` })
+				continue
+			}
+			updates.push({ ...change, version: fresh ? plan.items.find((it) => it.id === c.id)?.version ?? c.version : c.version })
+		}
+		return [...updates, ...creates.values()]
 	}
 
-	const titleOf = (rt, id) => rt.st.items?.find((it) => it.id === id)?.title ?? id
 	const sayRefusal = (title, error, message) =>
 		error === 'conflict' ? `"${title}" changed upstream; showing the upstream version.`
 		: error === 'not_found' ? `"${title}" is no longer in the plan.`
@@ -156,11 +215,27 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		: error === 'unavailable' ? `Couldn't reach the plan to save "${title}"${message ? `: ${message}` : ''}. Put back as it is upstream.`
 		: `"${title}": ${message || 'the change was refused'}. Put back as it is upstream.`
 
-	/** Writes changes upstream and takes in what it answers. Each change has its own idempotency key, so a retry writes once. */
-	async function write(rt, changes) {
+	/**
+	 * A gesture's idempotency key: made once, kept in the binding until the source gives a definite answer, so a write that
+	 * timed out is tried again under the same key (after a restart too) and is applied once.
+	 */
+	function mutationFor(rt, c) {
+		const sig = c.op === 'create' ? `create|${c.shape}` : `update|${c.id}|${c.version}|${JSON.stringify([c.set ?? null, c.place ?? null])}`
+		const pending = rt.st.pending
+		for (const [k, p] of Object.entries(pending)) if (Date.now() - p.t > 7 * 86400000) delete pending[k]
+		pending[sig] ??= { mutation: hex(), t: Date.now() }
+		return { sig, mutation: pending[sig].mutation }
+	}
+
+	/**
+	 * Writes changes upstream and takes in what it answers. `gesture`: they were read off the canvas (so their keys are kept
+	 * until answered, and what happened is told to the people at it); otherwise someone asked, and the answer is theirs.
+	 */
+	async function write(rt, changes, { gesture = false } = {}) {
 		const { st } = rt
-		const sent = changes.map((c) => ({ ...c, mutation: randomUUID().replace(/-/g, '') }))
-		const wire = sent.map(({ shape, view, ...c }) => c)
+		const sent = changes.map((c) => ({ ...c, ...(gesture ? mutationFor(rt, c) : { mutation: hex() }) }))
+		if (gesture) save(rt)
+		const wire = sent.map(({ shape, view, sig, ...c }) => c)
 		const label = (c) => (c.op === 'create' ? c.set?.title ?? 'New item' : titleOf(rt, c.id))
 		let answer
 		for (let attempt = 0; ; attempt++) {
@@ -172,10 +247,10 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 					await new Promise((r) => setTimeout(r, 400 * (attempt + 1)))
 					continue
 				}
-				for (const c of sent) {
-					problem(rt, { kind: e.code ?? 'unavailable', ...(c.id && { item: c.id }), title: label(c), text: sayRefusal(label(c), e.code ?? 'unavailable', e.message) })
-					if (c.shape) rt.skip.add(c.shape)
-				}
+				// Nobody knows whether it was applied. The keys stay, so the same gesture made again asks under the same key.
+				for (const c of sent) if (!c.shape) problem(rt, { kind: e.code ?? 'unavailable', ...(c.id && { item: c.id }), title: label(c), text: sayRefusal(label(c), e.code ?? 'unavailable', e.message) })
+				if (sent.some((c) => c.shape) && !st.problems.some((p) => p.kind === 'unavailable' && p.create)) problem(rt, { kind: 'unavailable', create: true, text: `Couldn't reach the plan to add ${sent.filter((c) => c.shape).map((c) => `"${label(c)}"`).join(', ')}: ${e.message}. It will be tried again.` })
+				rt.dirty = true
 				return sent.map((c) => ({ mutation: c.mutation, ok: false, error: e.code ?? 'unavailable', message: String(e.message ?? e) }))
 			}
 		}
@@ -183,12 +258,19 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		const results = sent.map((c, i) => byMutation.get(c.mutation) ?? answer.results[i] ?? { mutation: c.mutation, ok: false, error: 'unavailable', message: 'the source gave no answer for this change' })
 		sent.forEach((c, i) => {
 			const r = results[i]
+			if (c.sig && !(r.ok === false && r.error === 'unavailable')) delete st.pending[c.sig]
 			if (r.ok) {
-				// A box someone drew became an item: from now on it is that item's card.
-				if (c.shape && r.item?.id !== undefined) ((st.keys[c.view] ??= {})[String(r.item.id)] = c.shape)
+				if (c.shape && r.item?.id !== undefined) {
+					// A box someone drew became an item: from now on it is that item's card.
+					;(st.keys[c.view] ??= {})[String(r.item.id)] = c.shape
+					skipping(rt, [c.shape]) // whatever happens next, this box is never made into an item a second time
+					const where = st.schema?.source?.title ?? st.source.ref
+					problem(rt, { kind: 'created', item: String(r.item.id), title: r.item.title, text: `Added "${r.item.title ?? label(c)}" to ${where}. To take it back, remove it in ${where} itself: deleting its card here doesn't.` })
+				}
+				if (gesture && c.op === 'update' && r.item) st.own[c.id] = [...(st.own[c.id] ?? []), { from: c.version, to: r.item.version }].slice(-12)
 			} else {
 				problem(rt, { kind: r.error ?? 'invalid', ...(c.id && { item: c.id }), title: r.item?.title ?? label(c), text: sayRefusal(r.item?.title ?? label(c), r.error, r.message) })
-				if (c.shape) rt.skip.add(c.shape)
+				if (c.shape && r.error !== 'unavailable') skipping(rt, [c.shape])
 			}
 			// Until the plan is read again, this is the best account of upstream there is.
 			if (r.item && st.items) {
@@ -197,22 +279,29 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 				else st.items.push(r.item)
 			} else if (!r.ok && r.error === 'not_found' && c.id && st.items) st.items = st.items.filter((it) => it.id !== c.id)
 		})
+		for (const id of Object.keys(st.own)) if (!st.items?.some((it) => it.id === id)) delete st.own[id]
 		if (answer.cursor !== null && answer.cursor !== undefined) st.cursor = answer.cursor
 		rt.dirty = true
-		// Someone else may have written between our last read and this write, and the new cursor is past that: read it all.
+		// A write can change other items too (a reorder ranks its neighbours), and someone else may have written in between: read it all.
 		await pull(rt, true)
 		save(rt)
 		return results
 	}
 
 	// ---- draw -------------------------------------------------------------------------------------------------------------
-	async function draw(rt) {
+	async function draw(rt, hold = new Set()) {
 		const { st, canvas } = rt
 		const plan = planOf(rt)
 		if (!plan) return
 		const current = graphOf(canvas)
 		const now = observe(current)
 		const origins = originsOf(now)
+		// Which box is each item's card: the canvas says, so a box a person drew that became an item stays that item's card
+		// whatever happens to the binding.
+		const keys = cardKeys(now, st.keys)
+		// …and one that has just become an item, and doesn't carry the item yet, is the one the write remembered.
+		const present = new Set((current.nodes ?? []).map((n) => n.key))
+		for (const [view, map] of Object.entries(st.keys)) for (const [item, key] of Object.entries(map)) if (present.has(key) && !keys[view]?.[item]) (keys[view] ??= {})[item] = key
 		const nest = engineOf(canvas) !== 'excalidraw'
 		const full = { tg: 1, groups: [], nodes: [], edges: [] }
 		const kept = new Set() // views that can't be drawn just now: their shapes stay as they are
@@ -230,7 +319,7 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 			}
 			let tg
 			try {
-				tg = await render(plan, view, { origin: origins[view.id] ?? fresh, keys: st.keys[view.id], nest })
+				tg = await render(plan, view, { origin: origins[view.id] ?? fresh, keys: keys[view.id], nest, titlesInBars: nest })
 			} catch (e) {
 				kept.add(view.id)
 				problem(rt, { kind: 'view', view: view.id, text: `Couldn't draw the ${view.id} view: ${e.message}` })
@@ -249,23 +338,39 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		const inKept = (o) => kept.has(o?.plan?.view)
 		for (const [key, f] of Object.entries(now.frames)) if (inKept(f)) want.frames[key] = f
 		for (const [key, n] of Object.entries(now.nodes)) if (inKept(n)) want.nodes[key] = n
-		if (sameObserved(now, want, { loose: false })) {
-			st.rendered = want
-			rt.dirty = false
+		// What someone has hold of is left as it is, and the record of what was drawn keeps what was drawn for it.
+		const held = (o, key) => hold.has(key) || hold.has(o?.g)
+		const baseline = () => {
+			if (!hold.size) return want
+			const out = { ...want, frames: { ...want.frames }, nodes: { ...want.nodes } }
+			for (const part of ['frames', 'nodes']) {
+				for (const key of new Set([...Object.keys(want[part]), ...Object.keys(st.rendered?.[part] ?? {})])) {
+					if (!held(want[part][key] ?? st.rendered[part][key], key)) continue
+					if (st.rendered?.[part]?.[key]) out[part][key] = st.rendered[part][key]
+					else delete out[part][key]
+				}
+			}
+			return out
+		}
+		if (sameObserved(withoutBusy(now, want, hold), want, { loose: false })) {
+			st.rendered = baseline()
+			rt.dirty = hold.size > 0 && !sameObserved(now, want, { loose: false })
 			save(rt)
 			return
 		}
 		const found = leftovers(now, want)
-		const release = found.release
+		const release = found.release.filter((key) => !hold.has(key))
 		// A view that can't be drawn keeps its arrows too.
-		const remove = found.remove.filter((key) => ![...kept].some((id) => key.startsWith(`edge:plan:${id}:`)))
+		const remove = found.remove.filter((key) => !hold.has(key) && ![...kept].some((id) => key.startsWith(`edge:plan:${id}:`)))
 		const rev = ++rt.rev
-		debug(canvas, `redrawing (${remove.length} to remove, ${release.length} to release)`, () => diffObserved(now, want))
-		const r = await exec(canvas, `return await toucan._planRender(${JSON.stringify({ tg: full, remove, release, rev, reveal: added })})`, { label: 'Plan sync', doing: `syncing ${plan.source.title}` })
-		if (r?.busy) return 'busy'
-		st.rendered = want
+		debug(canvas, `redrawing (${remove.length} to remove, ${release.length} to release${hold.size ? `, ${hold.size} held` : ''})`, () => diffObserved(now, want))
+		const r = await exec(canvas, `return await toucan._planRender(${JSON.stringify({ tg: full, remove, release, rev, reveal: added, skip: [...hold], pages: st.pages })})`, { label: 'Plan sync', doing: `syncing ${plan.source.title}` })
+		// The tab knows better than the server what its person has hold of right now.
+		for (const key of r?.skipped ?? []) hold.add(key)
+		if (r?.pages) st.pages = { ...st.pages, ...r.pages }
+		st.rendered = baseline()
 		rt.settling = { rev, since: Date.now(), frames: full.groups.length > 0 }
-		rt.dirty = false
+		rt.dirty = hold.size > 0
 		save(rt)
 	}
 
@@ -279,6 +384,7 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	function later(rt, ms = RETRY_MS) {
 		clearTimeout(rt.retry)
 		rt.retry = setTimeout(() => reconcile(rt.canvas).catch(() => {}), ms)
+		rt.retry.unref?.()
 	}
 
 	/** Brings canvas and plan together: reads the plan if asked, writes what people changed, redraws what is out of date. */
@@ -296,40 +402,49 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 				}
 				if (!rt.st.items) return
 				if (!canDraw(canvas)) return // the views are drawn when someone opens the canvas
-				if (busy(canvas) || Date.now() - changedAt(canvas) < QUIET_MS) return void later(rt)
+				// Paused, after a canvas kept changing with nothing in it to save: the plan is still read, the canvas is left alone.
+				if (force) rt.pausedUntil = 0
+				if (rt.pausedUntil > Date.now()) return
+				// Mid-drag the document changes many times a second: wait for a pause, but not for ever.
+				if (Date.now() - changedAt(canvas) < QUIET_MS && Date.now() - (rt.waitingSince ??= Date.now()) < QUIET_MAX) return void later(rt)
+				rt.waitingSince = null
 				if (rt.settling) {
 					if (landed(canvas, rt.settling) || Date.now() - rt.settling.since > SETTLE_MS) rt.settling = null
 					else return void later(rt)
 				}
 				// What people did since the last redraw, as changes upstream. A second look catches a gesture made while the first was being written.
+				let hold = busyNow(canvas)
 				let base = rt.st.rendered
 				for (let round = 0; base && round < 3; round++) {
-					const now = observe(graphOf(canvas))
+					hold = busyNow(canvas)
+					const now = withoutBusy(observe(graphOf(canvas)), base, hold)
 					const creating = planOf(rt).source.readonly !== true && fieldOf(planOf(rt), 'title')?.writable === true
-					if (sameObserved(now, base, { loose: creating, skip: [...rt.skip] })) break
+					if (sameObserved(now, base, { loose: creating, skip: rt.st.skip })) break
+					const told = rt.st.problems.length
 					const changes = collect(rt, base, now, round > 0)
 					debug(canvas, `the canvas differs from what was drawn (${changes.length} change${changes.length === 1 ? '' : 's'} to write)`, () => diffObserved(base, now))
-					// A canvas that keeps drifting from what was drawn, with nothing in it to save (an engine quirk, a script fighting the
-					// sync), mustn't be redrawn forever.
+					// A canvas that keeps drifting from what was drawn, with nothing in it to save (a script fighting the sync, a fault
+					// here), mustn't be redrawn for ever. It is left alone for a while, what was drawn stays the record, and what kept
+					// differing is written down.
 					const t = Date.now()
-					rt.churn = changes.length ? [] : [...rt.churn.filter((x) => t - x < 20000), t]
+					rt.churn = changes.length || rt.st.problems.length > told ? [] : [...rt.churn.filter((x) => t - x < 20000), t]
 					if (rt.churn.length > 12) {
-						if (!rt.st.problems.some((p) => p.kind === 'churn')) problem(rt, { kind: 'churn', text: 'The plan\'s views keep changing on the canvas faster than they can be synced; syncing is paused for a minute.' })
 						rt.churn = []
-						rt.st.rendered = now
-						rt.dirty = false
+						rt.pausedUntil = t + PAUSE_MS
+						problem(rt, { kind: 'churn', text: 'The plan\'s views keep changing on the canvas with nothing in the changes to save, so syncing the canvas is paused for a minute (Sync now starts it again).', detail: diffObserved(base, now).slice(0, 8) })
 						save(rt)
-						announce(rt)
-						return void later(rt, 60000)
+						return void later(rt, PAUSE_MS + 100)
 					}
-					if (changes.length) await write(rt, changes)
+					if (changes.length) await write(rt, changes, { gesture: true })
 					rt.dirty = true
 					base = now
 					if (!changes.length) break
-					for (let i = 0; i < 20 && (busy(canvas) || Date.now() - changedAt(canvas) < QUIET_MS); i++) await new Promise((r) => setTimeout(r, 150))
+					for (let i = 0; i < 10 && Date.now() - changedAt(canvas) < QUIET_MS; i++) await new Promise((r) => setTimeout(r, 150))
 				}
 				if (rt.dirty || !rt.st.rendered) {
-					if ((await draw(rt)) === 'busy') return void later(rt)
+					await draw(rt, busyNow(canvas))
+					// Something was left out because someone had hold of it: come back for it.
+					if (rt.dirty) later(rt, 700)
 				}
 			} catch (e) {
 				// No page to draw in (no tab, no headless mode) isn't a problem with the plan: it waits for someone to open the canvas.
@@ -367,18 +482,42 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		const rt = load(canvas)
 		if (rt) later(rt, QUIET_MS + 30)
 	}
+	/**
+	 * The canvas is about to be put back to an earlier version. What it will hold is old drawings of the plan, not anyone's
+	 * edits: nothing of it is written, and the views are drawn again from upstream.
+	 */
+	function reset(canvas) {
+		const rt = load(canvas)
+		if (!rt) return
+		rt.st.rendered = null
+		rt.st.own = {}
+		rt.settling = null
+		rt.dirty = true
+		save(rt)
+		later(rt, QUIET_MS + 30)
+	}
+	/** Shapes an agent's run (an exec, an import, a routine) added: a box among them in a board column is an annotation, not an item. */
+	function agentAdded(canvas, keys) {
+		if (!bound.has(canvas) || !keys?.length) return
+		const rt = load(canvas)
+		if (!rt) return
+		skipping(rt, keys.filter((k) => typeof k === 'string' && !k.startsWith('plan:')))
+		save(rt)
+	}
 
 	// ---- what the CLI and the app ask for ---------------------------------------------------------------------------------
 	async function bind(canvas, { name, ref, views = [] }) {
 		if (typeof ref !== 'string' || !ref) throw new PlanError('invalid', 'plan bind SOURCE REF: name what to show (`toucan sources` lists what each source has)')
 		const source = sources.get(name)
 		const plan = await source.read(ref, canvas)
-		const st = { binding: 1, source: { name, ref }, views: [], cursor: plan.cursor, schema: { source: plan.source, fields: plan.fields }, items: plan.items, rendered: null, keys: {}, problems: [], syncedAt: new Date().toISOString() }
+		const st = { binding: 1, source: { name, ref }, views: [], cursor: plan.cursor, schema: { source: plan.source, fields: plan.fields }, items: plan.items, rendered: null, keys: {}, pages: {}, pending: {}, own: {}, skip: [], problems: [], syncedAt: new Date().toISOString() }
 		const had = load(canvas)
 		if (had) {
-			// Bound again, to this or another plan: the views stay, as far as they still fit.
+			// Bound again, to this or another plan: the views stay, as far as they still fit, and so does what is known of the canvas.
 			st.views = had.st.views.filter((v) => validateView(v, plan).ok)
-			st.rendered = had.st.rendered
+			st.pages = had.st.pages
+			st.skip = had.st.skip
+			if (had.st.source.name === name && had.st.source.ref === ref) Object.assign(st, { keys: had.st.keys, pending: had.st.pending })
 			clearTimeout(had.retry)
 			clearInterval(had.poll)
 			live.delete(canvas)
@@ -400,16 +539,21 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		if (!ok) throw new PlanError('invalid', errors.join('\n'))
 		return view
 	}
+	const releasing = (keys, rev = 0) => `return await toucan._planRender(${JSON.stringify({ tg: { groups: [], nodes: [], edges: [] }, remove: [], release: keys, rev })})`
+	const managedKeys = (canvas, view) => {
+		const tg = graphOf(canvas), now = observe(tg)
+		const mine = (o) => view === undefined || o.plan?.view === view
+		return [...Object.entries(now.frames).filter(([, f]) => mine(f)).map(([k]) => k), ...Object.entries(now.nodes).filter(([, n]) => mine(n)).map(([k]) => k), ...(tg.edges ?? []).filter((e) => e.meta?.plan?.view && (view === undefined || e.meta.plan.view === view)).map((e) => `edge:${e.from}->${e.to}`)]
+	}
 
 	/** Lets go of the plan. What was drawn stays on the canvas, as ordinary shapes. */
 	async function unbind(canvas) {
 		const rt = need(canvas)
 		return queued(rt, async () => {
-			const now = observe(graphOf(canvas))
-			const keys = [...Object.keys(now.frames), ...Object.keys(now.nodes), ...now.edges]
+			const keys = managedKeys(canvas)
 			if (keys.length) {
 				try {
-					await exec(canvas, `return await toucan._planRender(${JSON.stringify({ tg: { groups: [], nodes: [], edges: [] }, remove: [], release: keys, rev: 0 })})`, { label: 'Plan unbound', doing: 'letting go of the plan' })
+					await exec(canvas, releasing(keys), { label: 'Plan unbound', doing: 'letting go of the plan' })
 				} catch (e) {
 					throw new PlanError('unavailable', `the canvas has to be open to unbind it, so its ${keys.length} plan shapes can be left as ordinary ones: ${e.message}`)
 				}
@@ -454,12 +598,10 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		if (!rt.st.views.some((v) => v.id === id)) throw new PlanError('not_found', `no view "${id}"; views: ${rt.st.views.map((v) => v.id).join(', ') || 'none yet'}`)
 		await queued(rt, async () => {
 			if (keep) {
-				const now = observe(graphOf(canvas))
-				const mine = (o) => o.plan?.view === id
-				const keys = [...Object.entries(now.frames).filter(([, f]) => mine(f)).map(([k]) => k), ...Object.entries(now.nodes).filter(([, n]) => mine(n)).map(([k]) => k), ...(graphOf(canvas).edges ?? []).filter((e) => e.meta?.plan?.view === id).map((e) => `edge:${e.from}->${e.to}`)]
+				const keys = managedKeys(canvas, id)
 				if (keys.length) {
 					try {
-						await exec(canvas, `return await toucan._planRender(${JSON.stringify({ tg: { groups: [], nodes: [], edges: [] }, remove: [], release: keys, rev: 0 })})`, { label: `Plan view ${id} kept`, doing: 'leaving a view as ordinary shapes' })
+						await exec(canvas, releasing(keys), { label: `Plan view ${id} kept`, doing: 'leaving a view as ordinary shapes' })
 					} catch (e) {
 						throw new PlanError('unavailable', `the canvas has to be open to keep the view's shapes: ${e.message}`)
 					}
@@ -467,8 +609,12 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 				}
 			}
 			rt.st.views = rt.st.views.filter((v) => v.id !== id)
-			delete rt.st.keys[id]
-			rt.st.rendered = null // what's on the canvas is no baseline for anything now
+			delete rt.st.pages[id]
+			// What the other views were drawn as still stands; this one's shapes are no longer anyone's edits to read.
+			if (rt.st.rendered) {
+				for (const part of ['frames', 'nodes']) for (const [key, o] of Object.entries(rt.st.rendered[part])) if (o.plan?.view === id) delete rt.st.rendered[part][key]
+				rt.st.rendered.edges = rt.st.rendered.edges.filter((key) => !key.startsWith(`edge:plan:${id}:`))
+			}
 			rt.dirty = true
 			save(rt)
 		})
@@ -483,7 +629,7 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	async function change(canvas, changes) {
 		const rt = need(canvas)
 		const results = await queued(rt, async () => {
-			if (!rt.st.items) await pull(rt, true)
+			await pull(rt, !rt.st.items)
 			const plan = planOf(rt)
 			if (!plan) throw new PlanError('unavailable', rt.error ?? 'the plan hasn\'t been read yet')
 			if (plan.source.readonly) throw new PlanError('forbidden', `${plan.source.title} is read-only`)
@@ -523,6 +669,15 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		}
 		return status(canvas)
 	}
+	/**
+	 * Before someone reads the plan from here (`plan`, `plan items`): ask the source whether it moved, and read it again if so,
+	 * so what they are told is not what was true when a tab was last open. The redraw can wait for a page; the answer doesn't.
+	 */
+	async function fresh(canvas) {
+		const rt = load(canvas)
+		if (!rt || Date.now() - (rt.pulledAt ?? 0) < 1500) return
+		await reconcile(canvas, { pull: true })
+	}
 
 	function items(canvas) {
 		const rt = need(canvas)
@@ -550,7 +705,7 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 			'Shapes keyed plan:… are drawn from the plan and redrawn on every sync: never change them with `exec`, `import` or `draw`. Change the work with `plan set ITEM field=value` and `plan add --title T`, and the views with `plan view add|set|rm` (`plan catalog` has the options; `plan items` the data). Anything else on the canvas is yours and the person\'s as usual.',
 		]
 		if (s.error) lines.push(`The plan can't be reached just now: ${s.error}`)
-		for (const p of s.problems.slice(-5)) lines.push(`Plan problem: ${p.text}`)
+		for (const p of s.problems.filter((x) => x.kind !== 'created').slice(-5)) lines.push(`Plan problem: ${p.text}`)
 		return lines
 	}
 
@@ -567,7 +722,5 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		for (const rt of live.values()) (clearTimeout(rt.retry), clearInterval(rt.poll))
 	}
 
-	void resolveView
-	void KINDS
-	return { has, status, bind, unbind, sync, putView, setView, removeView, change, items, dismiss, opened, touched, brief, forget, close, sidecarPath: (canvas) => sidecarPath(data, canvas) }
+	return { has, status, bind, unbind, sync, fresh, reconcile, putView, setView, removeView, change, items, dismiss, opened, touched, reset, agentAdded, brief, forget, close, sidecarPath: (canvas) => sidecarPath(data, canvas) }
 }
