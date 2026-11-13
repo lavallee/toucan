@@ -16,6 +16,8 @@ import { AwayNotice } from './AwayNotice'
 import { AgentStatus } from './pulses'
 import { ReferencesButton, ReferencesPanel } from './References'
 import { AddMenu } from './AddMenu'
+import { PlanMenu } from './PlanMenu'
+import { PlanNotice } from './PlanNotice'
 import { AnimateMenu } from './AnimateMenu'
 import { close as closeReferences, openReference, toggle as toggleReferences, useReferences } from './references-store'
 
@@ -111,6 +113,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 						<p className="border-t px-2 pt-1.5 pb-1 text-xs text-muted-foreground">Choosing a format moves nothing. To give an existing diagram room, run Air out from Routines.</p>
 					</PopoverContent>
 				</Popover>
+				<PlanMenu />
 				<AddMenu />
 				<ReferencesButton open={referencesOpen} onToggle={toggleReferences} />
 				<CommentButton onComment={onComment} />
@@ -137,6 +140,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 				<div className="relative min-h-0 min-w-0 flex-1">
 					{children}
 					{!headless && <AgentStatus top={engine === 'excalidraw' ? 84 : 52} />}
+					{!headless && <PlanNotice />}
 					{historyOpen && !threadsOpen && <History Preview={preview} onClose={() => setHistoryOpen(false)} />}
 					{threadsOpen && <ThreadsPanel />}
 					{referencesOpen && !threadsOpen && !historyOpen && <ReferencesPanel />}
