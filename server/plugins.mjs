@@ -81,7 +81,21 @@ function whoAmI() {
 			return null
 		}
 	}
-	return { uid, gid: process.getgid(), groupIsPrivate: (gid) => privateGroup({ uid, gid, group: read('/etc/group'), passwd: read('/etc/passwd') }) }
+	return { uid, gid: process.getgid(), groupIsPrivate: (gid) => privateGroup({ uid, gid, group: read('/etc/group'), passwd: read('/etc/passwd') }), nobody: unmappedRoot(read('/proc/self/uid_map'), read('/proc/sys/kernel/overflowuid')) }
+}
+
+/**
+ * The uid that root's files show under when this process can't see root, or null. A service manager's sandbox (systemd's
+ * PrivateTmp in a user unit, a rootless container) runs a program in a user namespace that maps only its own user, and
+ * there everything root owns (/home, /usr/local/bin) reads as the kernel's overflow uid, "nobody". `uidMap` is
+ * /proc/self/uid_map (lines of: first uid inside, first outside, how many) and `overflow` /proc/sys/kernel/overflowuid.
+ */
+export function unmappedRoot(uidMap, overflow) {
+	if (uidMap == null) return null
+	const rows = uidMap.split('\n').map((l) => l.trim().split(/\s+/).map(Number)).filter((r) => r.length === 3 && r.every(Number.isFinite))
+	if (!rows.length || rows.some(([inside, , count]) => inside <= 0 && 0 < inside + count)) return null
+	const n = Number(String(overflow ?? '').trim() || 65534)
+	return Number.isFinite(n) ? n : 65534
 }
 
 /**
@@ -99,7 +113,9 @@ export function scan({ data, path = process.env.PATH ?? '', pluginPath = process
 	const INSIDE = `inside toucan's own folder or its data, where agents can write`
 	const privately = new Map() // gid -> whether it is this user's alone: the group database is read once a scan
 	const myGroup = (gid) => gid === me.gid && (privately.has(gid) ? privately : privately.set(gid, !!me.groupIsPrivate(gid))).get(gid)
-	const others = (uid) => uid !== me.uid && uid !== 0
+	// Root's are trusted, and so is what reads as nobody's where root can't be seen (see unmappedRoot): it is root's or an
+	// unmapped stranger's, and refusing it would refuse every plugin of a sandboxed service.
+	const others = (uid) => uid !== me.uid && uid !== 0 && !(me.nobody != null && uid === me.nobody)
 	const sticky = (st) => st.isDirectory() && (st.mode & 0o1000) !== 0
 	// What is wrong with who may write to one folder or file, as { why, fix }, or null. In a sticky folder anyone may add a
 	// file and nobody replace another's, and a program found there is still asked whose it is.

@@ -77,6 +77,8 @@ PATH folder, all of this must hold:
 - The program is executable and, once links are followed, a file. Where a link leads, the file and its folder must pass
   the same checks; what the folder is called doesn't matter. So an adapter installed with `npm i -g` works: the link in
   the prefix's `bin` leads to a file under its `node_modules`, and both are yours.
+- Under a service manager's sandbox (a systemd user unit with `PrivateTmp`, a rootless container) the server can't see root,
+  and root's folders read as belonging to "nobody". There, nobody's count as root's.
 
 Where there are no user ids (Windows), the questions about owners, groups and modes aren't asked.
 
