@@ -36,7 +36,7 @@ toucan knows nothing about either. It knows *kinds* of plugin, and each kind is 
 | Kind | Program | What it gives toucan | Verbs |
 |---|---|---|---|
 | Agent profiles | `toucan-profiles-NAME` | named agents a canvas can work with | `list`, `get ID` |
-| Plan sources | `toucan-source-NAME` | plans a canvas shows views of, and writes to | `list`, `read REF`, `changes REF --after CURSOR`, `write REF` |
+| Plan sources | `toucan-source-NAME` | plans a canvas shows views of, and writes to | `list`, `read -- REF`, `changes --after CURSOR -- REF`, `write -- REF` |
 
 Every kind works the same way, so one written for either looks like the other:
 
@@ -45,12 +45,31 @@ Every kind works the same way, so one written for either looks like the other:
   `not_found`, `invalid`, `conflict`, `forbidden` or `unavailable`. Plain text is tolerated and treated as `unavailable`.
 - **`describe` is optional**: `{"name": "…", "description": "…", "version": "…"}`, shown by `toucan plugins`. A plugin that doesn't
   answer it is listed all the same.
-- toucan never runs a plugin through a shell, gives every call a time limit, and checks whatever comes back.
+- **Arguments are the verb, then options, then `--`, then what the verb is about.** Whatever follows `--` is never an option,
+  however it looks, and a plugin must read it that way: a plan's `REF` comes from whoever bound the canvas. toucan also
+  refuses a `REF`, or a plugin name, that starts with `-`.
+- **Every call has a time limit**: `describe` 4 seconds; for plan sources `list` 15, `read` 30, `changes` 8 and `write` 30; for
+  profile sources 15. A plugin runs in a process group of its own, and one that runs out of time is killed with everything
+  it started (the whole group), and the call fails as `unavailable`.
+- **The environment says which protocol is spoken**: `TOUCAN_SOURCE_PROTOCOL=1` for a plan source, `TOUCAN_PROFILES_PROTOCOL=1`
+  for a profile source, on top of the server's own environment.
+- toucan never runs a plugin through a shell, and checks whatever comes back. What `describe` said is kept until the
+  program's file changes.
 - A plugin can be written in anything. `NAME` is letters, digits, `-` and `_`; an extension (`.mjs`, `.py`, `.sh`) is ignored.
 
-**Where toucan looks.** The server runs plugins outside any agent's sandbox, so it only trusts ones an agent couldn't have put
-there: in PATH folders given as absolute paths, outside toucan's own folder and its data directory, that no other user can write
-to; and the program itself, once links are followed, must be a file under the same rule. The first of a name on PATH wins. The
+**Where toucan looks.** The server runs plugins outside any agent's sandbox, so it only trusts ones an agent, or another user,
+couldn't have put there. The folder must be on PATH as an absolute path, and:
+
+- outside toucan's own folder and its data directory;
+- not a `node_modules` folder or anywhere inside one (`node_modules/.bin` included): that is where installing a package puts
+  programs;
+- owned by you or by root, and not writable by your group or by everyone;
+- under folders of which the same is true, every one up to the root. A folder above that anyone can write to is accepted
+  only if it is sticky, as `/tmp` is, since nobody can replace another user's folder there.
+
+The program itself, once links are followed, must be a file under the same rule, in a folder under the same rule. So a
+program that is a link into a `node_modules` (what a package manager's global install leaves in its `bin`) is refused: put a
+copy, or a two-line wrapper script, in a folder of your own such as `~/.local/bin`. The first of a name on PATH wins. The
 server reads PATH as it was when the server started, so put the folder on PATH for the server, not just your shell
 (`toucan restart` from a shell that has it).
 
@@ -64,9 +83,11 @@ $ toucan plugins
                 "reason": "its folder can be written to by other users (chmod go-w /opt/tools)" }]
 ```
 
-The reasons are: the folder is a relative PATH entry, is inside toucan's folder or data, or is writable by others; the program
-isn't executable, isn't a file, or links to somewhere not trusted; another of the same name comes first on PATH; or the name is
-taken by a built-in (`local` for profiles, `file` for plan sources). `toucan plugins` also lists extension commands, below.
+The reasons are: the folder is a relative PATH entry, is inside toucan's folder or data, is or is inside a `node_modules`,
+belongs to another user, is writable by others, or is under a folder that is one of the last two (the reason names that
+folder); the program isn't executable, isn't a file, belongs to another user, or links to somewhere not trusted; another of the
+same name comes first on PATH; or the name is taken by a built-in (`local` for profiles, `file` for plan sources).
+`toucan plugins` also lists extension commands, below.
 
 A new kind of plugin is an entry in `server/plugins.mjs` and the code that calls it; finding, trusting, running and listing
 come with the entry. Plugins are published with the systems they speak for, not with toucan.
@@ -137,11 +158,16 @@ source says. The [agent guide](agents.html) covers views and the `plan` commands
 `toucan-source-NAME` answers four verbs. `REF` names one plan in your system and is opaque to toucan (a project id, a path).
 
 ```sh
-toucan-source-NAME list                        # {"sources": [{"ref": "…", "title": "…", "description": "…"}]}
-toucan-source-NAME read REF                    # a plan (below)
-toucan-source-NAME changes REF --after CURSOR  # {"cursor": "…", "changed": true}
-toucan-source-NAME write REF  < changes.json   # {"cursor": "…", "results": […]}
+toucan-source-NAME list                           # {"sources": [{"ref": "…", "title": "…", "description": "…"}]}
+toucan-source-NAME read -- REF                    # a plan (below)
+toucan-source-NAME changes --after CURSOR -- REF  # {"cursor": "…", "changed": true}
+toucan-source-NAME write -- REF  < changes.json   # {"cursor": "…", "results": […]}
 ```
+
+These are the arguments exactly as toucan sends them. `REF` is always the one argument after `--`: take it from there and
+never read it as an option, since it is typed by whoever binds a canvas. toucan refuses a `REF` that starts with `-` before
+your program runs. `CURSOR` is the value of `--after`; one that starts with `-` is sent as a single argument,
+`--after=CURSOR`, so accept both forms. The first `changes` after a bind may carry an empty cursor.
 
 `cursor` is any string that changes when the plan does. toucan calls `changes` every few seconds while someone has the canvas
 open, so make it cheap: it only says whether anything in this plan changed after `CURSOR`. When it has, toucan calls `read`.
@@ -184,9 +210,11 @@ open, so make it cheap: it only says whether anything in this plan changed after
   parent, an epic, a milestone): `options` can then be left out, and a gantt grouped by it heads each lane with a bar
   spanning the children.
 - Item keys toucan gives meaning to without a declaration: `title`, `detail` (shown in the Details card), `dependsOn` (item
-  ids; the arrows of a `graph` view and of a gantt with `dependencies`), `milestone` (drawn as a diamond), `done`, `start`
-  and `end` (a gantt's bars), `url`. Others (`stage`, `assignee`, `priority`, `labels`, `parent`, `estimate`) are
-  conventions, used as defaults when declared. Anything else on an item, a field or `source` is kept and ignored.
+  ids; the arrows of a `graph` view and of a gantt with `dependencies`), `milestone` (exactly `true` draws a diamond, as does an
+  item with a single date; any other value is ignored), `done`, `start` and `end` (a gantt's bars, exactly as long as the two
+  are apart), `estimate` (minutes of work; an item dragged out of Unscheduled gets a day per 480 of them), `url`. Others (`stage`,
+  `assignee`, `priority`, `labels`, `parent`) are conventions, used as defaults when declared. Anything else on an item, a field
+  or `source` is kept and ignored.
 - `null` or a missing value is "unset". Unset values group under their own column or lane.
 - `source.readonly: true` means no writes at all.
 
@@ -215,6 +243,9 @@ and is answered with:
 - `version` is the one the person's card showed. If the item has moved on, answer `conflict` with the item as it stands.
 - `mutation` is an idempotency key: toucan retries a write it couldn't complete with the same key, and the same change
   again must get the same answer and be applied once.
+  A key is reused in exactly one case: a write toucan made for a person's gesture got no definite answer (the call failed or
+  timed out, so nobody knows whether it was applied). toucan keeps that change's key in the canvas's binding, across restarts,
+  and sends the same change under the same key when it tries again. A definite answer, success or refusal, retires the key.
 - Changes stand alone: one failing doesn't stop the others.
 - `item` is the item as it now is upstream, left out only when it no longer exists. There is no delete: removing work is
   decided in the system of record, and a shape deleted from a canvas simply comes back.

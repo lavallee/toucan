@@ -8,12 +8,17 @@ All notable changes to toucan are recorded here. The format follows
 ### Added
 
 - **Plans: a canvas over a system of record.** A canvas can bind to a project kept somewhere else and show it as views that stay
-  in step both ways: a kanban **board** (columns by any option field, optional swimlanes), a **gantt** with a real date axis, a today
-  marker, milestones as diamonds, an Unscheduled strip and optional lanes and dependency arrows, a **timeline**, a dependency
-  **graph**, and a **table**. Upstream changes redraw the views; a person's edits are written back as field changes (a card into
+  in step both ways: a kanban **board** (columns by any option field, optional swimlanes), a **gantt** with a real date axis, bars
+  exactly as long as start to end (a title that doesn't fit stands beside its bar), a today marker, milestones as diamonds, an
+  Unscheduled strip, optional lanes (headed by a summary bar when grouped by a parent) and dependency arrows, a **timeline**, a
+  dependency **graph**, and a **table**. Upstream changes redraw the views; a person's edits are written back as field changes (a card into
   another column sets the grouped field, a bar moved or stretched sets its dates in whole days, text sets the title, a box drawn
   in a column makes an item). A write quotes the version the card showed; on a conflict or a refusal the canvas goes back to what
-  upstream says and a notice says so. Only shapes carrying `meta.plan` are ever touched; what people draw around a view is left alone.
+  upstream says and a notice says so. Only shapes carrying `meta.plan` are ever touched: what people draw around or inside a view
+  is left alone, and moved out, not removed, when the frame it was in goes. Nothing is read from where a shape is on the page (a
+  column is the frame a card is in, dates are read against the view's own axis), so moving, resizing or nesting a view, restoring a
+  version, or running a routine is never an edit; routines, `import --move`, `draw --update` and `toucan.layout()` leave plan views as
+  they are. What someone is dragging or typing in is left alone until they let go, and everything else syncs meanwhile.
   `toucan plan bind SOURCE REF`, `plan sync`, `plan unbind`, and `toucan new NAME --plan SOURCE REF --views board,gantt`.
 - **Views are specs.** Agents compose and reshape views with `plan view add|set|put|rm` from a typed catalog (`plan catalog`):
   `groupBy`, `lanes`, `filter`, `sort`, `fields`, `rollup` (count, percent done, the sum of a number field, in column and lane
@@ -27,10 +32,16 @@ All notable changes to toucan are recorded here. The format follows
   (`server/plugins.mjs`), so a new kind of plugin is a registry entry. `toucan plugins` (and `/api/plugins`) lists every plugin by
   kind with its path and what it says of itself (an optional `describe` verb), and, for one found on PATH but refused, why: its
   folder is writable by others, it's inside the data directory, it isn't executable. Existing `toucan-profiles-NAME` sources work unchanged.
+  The trust rule now also looks at every folder above a plugin (owned by you or root, not writable by others unless sticky) and
+  never trusts one under `node_modules`, so a plugin installed with `npm install -g` is refused: install it as a file on PATH.
+  A plugin that runs past its time limit is killed with everything it started.
 - A plan control in the app bar (state, Sync now, views, group-by, add and remove), and the Details card of a plan's card shows
   the item's fields, with stage, owner and dates editable there.
 
 ### Fixed
+
+- Excalidraw: an edit made in one tab (an import, a routine) took the text off boxes in every other tab that had the canvas open,
+  because each update's bindings were repaired without the unchanged labels it didn't carry.
 
 - `import --move` (and applyGraph with `move`) put a frame nested in another frame at its page position counted from the parent's
   corner, so it landed offset by wherever the parent was. A nested frame now goes where the graph says (tldraw).
