@@ -301,6 +301,11 @@ toucan plugins && toucan sources
 toucan new garden --plan example demo/garden --views board,gantt
 ```
 
+**A real one to read.** Adapters live with the systems they speak for, not in toucan.
+[toucan-source-daymark](https://github.com/lavallee/toucan-source-daymark) is one for [Daymark](https://github.com/lavallee/daymark), a task
+system on one SQLite file: stages become board columns, planned dates become gantt bars, and a project's own types,
+milestones and custom fields arrive as fields a view can group by.
+
 ## Deployment notes for agents
 
 An `AGENTS.md` placed in the data directory is handed to the chat agent as extra instructions. Use it

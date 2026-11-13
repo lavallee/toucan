@@ -5,6 +5,8 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-11-13
+
 ### Added
 
 - **Plans: a canvas over a system of record.** A canvas can bind to a project kept somewhere else and show it as views that stay

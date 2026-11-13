@@ -43,9 +43,9 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Agent at work](agents.html#what-people-see-presence-and-undo) | While an agent works, every tab shows a status pill with what it's doing, a soft ring round the canvas, and its cursor on the shape it touched. | **On the canvas**; CLI: `say TEXT [--at KEY,KEY]` · `--agent NAME` | 0.9.0 |
 | ["This": selection awareness](agents.html#this-what-people-have-selected) | Agents can see what you've selected, so "make this bigger" means this. | **Select**; CLI: `selection` | 0.2.0 |
 | Edits glow | Shapes an agent adds or changes glow briefly, tagged with its name, in every open tab. | **On the canvas** | 0.2.0 |
-| [Plans: views of a system of record](agents.html#plans-a-canvas-over-a-system-of-record) | Bind a canvas to a project kept elsewhere and see it as a board, gantt, timeline, dependency graph or table that follows upstream changes and writes a person's drags and edits back. | **Plan menu · Details card**; CLI: `plan bind SOURCE REF` · `plan sync` · `new NAME --plan SOURCE REF` | Unreleased |
-| [Views as specs](agents.html#plans-a-canvas-over-a-system-of-record) | Agents compose and reshape plan views by writing small declarative specs from a catalog: group by any option field, swimlanes, filter, sort, card fields, roll-ups, a real date axis. A spec that doesn't fit is refused with what would. | **Plan menu**; CLI: `plan catalog` · `plan view add KIND` · `plan view set ID` · `plan view put FILE` · `plan view rm ID` | Unreleased |
-| [Writing the plan from the canvas](agents.html#plans-a-canvas-over-a-system-of-record) | An agent updates the system of record through the same versioned write as a person's gesture; a conflict or refusal puts the canvas back to upstream and tells people. | **Notice above the canvas**; CLI: `plan items` · `plan set ITEM field=value` · `plan add --title T` · `plan dismiss` | Unreleased |
+| [Plans: views of a system of record](agents.html#plans-a-canvas-over-a-system-of-record) | Bind a canvas to a project kept elsewhere and see it as a board, gantt, timeline, dependency graph or table that follows upstream changes and writes a person's drags and edits back. | **Plan menu · Details card**; CLI: `plan bind SOURCE REF` · `plan sync` · `new NAME --plan SOURCE REF` | 0.15.0 |
+| [Views as specs](agents.html#plans-a-canvas-over-a-system-of-record) | Agents compose and reshape plan views by writing small declarative specs from a catalog: group by any option field, swimlanes, filter, sort, card fields, roll-ups, a real date axis. A spec that doesn't fit is refused with what would. | **Plan menu**; CLI: `plan catalog` · `plan view add KIND` · `plan view set ID` · `plan view put FILE` · `plan view rm ID` | 0.15.0 |
+| [Writing the plan from the canvas](agents.html#plans-a-canvas-over-a-system-of-record) | An agent updates the system of record through the same versioned write as a person's gesture; a conflict or refusal puts the canvas back to upstream and tells people. | **Notice above the canvas**; CLI: `plan items` · `plan set ITEM field=value` · `plan add --title T` · `plan dismiss` | 0.15.0 |
 
 ## Reading a diagram
 
@@ -99,7 +99,7 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Mermaid in and out](tour.html#or-as-mermaid) | Paste or import Mermaid: on a blank canvas it looks like a template, and on a full one it merges by key. | **Chat: paste**; CLI: `import FILE --format mermaid` · `graph --format mermaid` | 0.1.0 |
 | [JSON Canvas, Excalidraw, DOT](tour.html#or-as-mermaid) | Import and export JSON Canvas (Obsidian) and .excalidraw; export DOT. | CLI: `import` · `graph --format jsoncanvas\|excalidraw\|dot` | 0.1.0 |
 | [Toucan graph](agents.html#graphs-the-engine-neutral-path) | An engine-neutral graph format, with keyed upsert import and automatic layout. | CLI: `graph` · `import --format tg` | 0.1.0 |
-| [A plan as a file](extending.html#plan-sources) | The built-in file source: a plan in one JSON file in the canvas's files or its project, rewritten by edits on the canvas, with nothing else installed. | CLI: `plan bind file files/PATH` · `sources` | Unreleased |
+| [A plan as a file](extending.html#plan-sources) | The built-in file source: a plan in one JSON file in the canvas's files or its project, rewritten by edits on the canvas, with nothing else installed. | CLI: `plan bind file files/PATH` · `sources` | 0.15.0 |
 
 ## Installing and running
 
@@ -109,6 +109,6 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Setup and doctor](quickstart.html) | setup asks nothing, so an agent can run it; doctor says what's wrong and what to do. | CLI: `setup` · `doctor` · `status` · `open` · `guide` | 0.8.0 |
 | [A server that looks after itself](how-it-works.html) | Commands start a background server when needed, and never fight one you run yourself. | CLI: `start` · `stop` · `restart` · `start --take-over` | 0.8.0 |
 | [Remote and behind a proxy](how-it-works.html) | Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to. | **Sign-in page**; CLI: `--public-url` · `--allow-host` · `TOUCAN_URL` · `TOUCAN_TOKEN` | 0.11.0 |
-| [Plugins](extending.html#plugins) | One mechanism for programs on PATH that connect toucan to your own systems (agent profiles, plan sources), with one trust rule; lists what was found and, for anything refused, why. | CLI: `plugins` · `sources` · `profiles` | Unreleased |
+| [Plugins](extending.html#plugins) | One mechanism for programs on PATH that connect toucan to your own systems (agent profiles, plan sources), with one trust rule; lists what was found and, for anything refused, why. | CLI: `plugins` · `sources` · `profiles` | 0.15.0 |
 
 *60 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
