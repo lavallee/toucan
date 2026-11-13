@@ -15,7 +15,7 @@
 // both, and caught up with when they let go; everything else carries on.
 
 import { randomUUID } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { PlanError, cardKeys, changesFrom, checkPlan, coerceValue, diffObserved, fieldOf, freeViewId, leftovers, observe, originsOf, render, sameObserved, validateView, viewTitle } from '../lib/plan.mjs'
 import { writeAtomic } from '../lib/paths.mjs'
@@ -30,6 +30,7 @@ const RETRY_MS = 300
 const SETTLE_MS = 6000 // how long to wait to see a redraw arrive in the server's copy before taking the canvas as it is
 const PAUSE_MS = 60000
 const MAX_PROBLEMS = 20
+const GAP = 200 // clear room between one view and the next, as `draw` leaves between drawings
 // TOUCAN_PLAN_DEBUG=1: say on stderr what each sync saw, to find out why a canvas keeps being redrawn.
 const debug = (canvas, what, lines) => process.env.TOUCAN_PLAN_DEBUG && console.error(`plan ${canvas}: ${what}${lines ? `\n  ${lines().slice(0, 12).join('\n  ')}` : ''}`)
 const hex = () => randomUUID().replace(/-/g, '')
@@ -61,6 +62,15 @@ function withoutBusy(now, base, busy) {
  */
 export function createPlans({ data, sources, graphOf, engineOf, exec, people, canDraw, busy = () => [], changedAt, broadcast, pollMs = POLL_MS }) {
 	const bound = new Set(existsSync(data) ? readdirSync(data).map((f) => /^(.+)\.plan\.json$/.exec(f)?.[1]).filter((n) => n && NAME.test(n)) : [])
+	// A binding that couldn't be read is put aside, and the person is told: canvas -> what to say. (Found again after a restart
+	// by the file it was put aside as.)
+	const unreadable = new Map()
+	const BAD = /^(.+)\.plan\.json\.bad-[\w-]+$/
+	const sayUnreadable = (canvas, file) => ({ id: 'binding', kind: 'binding', t: new Date().toISOString(), text: `This canvas's plan binding could not be read, so its plan views are not being kept in step. The file was kept as ${file}. To carry on, bind it again (\`toucan --canvas ${canvas} plan bind SOURCE REF\`, then add its views): the shapes already here are taken up by their keys.` })
+	if (existsSync(data)) for (const f of readdirSync(data)) {
+		const m = BAD.exec(f)
+		if (m && NAME.test(m[1]) && !bound.has(m[1])) unreadable.set(m[1], sayUnreadable(m[1], f))
+	}
 	const live = new Map() // canvas -> { st, queue, poll, retry, settling, dirty, rev, error, working, churn, pausedUntil, waitingSince, pulledAt }
 
 	const has = (canvas) => bound.has(canvas)
@@ -70,8 +80,16 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 			let st
 			try {
 				st = JSON.parse(readFileSync(sidecarPath(data, canvas), 'utf8'))
+				if (!st || typeof st !== 'object' || !st.source?.name) throw new Error('it has no source')
 			} catch (e) {
-				console.error(`plan of ${canvas}: ${e.message}`)
+				// Kept, not deleted: whoever looks into it wants the file. The canvas is no longer bound, and says why.
+				const aside = `${canvas}.plan.json.bad-${new Date().toISOString().replace(/[:.]/g, '-')}`
+				console.error(`plan of ${canvas}: ${e.message}; kept as ${aside}`)
+				try {
+					renameSync(sidecarPath(data, canvas), join(data, aside))
+				} catch {}
+				bound.delete(canvas)
+				unreadable.set(canvas, sayUnreadable(canvas, aside))
 				return null
 			}
 			live.set(canvas, { canvas, st: { views: [], problems: [], keys: {}, pages: {}, pending: {}, own: {}, skip: [], ...st }, queue: Promise.resolve(), dirty: true, rev: Date.now() % 1e9, churn: [] })
@@ -98,17 +116,25 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	// ---- what people are told ---------------------------------------------------------------------------------------------
 	function status(canvas) {
 		const rt = load(canvas)
-		if (!rt) return { bound: false }
+		if (!rt) return { bound: false, ...(unreadable.has(canvas) && { problems: [unreadable.get(canvas)] }) }
 		const { st } = rt
 		const plan = planOf(rt)
 		const wrong = st.problems.some((p) => p.kind !== 'created')
-		const state = rt.working ? 'syncing' : rt.error ? 'problem' : !st.items ? 'waiting' : rt.pausedUntil > Date.now() ? 'problem' : rt.dirty || rt.settling ? (canDraw(canvas) ? 'syncing' : 'waiting') : wrong ? 'problem' : 'synced'
+		// A redraw that has arrived is done, whoever asks first.
+		if (rt.settling && !rt.working && (landed(canvas, rt.settling) || Date.now() - rt.settling.since > SETTLE_MS)) rt.settling = null
+		// `state` is about the plan's data: read, and written, or not. Whether the views on the canvas show it yet is `drawn`:
+		// with nobody at the canvas and no page to draw in, the data is current and the drawing waits.
+		const drawn = !!st.rendered && !rt.dirty && !rt.settling
+		const state = rt.working ? 'syncing' : rt.error ? 'problem' : !st.items ? 'waiting' : rt.pausedUntil > Date.now() || wrong ? 'problem' : 'synced'
+		// Something is left to draw and there is a page to draw it in: make sure someone is coming to do it.
+		if (!drawn && !rt.working && !rt.retrying && st.items && canDraw(canvas) && !(rt.pausedUntil > Date.now())) later(rt, 200)
 		return {
 			bound: true,
 			source: { name: st.source.name, ref: st.source.ref, title: st.schema?.source?.title ?? st.source.ref, readonly: !!st.schema?.source?.readonly },
 			state,
+			drawn,
 			...(rt.error && { error: rt.error }),
-			...(state === 'waiting' && st.items && { waiting: 'the views are drawn when someone opens the canvas' }),
+			...(!drawn && st.items && !canDraw(canvas) && { waiting: 'the views are drawn when someone opens the canvas' }),
 			cursor: st.cursor ?? null,
 			syncedAt: st.syncedAt ?? null,
 			items: st.items?.length ?? 0,
@@ -169,13 +195,13 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	/** The changes between two observations, across every view: one per item, however many views showed the gesture. */
 	function collect(rt, base, now, fresh) {
 		const plan = planOf(rt)
-		const byItem = new Map(), creates = new Map()
+		const byItem = new Map(), creates = new Map(), order = []
 		const skip = new Set(rt.st.skip)
 		for (const view of rt.st.views) {
 			if (!validateView(view, plan).ok) continue
 			for (const c of changesFrom(plan, view, base, now)) {
 				if (c.op === 'note') {
-					if (!rt.st.problems.some((p) => p.kind === 'unread' && p.item === c.id)) problem(rt, { kind: 'unread', item: c.id, title: titleOf(rt, c.id), text: c.message })
+					if (!rt.st.problems.some((p) => p.kind === 'unread' && p.text === c.message)) problem(rt, { kind: 'unread', ...(c.id && { item: c.id, title: titleOf(rt, c.id) }), text: c.message })
 				} else if (c.op === 'create') {
 					if (!skip.has(c.shape) && !creates.has(c.shape)) creates.set(c.shape, { ...c, view: view.id })
 				} else {
@@ -185,6 +211,8 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 						if (c.set) have.set = { ...have.set, ...c.set }
 						if (c.place) have.place = c.place
 					}
+					// Places build on each other in the order a view gave them (lib/plan.mjs): keep that order across views.
+					if (c.place) (order.includes(c.id) && order.splice(order.indexOf(c.id), 1), order.push(c.id))
 				}
 			}
 		}
@@ -205,7 +233,8 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 			}
 			updates.push({ ...change, version: fresh ? plan.items.find((it) => it.id === c.id)?.version ?? c.version : c.version })
 		}
-		return [...updates, ...creates.values()]
+		const at = (c) => (c.place ? order.indexOf(c.id) : -1)
+		return [...updates.sort((p, q) => at(p) - at(q)), ...creates.values()]
 	}
 
 	const sayRefusal = (title, error, message) =>
@@ -308,27 +337,55 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		// Somewhere clear for a view that isn't on the canvas yet: under the plan's other views, else right of everything.
 		const boxes = [...(current.groups ?? []), ...(current.nodes ?? [])].map((x) => x.box).filter(Boolean)
 		const managed = Object.values(now.frames)
-		let fresh = managed.length ? { x: Math.min(...managed.map((f) => f.x)), y: Math.max(...managed.map((f) => f.y + f.h)) + 160 } : boxes.length ? { x: Math.max(...boxes.map((b) => b.x + b.w)) + 240, y: Math.min(...boxes.map((b) => b.y)) } : { x: 0, y: 0 }
+		let fresh = managed.length ? { x: Math.min(...managed.map((f) => f.x)), y: Math.max(...managed.map((f) => f.y + f.h)) + GAP } : boxes.length ? { x: Math.max(...boxes.map((b) => b.x + b.w)) + 240, y: Math.min(...boxes.map((b) => b.y)) } : { x: 0, y: 0 }
 		let added = false
-		for (const view of st.views) {
+		// Views are the plan's own, so one that grows down into another moves that other one down, as long as it is still where
+		// it was put: a view a person moved is theirs to place, and then the overlap stands and is said.
+		const placed = [] // { id, box } of the views drawn so far, top to bottom
+		const boxOf = (tg) => {
+			const all = [...tg.groups, ...tg.nodes].map((x) => x.box)
+			const x = Math.min(...all.map((b) => b.x)), y = Math.min(...all.map((b) => b.y))
+			return { x, y, w: Math.max(...all.map((b) => b.x + b.w)) - x, h: Math.max(...all.map((b) => b.y + b.h)) - y }
+		}
+		const hits = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+		// (Nothing recorded, as after a binding was made again: taken as where it was put.)
+		const whereItWasPut = (id) => !!origins[id] && (!st.placed?.[id] || (Math.abs(st.placed[id].x - origins[id].x) < 2 && Math.abs(st.placed[id].y - origins[id].y) < 2))
+		st.placed ??= {}
+		for (const view of [...st.views].sort((a, b) => (origins[a.id]?.y ?? Infinity) - (origins[b.id]?.y ?? Infinity))) {
 			const check = validateView(view, plan)
 			if (!check.ok) {
 				kept.add(view.id)
 				if (!st.problems.some((p) => p.kind === 'view' && p.view === view.id)) problem(rt, { kind: 'view', view: view.id, text: `The ${view.id} view no longer fits the plan: ${check.errors.join('; ')}` })
 				continue
 			}
-			let tg
+			// (On the 10 px grid the renderer draws on, so where a view is put is exactly where it is found.)
+			const grid = (o) => ({ x: Math.round(o.x / 10) * 10, y: Math.round(o.y / 10) * 10 })
+			let tg, at = grid(origins[view.id] ?? fresh)
+			const isNew = !origins[view.id]
 			try {
-				tg = await render(plan, view, { origin: origins[view.id] ?? fresh, keys: keys[view.id], nest, titlesInBars: nest })
+				tg = await render(plan, view, { origin: at, keys: keys[view.id], nest, titlesInBars: nest })
+				const over = placed.filter((p) => hits(boxOf(tg), p.box))
+				if (over.length && (isNew || whereItWasPut(view.id))) {
+					at = grid({ x: at.x, y: Math.max(...over.map((p) => p.box.y + p.box.h)) + GAP })
+					tg = await render(plan, view, { origin: at, keys: keys[view.id], nest, titlesInBars: nest })
+					st.problems = st.problems.filter((p) => !(p.kind === 'overlap' && p.view === view.id))
+				} else if (over.length) {
+					if (!st.problems.some((p) => p.kind === 'overlap' && p.view === view.id)) problem(rt, { kind: 'overlap', view: view.id, text: `The ${over[0].id} view has grown into the ${view.id} view below it. That one was moved by hand, so it is left where it is: move it clear.` })
+				} else st.problems = st.problems.filter((p) => !(p.kind === 'overlap' && p.view === view.id))
 			} catch (e) {
 				kept.add(view.id)
 				problem(rt, { kind: 'view', view: view.id, text: `Couldn't draw the ${view.id} view: ${e.message}` })
 				continue
 			}
-			if (!origins[view.id]) {
+			const box = boxOf(tg)
+			placed.push({ id: view.id, box })
+			if (isNew || whereItWasPut(view.id) || !st.placed[view.id]) {
+				// Where the sync itself put it: while it is still there, it is the sync's to move.
+				if (isNew || whereItWasPut(view.id)) st.placed[view.id] = { x: at.x, y: at.y }
+			}
+			if (isNew) {
 				added = true
-				const bottoms = [...tg.groups, ...tg.nodes].map((x) => x.box.y + x.box.h)
-				fresh = { x: fresh.x, y: Math.max(...bottoms) + 160 }
+				fresh = { x: fresh.x, y: box.y + box.h + GAP }
 			}
 			full.groups.push(...tg.groups)
 			full.nodes.push(...tg.nodes)
@@ -364,7 +421,10 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		const remove = found.remove.filter((key) => !hold.has(key) && ![...kept].some((id) => key.startsWith(`edge:plan:${id}:`)))
 		const rev = ++rt.rev
 		debug(canvas, `redrawing (${remove.length} to remove, ${release.length} to release${hold.size ? `, ${hold.size} held` : ''})`, () => diffObserved(now, want))
-		const r = await exec(canvas, `return await toucan._planRender(${JSON.stringify({ tg: full, remove, release, rev, reveal: added, skip: [...hold], pages: st.pages })})`, { label: 'Plan sync', doing: `syncing ${plan.source.title}` })
+		// Where the server saw each box when it decided this. A tab that finds one of its boxes somewhere else has an edit the
+		// server hasn't heard of yet (a drop made a moment ago): it leaves that box alone and says so, and the edit is read first.
+		const seen = Object.fromEntries(Object.entries(now.nodes).filter(([, n]) => !n.r).map(([key, n]) => [key, [n.g ?? '', n.x, n.y, n.w].join('|')]))
+		const r = await exec(canvas, `return await toucan._planRender(${JSON.stringify({ tg: full, remove, release, rev, reveal: added, skip: [...hold], pages: st.pages, seen })})`, { label: 'Plan sync', doing: `syncing ${plan.source.title}` })
 		// The tab knows better than the server what its person has hold of right now.
 		for (const key of r?.skipped ?? []) hold.add(key)
 		if (r?.pages) st.pages = { ...st.pages, ...r.pages }
@@ -383,7 +443,8 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	// ---- the loop ---------------------------------------------------------------------------------------------------------
 	function later(rt, ms = RETRY_MS) {
 		clearTimeout(rt.retry)
-		rt.retry = setTimeout(() => reconcile(rt.canvas).catch(() => {}), ms)
+		rt.retrying = true
+		rt.retry = setTimeout(() => ((rt.retrying = false), reconcile(rt.canvas).catch(() => {})), ms)
 		rt.retry.unref?.()
 	}
 
@@ -414,7 +475,7 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 				}
 				// What people did since the last redraw, as changes upstream. A second look catches a gesture made while the first was being written.
 				let hold = busyNow(canvas)
-				let base = rt.st.rendered
+				let base = rt.resetting ? null : rt.st.rendered
 				for (let round = 0; base && round < 3; round++) {
 					hold = busyNow(canvas)
 					const now = withoutBusy(observe(graphOf(canvas)), base, hold)
@@ -489,11 +550,17 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	function reset(canvas) {
 		const rt = load(canvas)
 		if (!rt) return
-		rt.st.rendered = null
-		rt.st.own = {}
-		rt.settling = null
-		rt.dirty = true
-		save(rt)
+		// From this moment nothing on the canvas is read as an edit; and in the queue, so a sync already under way finishes with
+		// what it had before this one's clean slate is laid down.
+		rt.resetting = true
+		queued(rt, async () => {
+			rt.st.rendered = null
+			rt.st.own = {}
+			rt.settling = null
+			rt.dirty = true
+			rt.resetting = false
+			save(rt)
+		})
 		later(rt, QUIET_MS + 30)
 	}
 	/** Shapes an agent's run (an exec, an import, a routine) added: a box among them in a board column is an annotation, not an item. */
@@ -516,6 +583,7 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 			// Bound again, to this or another plan: the views stay, as far as they still fit, and so does what is known of the canvas.
 			st.views = had.st.views.filter((v) => validateView(v, plan).ok)
 			st.pages = had.st.pages
+			st.placed = had.st.placed ?? {}
 			st.skip = had.st.skip
 			if (had.st.source.name === name && had.st.source.ref === ref) Object.assign(st, { keys: had.st.keys, pending: had.st.pending })
 			clearTimeout(had.retry)
@@ -528,6 +596,7 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		}
 		writeAtomic(sidecarPath(data, canvas), JSON.stringify(st, null, '\t') + '\n')
 		bound.add(canvas)
+		unreadable.delete(canvas)
 		const rt = load(canvas)
 		if (people(canvas)) startPolling(rt)
 		await reconcile(canvas)
@@ -675,8 +744,10 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	 */
 	async function fresh(canvas) {
 		const rt = load(canvas)
-		if (!rt || Date.now() - (rt.pulledAt ?? 0) < 1500) return
-		await reconcile(canvas, { pull: true })
+		if (!rt) return
+		// Asked, and waited for: whoever reads next reads what this found. (Two reads at once share one question.)
+		rt.asking ??= reconcile(canvas, { pull: true }).finally(() => (rt.asking = null))
+		await rt.asking
 	}
 
 	function items(canvas) {
@@ -687,6 +758,13 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	}
 
 	function dismiss(canvas, ids) {
+		if (!bound.has(canvas) && unreadable.has(canvas)) {
+			// Seen: the file put aside is renamed so the notice doesn't come back with the next restart.
+			for (const f of readdirSync(data)) if (BAD.exec(f)?.[1] === canvas) renameSync(join(data, f), join(data, f.replace('.bad-', '.unreadable-')))
+			unreadable.delete(canvas)
+			broadcast(canvas, { type: 'plan', plan: { bound: false } })
+			return { bound: false }
+		}
 		const rt = need(canvas)
 		rt.st.problems = ids?.length ? rt.st.problems.filter((p) => !ids.includes(p.id)) : []
 		save(rt)
@@ -697,13 +775,14 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 	/** Lines for the chat agent's brief: what this canvas shows, and how to change it. */
 	function brief(canvas) {
 		const rt = load(canvas)
-		if (!rt) return []
+		if (!rt) return unreadable.has(canvas) ? [unreadable.get(canvas).text] : []
 		const s = status(canvas)
 		const views = s.views.map((v) => `${v.id} (${v.kind}${v.groupBy ? ` by ${v.groupBy}` : ''})`).join(', ') || 'none yet'
 		const lines = [
 			`This canvas shows a plan: "${s.source.title}" from the ${s.source.name} source (${s.source.ref})${s.source.readonly ? ', read-only' : ''}, ${s.items} items. Views: ${views}.`,
 			'Shapes keyed plan:… are drawn from the plan and redrawn on every sync: never change them with `exec`, `import` or `draw`. Change the work with `plan set ITEM field=value` and `plan add --title T`, and the views with `plan view add|set|rm` (`plan catalog` has the options; `plan items` the data). Anything else on the canvas is yours and the person\'s as usual.',
 		]
+		if (!s.drawn) lines.push('The views on the canvas are not yet drawn from the plan as it now is: `plan items` has the current data.')
 		if (s.error) lines.push(`The plan can't be reached just now: ${s.error}`)
 		for (const p of s.problems.filter((x) => x.kind !== 'created').slice(-5)) lines.push(`Plan problem: ${p.text}`)
 		return lines
@@ -715,6 +794,7 @@ export function createPlans({ data, sources, graphOf, engineOf, exec, people, ca
 		if (rt) (clearTimeout(rt.retry), clearInterval(rt.poll))
 		live.delete(canvas)
 		bound.delete(canvas)
+		unreadable.delete(canvas)
 	}
 
 	/** Stop everything (the server is going down, or a test is done). */

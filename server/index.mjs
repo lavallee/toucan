@@ -373,10 +373,12 @@ function restoreVersion(n, version) {
 	else writeFileSync(docPath(n), JSON.stringify({ room: version.data.room }))
 	const saved = snapshotNow(n, { label, source: 'restore' })
 	if (!saved) return { ...version, data: undefined, unchanged: true } // it already looked like that
+	// A version from when the canvas showed a plan, restored on a canvas that no longer does: its plan views are just shapes now.
+	const orphaned = !plans.has(n) && [...(planGraph(n).nodes ?? []), ...(planGraph(n).groups ?? [])].filter((x) => x.meta?.plan).length
 	// Nobody may be watching this one land.
 	const after = currentDocument(n)
 	if (!(tabs.get(n) ?? []).some((w) => !w.headless) && before && after) trail.record(CANVASES, n, { source: 'restore', label, changes: versions.diffShapes(before.shapes, after.shapes) })
-	return { ...saved, undo }
+	return { ...saved, undo, ...(orphaned && { plan: `This version has ${orphaned} shapes drawn from a plan, and the canvas is no longer bound to one: they are ordinary shapes now. \`plan bind SOURCE REF\` takes them up again.` }) }
 }
 /** Excalidraw merges by element version, so restored elements must outrank what tabs hold now. */
 function restoreScene(n, target) {
@@ -834,7 +836,10 @@ const wss = new WebSocketServer({ noServer: true })
 const profiles = createProfiles({ data: CANVASES, exclude: [ROOT] })
 
 // ---- plans: a canvas over a system of record (server/sources.mjs, server/plan.mjs) -------------------------------------
-const plugins = createPlugins({ data: CANVASES, exclude: [ROOT] })
+// --plugin-path / TOUCAN_PLUGIN_PATH: folders the operator vouches for, searched as well as PATH (server/plugins.mjs).
+// (Set in the environment too: agent profiles look their plugins up through the same variable.)
+if (typeof args['plugin-path'] === 'string') process.env.TOUCAN_PLUGIN_PATH = args['plugin-path']
+const plugins = createPlugins({ data: CANVASES, exclude: [ROOT], pluginPath: typeof args['plugin-path'] === 'string' ? args['plugin-path'] : process.env.TOUCAN_PLUGIN_PATH ?? '' })
 const planSources = createSources({ plugins, roots: (canvas) => refs.rootsOf(canvas, { filesDir }) })
 const personTabs = (canvas) => (tabs.get(canvas) ?? []).filter((w) => !w.headless && w.readyState === 1)
 /** Every page of the canvas as one graph: a plan's views may be on any of them. */
@@ -1025,8 +1030,9 @@ function onCanvas(ws, canvas, nonce) {
 	tabs.set(canvas, list)
 	ws.send(JSON.stringify({ type: 'scripts', scripts: listScripts(canvas) }))
 	ws.send(JSON.stringify({ type: 'threads', threads: threadsView(canvas) }))
+	// (Bound or not: a tab is told either way, so routines know whether shapes carrying meta.plan are a plan's or just shapes.)
+	ws.send(JSON.stringify({ type: 'plan', plan: plans.status(canvas) }))
 	if (plans.has(canvas)) {
-		ws.send(JSON.stringify({ type: 'plan', plan: plans.status(canvas) }))
 		// A person opening the canvas is what brings its plan up to date.
 		if (!ws.headless) plans.opened(canvas)
 	}

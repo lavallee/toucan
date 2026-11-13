@@ -11,7 +11,7 @@
 //     mcp                         run as an MCP server on stdio, for agents that can't run the CLI
 //     guide                       the full guide for agents
 //     status                      is the server running, and where
-//     start [--port P] [--host H] [--data DIR] [--no-headless] [--take-over] | stop | restart   the background server (commands start it when needed)
+//     start [--port P] [--host H] [--data DIR] [--plugin-path DIRS] [--no-headless] [--take-over] | stop | restart   the background server (commands start it when needed)
 //     doctor                      check this install, and say what to do about anything wrong
 //     update                      install the latest release
 //     --version
@@ -616,6 +616,8 @@ switch (cmd) {
 		if (typeof port === 'string') opts.port = Number(port)
 		if (typeof host === 'string') opts.host = host
 		if (typeof data === 'string') opts.data = resolve(data)
+		const pluginPath = flag('plugin-path')
+		if (typeof pluginPath === 'string') opts.pluginPath = pluginPath
 		if (flag('no-headless')) opts.headless = false
 		else if (flag('headless')) opts.headless = true
 		const takeOver = !!flag('take-over')
