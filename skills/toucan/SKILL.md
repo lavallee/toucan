@@ -87,6 +87,11 @@ with `meta.refs: [{ref, label}]`.
 **Profiles.** A canvas can work with a named agent instead of the chat panel's own: `toucan profiles` lists them, `toucan profiles
 add ID --workdir DIR` makes one from an agent's folder, and `toucan --canvas NAME meta --profile local/ID` binds it (only when asked).
 
+**Plans.** A canvas can show views of a project kept elsewhere (a board, gantt, timeline, dependency graph or table over a plan
+file or a `toucan-source-NAME` plugin), kept in step both ways. `toucan --canvas NAME plan` says whether it does. Compose views with
+`plan view add KIND --group-by FIELD …` (`plan catalog` lists the options) and change the work with `plan set ITEM field=value` and
+`plan add --title T`; never edit shapes keyed `plan:…` with `exec` or `import`. `toucan sources` and `toucan plugins` list what's there.
+
 **Routines.** Before doing a chore by hand, check `toucan routine list` and `toucan --canvas NAME routine run
 NAME`. When the person says "bank that", write it as a routine and `toucan routine save NAME FILE --title T
 --description D --engines E`; it joins their Routines menu on every canvas.

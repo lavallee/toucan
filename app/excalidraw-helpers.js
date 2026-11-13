@@ -10,6 +10,7 @@ import { fromExcalidraw, toExcalidrawElements, wrap, layoutMissing } from '../li
 import { pulse as glow } from './pulses'
 import { refsOfShape } from './reference-links'
 import { excalidrawScene } from './scene'
+import { planBusy, planRender } from './plan-render-excalidraw'
 import { measureDiagram, scoreDiagram } from './measure'
 import { makeTidy } from './tidy'
 import { buildOrder, makeGif } from './animate'
@@ -126,8 +127,10 @@ export function makeExcalidrawHelpers(api, ex) {
 	 * style keys present, meta) and keep their geometry unless `move`; new ones take the graph's box,
 	 * or a grid spot below the scene for formats without positions. Arrows match by endpoints.
 	 * `prune` deletes keyed elements the graph doesn't mention.
+	 * A plan's elements (customData.meta.plan, or in a frame with it) are the plan's to change: a graph that names one, or a
+	 * prune, leaves it exactly as it is, and the result says how many (`planKept`). Only the plan's own drawing passes `plan: true`.
 	 */
-	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction } = {}) {
+	async function applyGraph(tg, { move = false, prune = false, propose: asProposal = false, direction, history, plan = false } = {}) {
 		// A graph may leave out what it has none of.
 		tg = { ...tg, groups: tg?.groups ?? [], nodes: tg?.nodes ?? [], edges: tg?.edges ?? [] }
 		tg = await layoutMissing(tg, { existing: graph(), elk, direction })
@@ -135,8 +138,12 @@ export function makeExcalidrawHelpers(api, ex) {
 		const byKey = new Map(shapes().map((e) => [keyOf(e), e]))
 		const edgeKey = (e) => `edge:${e.from}->${e.to}`
 		const box = (e) => ({ x: e.x, y: e.y, w: e.width, h: e.height })
-		// Existing geometry wins unless `move`, so new arrows are drawn between where things really are.
-		const keep = (item) => (byKey.has(item.key) && (!move || !item.box) ? { ...item, box: box(byKey.get(item.key)) } : item)
+		// The plan's elements this graph named, or a prune would have removed: left as they are, and counted.
+		const kept = new Set()
+		const ofPlan = (e) => !plan && !!e && scene.isPlan(e.id)
+		const keeps = (e) => ofPlan(e) && (scene.skipPlan(e.id), kept.add(e.id), true)
+		// Existing geometry wins unless `move` (and always for the plan's), so new arrows are drawn between where things really are.
+		const keep = (item) => (byKey.has(item.key) && (!move || !item.box || ofPlan(byKey.get(item.key))) ? { ...item, box: box(byKey.get(item.key)) } : item)
 		// An arrow may join something already on the canvas that the graph doesn't list: it's drawn to it as it is, and it's left
 		// alone. One whose end is nowhere is skipped, and reported, as on tldraw.
 		const listed = new Set([...tg.groups, ...tg.nodes].map((i) => i.key))
@@ -158,6 +165,7 @@ export function makeExcalidrawHelpers(api, ex) {
 			const key = t.customData?.key ?? t.id
 			if (asIs.has(key) && t.type !== 'arrow') continue
 			const existing = byKey.get(key)
+			if (keeps(existing)) continue
 			const label = target.find((l) => l.containerId === t.id)
 			if (existing) {
 				const src = tgItem.get(key) ?? tgEdge.get(key) ?? {}
@@ -194,16 +202,25 @@ export function makeExcalidrawHelpers(api, ex) {
 		if (prune) {
 			const keepKeys = new Set([...tg.groups.map((g) => g.key), ...tg.nodes.map((n) => n.key), ...tg.edges.map(edgeKey)])
 			for (const e of shapes()) {
-				if (!e.customData?.key || keepKeys.has(e.customData.key)) continue
+				if (!e.customData?.key || keepKeys.has(e.customData.key) || keeps(e)) continue
 				next.set(e.id, ex.newElementWith(e, { isDeleted: true }))
 				const l = labelOf(e, current)
 				if (l) next.set(l.id, ex.newElementWith(l, { isDeleted: true }))
 				out.pruned++
 			}
 		}
-		commit(ex.restoreElements([...next.values()], null, { refreshDimensions: true, repairBindings: true }))
+		// `history: 'ignore'` (a plan's sync): not a step in this tab's undo.
+		const restored = ex.restoreElements([...next.values()], null, { refreshDimensions: true, repairBindings: true })
+		if (history === 'ignore') api.updateScene({ elements: restored, captureUpdate: ex.CaptureUpdateAction.NEVER })
+		else commit(restored)
+		if (kept.size) out.planKept = kept.size
 		return out
 	}
+
+	/** Internal (a plan's sync, server/plan.mjs): draws a plan's views. All of it is in app/plan-render-excalidraw.js. */
+	const _planRender = (payload) => planRender({ api, ex, all, get, keyOf, applyGraph }, payload)
+	/** Internal: the keys of the elements this tab's person is dragging, resizing or typing in right now. */
+	const _busyKeys = () => planBusy({ api, all, keyOf })
 
 	function remove(...keys) {
 		const gone = new Set(keys.flat())
@@ -416,5 +433,8 @@ export function makeExcalidrawHelpers(api, ex) {
 		return { ...m, score: scoreDiagram(m) }
 	}
 
-	return { engine: 'excalidraw', scene, measure, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, remove, zoomTo, screenshot, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
+	/** Is this element (or key, or id) a plan's: carrying customData.meta.plan, or in a frame that does? Then leave it to the plan. */
+	const isPlanShape = (shapeOrKey) => scene.isPlan(typeof shapeOrKey === 'string' ? get(shapeOrKey)?.id ?? shapeOrKey : shapeOrKey?.id)
+
+	return { engine: 'excalidraw', isPlanShape, scene, measure, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, _planRender, _busyKeys, remove, zoomTo, screenshot, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
 }

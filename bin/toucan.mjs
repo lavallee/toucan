@@ -11,7 +11,7 @@
 //     mcp                         run as an MCP server on stdio, for agents that can't run the CLI
 //     guide                       the full guide for agents
 //     status                      is the server running, and where
-//     start [--port P] [--host H] [--data DIR] [--no-headless] [--take-over] | stop | restart   the background server (commands start it when needed)
+//     start [--port P] [--host H] [--data DIR] [--plugin-path DIRS] [--no-headless] [--take-over] | stop | restart   the background server (commands start it when needed)
 //     doctor                      check this install, and say what to do about anything wrong
 //     update                      install the latest release
 //     --version
@@ -20,6 +20,7 @@
 //     url                         sign-in link for the browser (opens the index of canvases)
 //     canvases                    list canvases: title, shapes, scripts, open tabs
 //     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE | --template ID] [--title T] [--description D] [--canvas-format F]
+//     new NAME --plan SOURCE REF [--views board,gantt]   a canvas over a plan, with views of it (a file plan given by path is copied in)
 //     templates [show ID]         starters (whole canvases) and blocks (one diagram each) to start from or add (show: one in full, as an example)
 //     add TEMPLATE                put a block or a starter on --canvas, beside what's there
 //     draw FILE|- [--update] [--move] [--label T]   lay out a diagram described as data (same form as a template) onto --canvas
@@ -53,6 +54,17 @@
 //     routine learn --codex [DIR] [--since 30d]  bring the chat agent's past Codex sessions into the work log, so suggest sees them
 //                                 chores banked once and run on any canvas (no --canvas needed to list, show, save or rm)
 //     say TEXT [--at KEY,KEY]     tell people what you're about to do; --at moves your cursor to those shapes
+//     plugins                     every plugin on PATH by kind (profiles, plan sources), with any found but refused and why; and extension commands
+//     sources                     where plans can come from: the built-in file source, and toucan-source-* adapters with what each lists
+//     plan                        the plan --canvas shows: source, state, views, problems
+//     plan bind SOURCE REF [--views board,gantt] [--copy] | unbind | sync | dismiss
+//     plan catalog                the kinds of view and their options, as an agent needs them
+//     plan views | view add KIND [options] | view set ID [options] | view put FILE|- | view rm ID [--keep]
+//                                 options: --id --title --group-by F --lanes F --rollup count,done,sum:F --filter EXPR|JSON --sort F,-G --fields a,b --color F
+//                                 --scale day|week|month|auto --from DATE --to DATE --[no-]dependencies --[no-]hide-empty --date F --per-row N --direction RIGHT|DOWN
+//     plan items [--json]         the plan's fields and items
+//     plan set ITEM field=value... [--after ID | --first]   change an item upstream (an option by id or label; empty clears)
+//     plan add --title T [field=value...] [--after ID | --first]   make an item upstream
 //     references                  what people can read beside this canvas: its files, its project's, links on it
 //     show REF|PATH|URL           open it for people, in the References panel beside the canvas
 //
@@ -61,7 +73,7 @@
 //   Any other command runs `toucan-<command>` from PATH with the same arguments and
 //   TOUCAN_CANVAS set, so extensions live in their own repos (see README, "Extending").
 
-import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync, mkdtempSync, accessSync, constants } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync, mkdtempSync, accessSync, constants, copyFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -102,7 +114,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'plan', 'sources', 'plugins']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -153,6 +165,67 @@ function screenshotDir() {
 }
 
 const print = (v) => console.log(typeof v === 'string' ? v : JSON.stringify(v, null, 2))
+
+/** Binds a canvas to a plan. A file plan may be named by a path on this machine: sent as it is, or copied into the canvas's files. */
+async function bindPlan(name, source, ref, { views = [], copy = false } = {}) {
+	const at = `/api/canvases/${encodeURIComponent(name)}`
+	const body = { name: source, views }
+	if (source === 'file' && !/^(files|project(-\d+)?)\//.test(ref) && existsSync(ref) && statSync(ref).isFile()) {
+		if (copy) {
+			const { dir } = await call(`${at}/files`)
+			// Never over a file that's already there: it may be another canvas's plan, with edits in it.
+			const base = basename(ref).replace(/(\.plan)?\.json$/, '')
+			let file = `${base}.plan.json`
+			for (let i = 2; existsSync(join(dir, file)); i++) file = `${base}-${i}.plan.json`
+			mkdirSync(dir, { recursive: true })
+			copyFileSync(ref, join(dir, file), constants.COPYFILE_EXCL)
+			body.ref = `files/${file}`
+			console.error(`toucan: copied ${ref} to ${join(dir, file)}; that copy is the plan now, and edits on the canvas are written to it`)
+		} else body.path = resolve(ref)
+	} else body.ref = ref
+	return call(`${at}/plan/bind`, { method: 'POST', body: JSON.stringify(body) })
+}
+const viewKinds = (list) => (typeof list === 'string' ? list.split(',').map((k) => k.trim()).filter(Boolean).map((kind) => ({ kind })) : [])
+/** A view's options from the command line. `none` (or an empty value) takes an option away, except where "none" is a value. */
+function viewFlags() {
+	const out = {}
+	const take = (name, key, { keepNone = false, number = false } = {}) => {
+		const v = flag(name)
+		if (v === undefined) return
+		if (v === true) die(`--${name} needs a value`)
+		out[key] = !keepNone && (v === 'none' || v === '') ? null : number ? Number(v) : v
+	}
+	take('id', 'id')
+	take('title', 'title')
+	take('group-by', 'groupBy', { keepNone: true })
+	take('lanes', 'lanes', { keepNone: true })
+	take('rollup', 'rollup')
+	take('color', 'color', { keepNone: true })
+	take('filter', 'filter')
+	take('sort', 'sort')
+	take('fields', 'fields')
+	take('scale', 'scale')
+	take('from', 'from')
+	take('to', 'to')
+	take('date', 'date')
+	take('direction', 'direction')
+	take('per-row', 'perRow', { number: true })
+	for (const [name, key] of [['dependencies', 'dependencies'], ['hide-empty', 'hideEmpty']]) {
+		if (flag(name)) out[key] = true
+		if (flag(`no-${name}`)) out[key] = false
+	}
+	return out
+}
+/** field=value arguments as a `set`. Values go as typed: the server reads an option by id or label, and an empty value clears. */
+function fieldArgs(args) {
+	const set = {}
+	for (const a of args) {
+		const i = a.indexOf('=')
+		if (i < 1) die(`"${a}": write a change as field=value`)
+		set[a.slice(0, i)] = a.slice(i + 1) === '' ? null : a.slice(i + 1)
+	}
+	return set
+}
 
 switch (cmd) {
 	case 'url': {
@@ -251,7 +324,14 @@ switch (cmd) {
 		const [name] = positional()
 		if (!name) die('usage: new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D]')
 		const seed = from && existsSync(from) && statSync(from).isFile() ? { graph: readGraph(from, flag('format')) } : from ? { from } : {}
+		const planSource = flag('plan'), planViews = flag('views')
+		const planRef = positional()[1]
+		if (planSource !== undefined && (planSource === true || !planRef)) die('usage: new NAME --plan SOURCE REF [--views board,gantt]   (see `toucan sources`)')
 		await call('/api/canvases', { method: 'POST', body: JSON.stringify({ name, title, description, engine, ...seed, ...(canvasFormat && { format: canvasFormat }), ...(typeof template === 'string' && { template }) }) })
+		if (planSource) {
+			const bound = await bindPlan(name, planSource, planRef, { views: viewKinds(planViews === undefined ? 'board' : planViews), copy: true })
+			console.error(`toucan: ${name} shows "${bound.source.title}" (${bound.items} items) as ${bound.views.map((v) => v.id).join(', ') || 'no views yet'}${bound.state === 'waiting' ? '; the views are drawn when the canvas is opened' : ''}`)
+		}
 		print(`made ${name} — open ${client.url(name)}`)
 		break
 	}
@@ -278,6 +358,62 @@ switch (cmd) {
 	case 'profile':
 		print((await call(cpath('/profile'))).profile)
 		break
+	case 'plugins': {
+		// What the server found, and, from this shell's own PATH, the extension commands `toucan NAME` would run.
+		const { scanCommands } = await import('../server/plugins.mjs')
+		print({ ...(await call('/api/plugins')), commands: scanCommands() })
+		break
+	}
+	case 'sources':
+		print((await call(`/api/sources${canvas ? `?canvas=${encodeURIComponent(canvas)}` : ''}`)).sources)
+		break
+	case 'plan': {
+		const [, sub] = argv
+		const post = (path, body) => call(cpath(`/plan${path}`), { method: 'POST', body: JSON.stringify(body ?? {}) })
+		// What a write came to: the items as they now stand, or the refusal, as the reason this command failed.
+		const written = (r) => {
+			const bad = r.results.filter((x) => !x.ok)
+			if (bad.length) die(bad.map((x) => `${x.error}: ${x.message ?? 'refused'}`).join('\n'))
+			print(r.results.map((x) => x.item))
+		}
+		if (!sub) print(await call(cpath('/plan')))
+		else if (sub === 'catalog') print((await call('/api/plan/catalog')).text)
+		else if (sub === 'bind') {
+			const views = flag('views'), copy = !!flag('copy')
+			const [, , source, ref] = argv
+			if (!source || !ref) die('usage: plan bind SOURCE REF [--views board,gantt] [--copy]   (see `toucan sources`; a file plan is files/PATH or project/PATH)')
+			print(await bindPlan(canvas ?? die('which canvas? Pass --canvas NAME'), source, ref, { views: viewKinds(views), copy }))
+		} else if (sub === 'unbind') print(await call(cpath('/plan'), { method: 'DELETE' }))
+		else if (sub === 'sync') print(await post('/sync'))
+		else if (sub === 'dismiss') print(await call(cpath('/plan/problems'), { method: 'DELETE' }))
+		else if (sub === 'views') print((await call(cpath('/plan/views'))).views)
+		else if (sub === 'view') {
+			const keep = !!flag('keep')
+			const opts = viewFlags()
+			const [, , verb, what] = argv
+			if (verb === 'add' && what) print((await post('/views', { ...opts, kind: what })).view)
+			else if (verb === 'set' && what) print((await call(cpath(`/plan/views/${encodeURIComponent(what)}`), { method: 'PATCH', body: JSON.stringify(opts) })).view)
+			else if (verb === 'put' && what) print((await post('/views', JSON.parse(readFileSync(what === '-' ? 0 : what, 'utf8')))).view)
+			else if (verb === 'rm' && what) print((await call(cpath(`/plan/views/${encodeURIComponent(what)}${keep ? '?keep' : ''}`), { method: 'DELETE' })).views)
+			else die('usage: plan view add KIND [options] | set ID [options] | put FILE|- | rm ID [--keep]   (`plan catalog` lists kinds and options)')
+		} else if (sub === 'items') {
+			if (flag('json')) print(await call(cpath('/plan/items')))
+			else print((await call(cpath('/plan/items?text'))).text)
+		} else if (sub === 'set' || sub === 'add') {
+			const after = flag('after'), first = !!flag('first'), title = flag('title')
+			const place = first ? { after: null } : typeof after === 'string' ? { after } : undefined
+			const args = argv.slice(2)
+			if (sub === 'set') {
+				const [id, ...fields] = args
+				if (!id || (!fields.length && !place && typeof title !== 'string')) die('usage: plan set ITEM field=value... [--after ID | --first]')
+				written(await post('/write', { changes: [{ op: 'update', id, set: { ...fieldArgs(fields), ...(typeof title === 'string' && { title }) }, ...(place && { place }) }] }))
+			} else {
+				if (typeof title !== 'string') die('usage: plan add --title T [field=value...] [--after ID | --first]')
+				written(await post('/write', { changes: [{ op: 'create', set: { ...fieldArgs(args), title }, ...(place && { place }) }] }))
+			}
+		} else die('usage: plan [bind SOURCE REF | unbind | sync | catalog | views | view add|set|put|rm | items | set ITEM f=v | add --title T | dismiss]')
+		break
+	}
 	case 'graph': {
 		const format = flag('format', 'tg')
 		if (!FORMATS[format]?.export) die(`--format: one of ${Object.keys(FORMATS).filter((f) => FORMATS[f].export).join(', ')}`)
@@ -480,6 +616,8 @@ switch (cmd) {
 		if (typeof port === 'string') opts.port = Number(port)
 		if (typeof host === 'string') opts.host = host
 		if (typeof data === 'string') opts.data = resolve(data)
+		const pluginPath = flag('plugin-path')
+		if (typeof pluginPath === 'string') opts.pluginPath = pluginPath
 		if (flag('no-headless')) opts.headless = false
 		else if (flag('headless')) opts.headless = true
 		const takeOver = !!flag('take-over')

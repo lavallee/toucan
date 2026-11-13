@@ -297,6 +297,12 @@ away" until you mark them seen (per browser).
   await t.exec('return toucan.summary()')
   ```
 
+- **Plugins.** Programs on PATH named `toucan-profiles-NAME` serve your agents as profiles a canvas can work with, and
+  `toucan-source-NAME` ones let a canvas show board, gantt, timeline, graph and table views of a project kept in your own
+  system, and write edits back. `toucan plugins` lists what was found and why anything was refused;
+  [Extending](https://lavallee.github.io/toucan/extending.html) has the protocols and
+  `examples/toucan-source-example.mjs` a source to copy. With no plugin at all, a plan can be a JSON file:
+  `toucan new relaunch --plan file examples/website-relaunch.plan.json --views board,gantt`.
 - **Deployment notes for agents.** An `AGENTS.md` in the data directory is passed to the chat agent as
   extra instructions, so your house canvases and extensions are documented without forking.
 

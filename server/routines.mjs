@@ -64,6 +64,17 @@ export function compose({ title, description, engines, kind, when, args, code })
 const headerValue = (lines, field) => lines.map((l) => HEADER.exec(l)).find((m) => m?.[1] === field)?.[2]
 const oneLine = (s) => String(s).replace(/\s+/g, ' ').trim()
 
+// Round a routine's code: the count of the plan's shapes left alone starts at nothing, and afterwards the summary mentions any.
+// A routine may return nothing, or something that isn't an object; and `toucan` isn't always there (a routine tried on its own).
+const PLAN_NOTE = 'left the plan views as they are'
+const PLAN_BEFORE = `const __plan = typeof toucan === 'undefined' ? undefined : toucan?.scene; __plan?.planSkipped?.(true);`
+const PLAN_AFTER = `const __left = __plan?.planSkipped?.() || 0;
+if (!__left) return __result;
+if (__result === undefined || __result === null) return { summary: ${JSON.stringify(PLAN_NOTE[0].toUpperCase() + PLAN_NOTE.slice(1))}, planSkipped: __left };
+if (typeof __result !== 'object' || Array.isArray(__result)) return __result;
+const __said = typeof __result.summary === 'string' ? __result.summary.trim().replace(/\\.$/, '') : '';
+return { ...__result, summary: __said ? __said + ${JSON.stringify(`; ${PLAN_NOTE}`)} : ${JSON.stringify(PLAN_NOTE[0].toUpperCase() + PLAN_NOTE.slice(1))}, planSkipped: __left };`
+
 export function createRoutines({ shipped, data }) {
 	const banked = join(data, '_routines')
 	const scan = (dir, source) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.js')).map((f) => ({ ...parse(f.slice(0, -3), readFileSync(join(dir, f), 'utf8')), source })) : [])
@@ -86,7 +97,10 @@ export function createRoutines({ shipped, data }) {
 			rmSync(f)
 			return true
 		},
-		/** The code to run on a canvas, with its arguments in scope. */
-		program: (routine, args) => `const args = ${JSON.stringify(args ?? {})};\n${routine.code}`,
+		/**
+		 * The code to run on a canvas, with its arguments in scope. A canvas showing a plan keeps the plan's shapes as they are
+		 * (app/scene.js counts what a run left alone), and the routine's summary says so, whichever routine it was.
+		 */
+		program: (routine, args) => `const args = ${JSON.stringify(args ?? {})};\n${PLAN_BEFORE}\nconst __result = await (async () => {\n${routine.code}\n})();\n${PLAN_AFTER}`,
 	}
 }

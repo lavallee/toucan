@@ -17,7 +17,12 @@ Then, in a project: `toucan init --open`, and `toucan guide` for the rest. Agent
 - [Agent guide](https://github.com/lavallee/toucan/blob/main/AGENTS.md): CLI, `toucan.*` helpers, the graph format, engines, canvas scripts
 - [Quick start](https://lavallee.github.io/toucan/quickstart.html): install, connect your agent, first canvas
 - [How it works](https://lavallee.github.io/toucan/how-it-works.html): sync, exec relay, headless mode and the trail, chat, security model
-- [Extending](https://lavallee.github.io/toucan/extending.html): extension commands, deployment notes, configuration, licences
+- [Extending](https://lavallee.github.io/toucan/extending.html): plugins (extension commands, agent profile sources, plan sources and their protocol), deployment notes, configuration, licences
+
+## What it does that a drawing tool doesn't
+
+- Agents edit the same canvas people do, through keyed, idempotent helpers and graph imports (Mermaid, JSON Canvas, Excalidraw).
+- A canvas can show a plan: board, gantt, timeline, dependency-graph and table views of a project kept in a JSON file or another system (through a `toucan-source-NAME` plugin), redrawn when it changes upstream, with a person's drags and edits written back. Agents compose views as small specs (`toucan plan catalog`).
 
 ## Source
 

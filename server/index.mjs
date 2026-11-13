@@ -27,6 +27,10 @@ import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
 import * as refs from './references.mjs'
 import { createProfiles, makeLocalProfile, profileInstructions, ProfileError } from './profiles.mjs'
+import { createSources } from './sources.mjs'
+import { createPlugins } from './plugins.mjs'
+import { createPlans, sidecarPath as planPath } from './plan.mjs'
+import { PlanError, catalogText, itemsText, KINDS as PLAN_KINDS } from '../lib/plan.mjs'
 import { hostCheck, parsePublicUrl, refusal } from '../lib/hosts.mjs'
 import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
 import { compose, layOut, placeBeside } from '../lib/layouts.mjs'
@@ -90,10 +94,10 @@ function exec(canvas, code, timeoutMs, label, who = {}) {
 	const agent = speaker(canvas, who.agent)
 	broadcast(canvas, { type: 'agent-activity', phase: 'start', agent, doing: String(who.doing || label || 'working on the canvas').slice(0, 120) })
 	const end = () => broadcast(canvas, { type: 'agent-activity', phase: 'end', agent })
-	return run(canvas, code, timeoutMs, label, agent).finally(end)
+	return run(canvas, code, timeoutMs, label, agent, who.internal).finally(end)
 }
 
-function run(canvas, code, timeoutMs = 30000, label, agent) {
+function run(canvas, code, timeoutMs = 30000, label, agent, internal = false) {
 	// So the person's edits and the agent's stay separate steps, note the unsaved state before a run; it's
 	// saved only if the run turns out to change something, so reads (summary, notes) cost nothing.
 	// (A previous run still reaching the server's copy waits its turn: quick runs share one version.)
@@ -106,7 +110,7 @@ function run(canvas, code, timeoutMs = 30000, label, agent) {
 		const send = (ws, next) => {
 			const id = ++execSeq
 			const done = (f) => (v) => (ws.headless && headless.touch(canvas, false), f(v))
-			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now(), agent, next }
+			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now(), agent, next, internal }
 			if (ws.headless) headless.touch(canvas, true)
 			p.timer = setTimeout(() => {
 				pending.delete(id)
@@ -147,6 +151,7 @@ function getRoom(canvas) {
 			clearTimeout(entry.timer)
 			entry.timer = setTimeout(persist, 1000)
 			snapshotSoon(canvas)
+			plans.touched(canvas)
 		},
 		onSessionRemoved: (room, { numSessionsRemaining }) => {
 			if (numSessionsRemaining > 0) return
@@ -195,6 +200,7 @@ function onScene(ws, canvas) {
 		clearTimeout(scene.timer)
 		scene.timer = setTimeout(scene.persist, 1000)
 		snapshotSoon(canvas)
+		plans.touched(canvas)
 	})
 	ws.on('close', () => {
 		scene.sockets.delete(ws)
@@ -271,6 +277,7 @@ function describe(n, idx) {
 		openThreads: threads.list(CANVASES, n).filter((t) => t.status === 'open').length,
 		format: idx[n]?.format ?? null,
 		profile: idx[n]?.profile ? { ref: idx[n].profile, name: bound.get(n)?.name ?? idx[n].profile.split('/')[1] } : null,
+		plan: plans.has(n) ? plans.status(n).source ?? null : null,
 		open: (tabs.get(n) ?? []).filter((w) => !w.headless).length,
 		headless: headless.has(n),
 		thumb: existsSync(thumbPath(n)) ? Math.round(mtime(thumbPath(n))) : null,
@@ -359,15 +366,19 @@ function restoreVersion(n, version) {
 	saveVersion(n, { label: due?.label ?? `Before restoring v${version.n}`, source: due?.label ? 'agent' : 'edit' })
 	const undo = versions.list(CANVASES, n)[0]?.n ?? null
 	const label = `Restored v${version.n}${version.label ? ` (${version.label})` : ''}`
+	// On a canvas that shows a plan, the old version's views are old drawings, not edits: nothing of them is written upstream.
+	plans.reset(n)
 	if (engineOf(n) === 'excalidraw') restoreScene(n, version.data.elements)
 	else if (rooms.has(n)) rooms.get(n).room.loadSnapshot(version.data.room)
 	else writeFileSync(docPath(n), JSON.stringify({ room: version.data.room }))
 	const saved = snapshotNow(n, { label, source: 'restore' })
 	if (!saved) return { ...version, data: undefined, unchanged: true } // it already looked like that
+	// A version from when the canvas showed a plan, restored on a canvas that no longer does: its plan views are just shapes now.
+	const orphaned = !plans.has(n) && [...(planGraph(n).nodes ?? []), ...(planGraph(n).groups ?? [])].filter((x) => x.meta?.plan).length
 	// Nobody may be watching this one land.
 	const after = currentDocument(n)
 	if (!(tabs.get(n) ?? []).some((w) => !w.headless) && before && after) trail.record(CANVASES, n, { source: 'restore', label, changes: versions.diffShapes(before.shapes, after.shapes) })
-	return { ...saved, undo }
+	return { ...saved, undo, ...(orphaned && { plan: `This version has ${orphaned} shapes drawn from a plan, and the canvas is no longer bound to one: they are ordinary shapes now. \`plan bind SOURCE REF\` takes them up again.` }) }
 }
 /** Excalidraw merges by element version, so restored elements must outrank what tabs hold now. */
 function restoreScene(n, target) {
@@ -445,6 +456,14 @@ const server = createServer(async (req, res) => {
 			return json(res, 201, describe(name, idx))
 		}
 		if (route === 'formats') return json(res, 200, { formats: formatList() })
+		// Every plugin on PATH, by kind, and the ones found but not trusted, with why (server/plugins.mjs).
+		if (route === 'plugins' && req.method === 'GET') return json(res, 200, await plugins.list())
+		// Plan sources (server/sources.mjs) and the catalog of views (lib/plan.mjs).
+		if (route === 'sources' && req.method === 'GET') {
+			const of = url.searchParams.get('canvas')
+			return json(res, 200, { sources: await planSources.list(of && NAME.test(of) && canvasNames().includes(of) ? of : null) })
+		}
+		if (route === 'plan' && canvas === 'catalog') return json(res, 200, { kinds: Object.fromEntries(Object.entries(PLAN_KINDS).map(([k, v]) => [k, { title: v.title, about: v.about }])), text: catalogText() })
 		if (route === 'profiles' && !canvas && req.method === 'GET') return json(res, 200, await profiles.list())
 		if (route === 'profiles' && !canvas && req.method === 'POST') {
 			try {
@@ -556,7 +575,8 @@ const server = createServer(async (req, res) => {
 			if ((tabs.get(canvas) ?? []).length || rooms.has(canvas) || scenes.has(canvas)) return json(res, 409, { error: `${canvas} is open in a tab — close it first` })
 			const dest = join(ARCHIVE, `${canvas}-${new Date().toISOString().replace(/[:.]/g, '-')}`)
 			mkdirSync(dest, { recursive: true })
-			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas), filesDir(canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
+			plans.forget(canvas)
+			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas), planPath(CANVASES, canvas), filesDir(canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
 			chat.forgetThreads(canvas)
 			const idx = readIndex()
 			if (idx[canvas]) writeFileSync(join(dest, 'index-entry.json'), JSON.stringify(idx[canvas], null, 2) + '\n')
@@ -739,6 +759,46 @@ const server = createServer(async (req, res) => {
 			broadcast(canvas, { type: 'agent-say', agent: speaker(canvas, agent), text: String(text).slice(0, 200), keys: [keys].flat().map(String).slice(0, 50) })
 			return json(res, 200, { ok: true, tabs: (tabs.get(canvas) ?? []).filter((w) => !w.headless).length })
 		}
+		// A plan: the system of record this canvas shows views of (server/plan.mjs).
+		if (sub === 'plan') {
+			const action = subName, id = url.pathname.split('/')[6]
+			let input = {}
+			try {
+				if (['POST', 'PATCH', 'PUT'].includes(req.method)) input = JSON.parse((await body(req)) || '{}')
+			} catch (e) {
+				return json(res, 400, { error: `the request body isn't JSON: ${e.message}` })
+			}
+			if (!input || typeof input !== 'object' || Array.isArray(input)) return json(res, 400, { error: 'the request body must be a JSON object' })
+			try {
+				// Whoever reads the plan from here is told what upstream says now, not what it said when a tab was last open.
+				if (req.method === 'GET' && (!action || action === 'items' || action === 'views')) await plans.fresh(canvas)
+				if (!action && req.method === 'GET') return json(res, 200, plans.status(canvas))
+				if (!canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` })
+				if (action === 'bind' && req.method === 'POST') {
+					// A file named by where it is on disk, when that's somewhere this canvas can read.
+					const roots = refs.rootsOf(canvas, { filesDir })
+					const ref = input.path ? refs.refForPath(input.path, roots) : input.ref
+					if (input.path && !ref) return json(res, 400, { error: `${input.path} isn't in this canvas's files folder or its project, so the canvas can't keep reading it. Copy it to ${filesDir(canvas)} (\`plan bind file PATH --copy\` does that).` })
+					return json(res, 200, await plans.bind(canvas, { name: input.name, ref, views: input.views ?? [] }))
+				}
+				if (!action && req.method === 'DELETE') return json(res, 200, await plans.unbind(canvas))
+				if (action === 'sync' && req.method === 'POST') return json(res, 200, await plans.sync(canvas))
+				if (action === 'items' && req.method === 'GET') {
+					const plan = plans.items(canvas)
+					return json(res, 200, url.searchParams.has('text') ? { text: itemsText(plan) } : plan)
+				}
+				if (action === 'views' && !id && req.method === 'GET') return json(res, 200, { views: plans.status(canvas).views ?? [] })
+				if (action === 'views' && !id && req.method === 'POST') return json(res, 200, await plans.putView(canvas, input))
+				if (action === 'views' && id && req.method === 'PATCH') return json(res, 200, await plans.setView(canvas, decodeURIComponent(id), input))
+				if (action === 'views' && id && req.method === 'DELETE') return json(res, 200, await plans.removeView(canvas, decodeURIComponent(id), { keep: url.searchParams.has('keep') }))
+				if (action === 'write' && req.method === 'POST') return json(res, 200, await plans.change(canvas, input.changes))
+				if (action === 'problems' && req.method === 'DELETE') return json(res, 200, plans.dismiss(canvas, url.searchParams.get('ids')?.split(',').filter(Boolean)))
+				return json(res, 404, { error: 'not found' })
+			} catch (e) {
+				if (e instanceof PlanError) return json(res, { not_found: 404, invalid: 400, conflict: 409, forbidden: 403, unavailable: 502 }[e.code] ?? 500, { error: e.message, code: e.code })
+				throw e
+			}
+		}
 		if (sub === 'log' && req.method === 'GET') return json(res, 200, { entries: trail.read(CANVASES, canvas, url.searchParams.get('since')) })
 		if (sub === 'scripts' && req.method === 'GET') return json(res, 200, { scripts: listScripts(canvas) })
 		if (sub === 'scripts' && NAME.test(subName ?? '')) {
@@ -774,6 +834,37 @@ const wss = new WebSocketServer({ noServer: true })
 // ---- agent profiles (server/profiles.mjs) ------------------------------------------------------------
 // A canvas can be bound to a named agent: its chat and comment threads become that agent, with its knowledge loaded.
 const profiles = createProfiles({ data: CANVASES, exclude: [ROOT] })
+
+// ---- plans: a canvas over a system of record (server/sources.mjs, server/plan.mjs) -------------------------------------
+// --plugin-path / TOUCAN_PLUGIN_PATH: folders the operator vouches for, searched as well as PATH (server/plugins.mjs).
+// (Set in the environment too: agent profiles look their plugins up through the same variable.)
+if (typeof args['plugin-path'] === 'string') process.env.TOUCAN_PLUGIN_PATH = args['plugin-path']
+const plugins = createPlugins({ data: CANVASES, exclude: [ROOT], pluginPath: typeof args['plugin-path'] === 'string' ? args['plugin-path'] : process.env.TOUCAN_PLUGIN_PATH ?? '' })
+const planSources = createSources({ plugins, roots: (canvas) => refs.rootsOf(canvas, { filesDir }) })
+const personTabs = (canvas) => (tabs.get(canvas) ?? []).filter((w) => !w.headless && w.readyState === 1)
+/** Every page of the canvas as one graph: a plan's views may be on any of them. */
+function planGraph(canvas) {
+	const out = { tg: 1, groups: [], nodes: [], edges: [] }
+	for (const page of pagesOf(canvas)) {
+		const tg = graphOf(canvas, page ? { page } : undefined)
+		out.groups.push(...tg.groups)
+		out.nodes.push(...tg.nodes)
+		out.edges.push(...tg.edges)
+	}
+	return out
+}
+const plans = createPlans({
+	data: CANVASES,
+	sources: planSources,
+	graphOf: planGraph,
+	engineOf,
+	exec: (canvas, code, { label, doing }) => exec(canvas, code, 60000, label, { agent: 'toucan', doing, internal: true }),
+	people: (canvas) => personTabs(canvas).length,
+	canDraw: (canvas) => personTabs(canvas).length > 0 || headless.enabled,
+	busy: (canvas) => personTabs(canvas).flatMap((w) => (w.busyKeys?.length && Date.now() - w.busyAt < 6000 ? w.busyKeys : [])),
+	changedAt: (canvas) => rooms.get(canvas)?.changed ?? scenes.get(canvas)?.changed ?? 0,
+	broadcast,
+})
 const bound = new Map() // canvas -> its loaded profile, kept so names and folders are at hand without a lookup
 async function profileOf(canvas) {
 	const ref = readIndex()[canvas]?.profile
@@ -881,18 +972,20 @@ function routeThread(canvas, thread, ask, mode, handover = false) {
 }
 
 const guideFor = (canvas) => CANVAS_FORMATS[readIndex()[canvas]?.format]?.guide ?? null
+/** What the brief says about how this canvas works: its format, and the plan it shows, if any. */
+const briefGuide = (canvas) => [guideFor(canvas), ...plans.brief(canvas)].filter(Boolean).join('\n') || null
 
 /** Selection and notes need a person's tab; with none, or a slow one, the brief goes without them. */
 async function chatBrief(canvas) {
 	if (!(tabs.get(canvas) ?? []).some((w) => !w.headless)) {
-		return formatBrief(graphOf(canvas), null, openThreadLines(canvas), guideFor(canvas))
+		return formatBrief(graphOf(canvas), null, openThreadLines(canvas), briefGuide(canvas))
 	}
 	const asked = exec(canvas, `const s = toucan.summary({ limit: 0 }), sel = toucan.selection?.()
 return { page: toucan.engine === 'tldraw' ? editor.getCurrentPageId() : undefined, selected: s.selected ?? [], openNotes: s.openNotes, others: (sel?.others ?? []).map((o) => ({ user: o.user, shapes: o.shapes.map((x) => x.key) })) }`, 1000, undefined, { agent: 'Codex', doing: 'reading the canvas' })
 	const live = await Promise.race([asked, new Promise((r) => setTimeout(r, 800))]).catch(() => null)
 	// The brief describes the page the person is on, not just the first one.
 	const tg = graphOf(canvas, live?.page ? { page: live.page } : undefined)
-	return formatBrief(tg, live, openThreadLines(canvas), guideFor(canvas))
+	return formatBrief(tg, live, openThreadLines(canvas), briefGuide(canvas))
 }
 
 /** A message that needs no agent: run it, and return what to say. Null: it's for the agent. */
@@ -937,9 +1030,21 @@ function onCanvas(ws, canvas, nonce) {
 	tabs.set(canvas, list)
 	ws.send(JSON.stringify({ type: 'scripts', scripts: listScripts(canvas) }))
 	ws.send(JSON.stringify({ type: 'threads', threads: threadsView(canvas) }))
+	// (Bound or not: a tab is told either way, so routines know whether shapes carrying meta.plan are a plan's or just shapes.)
+	ws.send(JSON.stringify({ type: 'plan', plan: plans.status(canvas) }))
+	if (plans.has(canvas)) {
+		// A person opening the canvas is what brings its plan up to date.
+		if (!ws.headless) plans.opened(canvas)
+	}
 	ws.on('message', (raw) => {
 		const msg = JSON.parse(raw)
-		if (msg.type === 'focus') {
+		if (msg.type === 'busy') {
+			// What this tab's person is dragging or typing in: a plan's sync leaves those shapes alone (server/plan.mjs). A claim
+			// lasts a few seconds unless renewed, so a tab that went to sleep mid-edit doesn't hold them for ever.
+			ws.busyKeys = Array.isArray(msg.keys) ? msg.keys.filter((k) => typeof k === 'string').slice(0, 2000) : []
+			ws.busyAt = Date.now()
+		}
+		else if (msg.type === 'focus') {
 			const l = tabs.get(canvas).filter((w) => w !== ws)
 			l.push(ws)
 			tabs.set(canvas, l)
@@ -952,13 +1057,17 @@ function onCanvas(ws, canvas, nonce) {
 			pending.delete(msg.id)
 			clearTimeout(p.timer)
 			// What agents and routines do is what routines are learned from (server/worklog.mjs).
+			// (Not a plan's own redraws: nobody would bank those.)
 			try {
-				worklog.record(CANVASES, { canvas, engine: engineOf(canvas), agent: p.agent, label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error, ms: Date.now() - p.sentAt })
+				if (!p.internal) worklog.record(CANVASES, { canvas, engine: engineOf(canvas), agent: p.agent, label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error, ms: Date.now() - p.sentAt })
 			} catch (e) {
 				console.error(`work log: ${e.message}`)
 			}
 			// Nobody watched a headless edit land, so it goes on the canvas's trail.
-			if (ws.headless) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
+			// (A plan's own redraws aren't an agent's edits: the plan control says when it last synced.)
+			if (ws.headless && !p.internal) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
+			// A box an agent's run put in a plan's board column is an annotation, not a new item (server/plan.mjs).
+			if (!p.internal && msg.changes?.added?.length) plans.agentAdded(canvas, msg.changes.added.map((c) => c.key))
 			if (msg.changes && (msg.changes.added?.length || msg.changes.updated?.length || msg.changes.removed?.length)) {
 				unlanded.set(canvas, { sentAt: p.sentAt, changes: msg.changes })
 				if (p.before) saveBefore(canvas, p.before)
@@ -1047,6 +1156,7 @@ for (const sig of ['SIGINT', 'SIGTERM']) {
 		} catch (e) {
 			console.error(`toucan: couldn't save on the way out: ${e.message}`)
 		}
+		plans.close()
 		// Close Chromium with the server (it would follow anyway once its pipe closes, but not always promptly).
 		if (headless.enabled) await headless.shutdown().catch(() => {})
 		process.exit(0)

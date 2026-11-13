@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { getFormat, useFormat } from './formats'
 import { getThreads, openThread, update as updateThreads, useThreads } from './threads-store'
 import { hostOf, isWeb, nameOf, openReference } from './references-store'
+import { messageOf, usePlan, usePlanItems, writeField, type PlanField, type PlanItem } from './plan-store'
 
 type Step = { key: string; text: string }
 
@@ -34,6 +35,86 @@ function linked(text: string) {
 }
 const CARD_W = 320
 
+// A shape a plan drew for one of its items carries which item (lib/plan.mjs). tldraw keeps meta on the shape, Excalidraw in customData.
+function planItemOf(toucan: any, key: string): string | null {
+	const shape = toucan.get(key)
+	return (shape?.meta?.plan ?? shape?.customData?.meta?.plan)?.item ?? null
+}
+
+const CONTROL = 'h-6 w-full min-w-0 rounded-md border bg-background px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-60'
+
+function shown(field: PlanField, value: unknown): string {
+	if (value === null || value === undefined || value === '') return '—'
+	const label = (id: unknown) => field.options?.find((o) => o.id === id)?.label ?? String(id)
+	if (Array.isArray(value)) return value.map(label).join(', ') || '—'
+	if (field.type === 'bool') return value ? 'Yes' : 'No'
+	return field.type === 'option' ? label(value) : String(value)
+}
+
+/**
+ * An item's fields, on the card of the box a plan drew for it. A choice or a date the source lets people set is a control,
+ * and changing it writes upstream, which then redraws the views; everything else is read.
+ */
+function PlanFields({ item, fields, readonly }: { item: PlanItem; fields: PlanField[]; readonly: boolean }) {
+	const [saving, setSaving] = useState('')
+	const [error, setError] = useState('')
+	useEffect(() => setError(''), [item.id])
+	async function set(field: PlanField, value: string) {
+		setSaving(field.id)
+		setError('')
+		try {
+			await writeField(item.id, field.id, value || null)
+		} catch (e) {
+			setError(messageOf(e))
+		}
+		setSaving('')
+	}
+	return (
+		<div aria-label="Plan fields" className="max-h-48 shrink-0 overflow-y-auto border-t px-3 py-2 text-xs">
+			<dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1">
+				{fields.map((f) => {
+					const value = item[f.id]
+					const editable = f.writable && !readonly
+					return (
+						<div key={f.id} className="contents">
+							<dt className="text-muted-foreground">{f.label}</dt>
+							<dd className="min-w-0">
+								{editable && f.type === 'option' ? (
+									<select aria-label={f.label} className={CONTROL} value={typeof value === 'string' ? value : ''} disabled={saving === f.id} onChange={(e) => set(f, e.target.value)}>
+										<option value="">—</option>
+										{f.options?.map((o) => (
+											<option key={o.id} value={o.id}>
+												{o.label}
+											</option>
+										))}
+									</select>
+								) : editable && f.type === 'date' ? (
+									// A date is cleared here, on purpose, and not by dragging a bar off the chart.
+									<span className="flex items-center gap-1">
+										<input type="date" aria-label={f.label} className={CONTROL} value={typeof value === 'string' ? value.slice(0, 10) : ''} disabled={saving === f.id} onChange={(e) => set(f, e.target.value)} />
+										{typeof value === 'string' && value && (
+											<button type="button" aria-label={`Clear ${f.label}`} title={`Clear ${f.label.toLowerCase()}`} className="shrink-0 rounded px-1 text-muted-foreground outline-none hover:bg-muted focus-visible:bg-muted" disabled={saving === f.id} onClick={() => set(f, '')}>
+											×
+											</button>
+										)}
+									</span>
+								) : (
+									<span className="break-words">{shown(f, value)}</span>
+								)}
+							</dd>
+						</div>
+					)
+				})}
+			</dl>
+			{error && (
+				<p role="alert" className="mt-1.5 break-words text-destructive">
+					{error}
+				</p>
+			)}
+		</div>
+	)
+}
+
 /**
  * A box stays short, and what's behind it opens when it's selected: its detail, the threads on it, and, on a canvas
  * with a format, the way to walk on from it with ← and →. It takes no focus and blocks nothing, and doesn't appear for a
@@ -46,6 +127,7 @@ export function DetailsCard({ toucan, subscribe }: { toucan: any; subscribe: (on
 	const [key, setKey] = useState<string | null>(null)
 	const [dismissed, setDismissed] = useState<string | null>(null)
 	const [, redraw] = useState(0)
+	const plan = usePlan()
 
 	useEffect(() => {
 		let frame = 0
@@ -78,7 +160,12 @@ export function DetailsCard({ toucan, subscribe }: { toucan: any; subscribe: (on
 	const refs: { ref: string; label?: string }[] = key ? (toucan.refsOf?.(key) ?? []) : []
 
 	const onThis = key ? threads.filter((t) => t.status === 'open' && t.anchor.shapes?.includes(key)) : []
-	const nothingToShow = !detail && !format && !see.length && !refs.length
+	// A box a plan drew for an item always has something to show: the item's fields.
+	const itemId = key && plan.bound ? planItemOf(toucan, key) : null
+	const items = usePlanItems(!!itemId)
+	const item = itemId ? items?.get(itemId) : undefined
+	const itemFields = (plan.fields ?? []).filter((f) => f.id !== 'title' && f.id !== 'detail')
+	const nothingToShow = !detail && !format && !see.length && !refs.length && !itemId
 	const showing = !!key && key !== dismissed && !nothingToShow && active === null && !draft && !placing
 
 	// ← and → walk the canvas while a card is open, instead of nudging the shape.
@@ -86,7 +173,7 @@ export function DetailsCard({ toucan, subscribe }: { toucan: any; subscribe: (on
 		if (!showing || !getFormat()) return
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
-			if ((e.target as HTMLElement).closest?.('input, textarea, [contenteditable]') || !toucan.isIdle()) return
+			if ((e.target as HTMLElement).closest?.('input, textarea, select, [contenteditable]') || !toucan.isIdle()) return
 			const to = e.key === 'ArrowRight' ? steps.next[0] : steps.prev[0]
 			e.preventDefault()
 			e.stopPropagation()
@@ -116,6 +203,7 @@ export function DetailsCard({ toucan, subscribe }: { toucan: any; subscribe: (on
 					</Button>
 				</header>
 				{detail && <p className="min-h-0 flex-1 overflow-y-auto px-3 pb-2 break-words whitespace-pre-line text-muted-foreground">{linked(detail)}</p>}
+				{item && itemFields.length > 0 && <PlanFields item={item} fields={itemFields} readonly={!!plan.source?.readonly} />}
 				{refs.length > 0 && (
 					<ul aria-label="References" className="border-t px-1.5 py-1 text-xs">
 						{refs.map((r) => (

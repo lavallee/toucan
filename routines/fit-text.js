@@ -17,6 +17,8 @@ if (toucan.engine === 'excalidraw') {
 		if (!box || box.type === 'arrow') continue
 		const need = t.height + PAD * 2
 		if (box.height >= need - 1) continue
+		// A plan's boxes are the size the plan drew them.
+		if (toucan.scene.skipPlan(box.id)) continue
 		const grown = tl.newElementWith(box, { height: Math.ceil(need) })
 		changed.set(box.id, grown)
 		changed.set(t.id, tl.newElementWith(t, { y: grown.y + (grown.height - t.height) / 2 }))
@@ -25,7 +27,8 @@ if (toucan.engine === 'excalidraw') {
 	if (changed.size) editor.updateScene({ elements: all.map((e) => changed.get(e.id) ?? e), captureUpdate: tl.CaptureUpdateAction.IMMEDIATELY })
 } else {
 	// tldraw grows a box with too much text by growY; fold it into the height, so the box is simply that tall.
-	const grown = editor.getCurrentPageShapes().filter((s) => s.type === 'geo' && s.props.growY > 0)
+	// (Not a plan's boxes: those are the size the plan drew them.)
+	const grown = editor.getCurrentPageShapes().filter((s) => s.type === 'geo' && s.props.growY > 0 && !toucan.scene.skipPlan(s.id))
 	editor.updateShapes(grown.map((s) => ({ id: s.id, type: s.type, props: { h: s.props.h + s.props.growY, growY: 0 } })))
 	fitted = grown.length
 }

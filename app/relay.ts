@@ -6,6 +6,7 @@
 import { wsUrl, canvasName, token, headless } from './net'
 import { getThreads, setThreads } from './threads-store'
 import { setFormatId } from './formats'
+import { setPlan } from './plan-store'
 import { openReference } from './references-store'
 import { activity, say, turn, setRunning } from './pulses'
 
@@ -35,7 +36,10 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 	function connect() {
 		ws = new WebSocket(wsUrl('/ws/canvas') + (headless && `&headless=${headless}`))
 		const sock = ws
-		sock.onopen = () => setStatus('live')
+		sock.onopen = () => {
+			busy = '' // a new socket: the server takes this tab as idle until told otherwise
+			setStatus('live')
+		}
 		sock.onclose = () => {
 			setStatus('offline')
 			if (!closed) setTimeout(connect, 1500)
@@ -45,6 +49,7 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 			if (msg.type === 'scripts') return runScripts(msg.scripts)
 			if (msg.type === 'threads') return setThreads(msg.threads)
 			if (msg.type === 'format') return setFormatId(msg.format)
+			if (msg.type === 'plan') return setPlan(msg.plan)
 			// An agent ran `toucan show`: open it for people to read.
 			if (msg.type === 'show') return headless ? undefined : openReference(msg.ref, msg.agent)
 			// Another tab ran agent code: glow what it added or changed (agent presence, app/pulses.tsx).
@@ -61,30 +66,45 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 			// One undo step per run, and a record of which shapes it added, changed or removed.
 			const done = scope.toucan._track?.()
 			setRunning(msg.agent)
-			const finish = () => {
+			const finish = (quiet = false) => {
 				const changes = done?.()
 				const ids = changes ? [...changes.added, ...changes.updated].map((c: any) => c.id) : []
 				if (ids.length) scope.toucan.pulse?.(ids, msg.agent)
 				setRunning()
 				// Don't move the canvas under someone reading or writing in a thread.
 				const { active, draft } = getThreads()
-				if (changes?.added.length && active === null && !draft) scope.toucan.reveal?.(changes.added.map((c: any) => c.id))
+				if (!quiet && changes?.added.length && active === null && !draft) scope.toucan.reveal?.(changes.added.map((c: any) => c.id))
 				return changes
 			}
 			try {
 				const fn = new AsyncFunction('editor', 'tl', 'toucan', msg.code)
 				const result = await fn(scope.editor, scope.tl, scope.toucan)
-				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: true, result: JSON.parse(JSON.stringify(result ?? null)), changes: finish() }))
+				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: true, result: JSON.parse(JSON.stringify(result ?? null)), changes: finish(result?._quiet === true) }))
 			} catch (e: any) {
 				sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: false, error: `${e.name}: ${e.message}`, changes: finish() }))
 			}
 		}
 	}
 	connect()
+	// A plan's sync (server/plan.mjs) leaves alone what someone is dragging or typing in, in any tab: say which shapes those
+	// are when that changes, and again every couple of seconds while it lasts, since the server forgets a claim that isn't renewed.
+	let busy = '', said = 0
+	const watchBusy = setInterval(() => {
+		let keys: string[] = []
+		try {
+			keys = scope.toucan._busyKeys?.() ?? []
+		} catch {}
+		const now = keys.join('\n')
+		if (ws?.readyState !== 1 || (now === busy && (!now || Date.now() - said < 2000))) return
+		busy = now
+		said = Date.now()
+		ws.send(JSON.stringify({ type: 'busy', keys }))
+	}, 200)
 	const onFocus = () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: 'focus' }))
 	window.addEventListener('focus', onFocus)
 	return () => {
 		closed = true
+		clearInterval(watchBusy)
 		ws?.close()
 		window.removeEventListener('focus', onFocus)
 		for (const [, cleanup] of cleanups) try { cleanup?.() } catch {}

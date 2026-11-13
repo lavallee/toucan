@@ -5,6 +5,54 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-11-13
+
+### Added
+
+- **Plans: a canvas over a system of record.** A canvas can bind to a project kept somewhere else and show it as views that stay
+  in step both ways: a kanban **board** (columns by any option field, optional swimlanes), a **gantt** with a real date axis, bars
+  exactly as long as start to end (a title that doesn't fit stands beside its bar), a today marker, milestones as diamonds, an
+  Unscheduled strip, optional lanes (headed by a summary bar when grouped by a parent) and dependency arrows, a **timeline**, a
+  dependency **graph**, and a **table**. Upstream changes redraw the views; a person's edits are written back as field changes (a card into
+  another column sets the grouped field, a bar moved or stretched sets its dates in whole days, text sets the title, a box drawn
+  in a column makes an item). A write quotes the version the card showed; on a conflict or a refusal the canvas goes back to what
+  upstream says and a notice says so. Only shapes carrying `meta.plan` are ever touched: what people draw around or inside a view
+  is left alone, and moved out, not removed, when the frame it was in goes. Nothing is read from where a shape is on the page (a
+  column is the frame a card is in, dates are read against the view's own axis), so moving, resizing or nesting a view, restoring a
+  version, or running a routine is never an edit; routines, `import --move`, `draw --update` and `toucan.layout()` leave plan views as
+  they are. What someone is dragging or typing in is left alone until they let go, and everything else syncs meanwhile.
+  Several cards moved at once end in the order they were dropped in; a rotated shape is stood up again; a duplicated view is the
+  person's own ordinary copy; only a card-sized rectangle a person draws in a column becomes an item. Views are placed clear of
+  each other and move down out of the way of one that grows. `plan` reports `drawn` apart from `state`, so data that is current
+  while the drawing waits for a page reads as that.
+  `toucan plan bind SOURCE REF`, `plan sync`, `plan unbind`, and `toucan new NAME --plan SOURCE REF --views board,gantt`.
+- **Views are specs.** Agents compose and reshape views with `plan view add|set|put|rm` from a typed catalog (`plan catalog`):
+  `groupBy`, `lanes`, `filter`, `sort`, `fields`, `rollup` (count, percent done, the sum of a number field, in column and lane
+  headers), gantt `scale`, `from`, `to` and `dependencies`. Fields are whatever the plan declares, including a system's own. A spec
+  that doesn't fit is refused with what would. `plan items`, `plan set ITEM field=value` and `plan add --title T` change the work
+  itself through the same write as a person's gesture.
+- **Plan sources.** A built-in `file` source (a plan as one JSON file in the canvas's files or its project; edits rewrite it), and
+  `toucan-source-NAME` plugins speaking a four-verb protocol (`list`, `read`, `changes`, `write`), documented in full in Extending.
+  `examples/website-relaunch.plan.json` is a plan to try and `examples/toucan-source-example.mjs` a source to copy. `toucan sources`.
+- **One plugin mechanism.** Agent profile sources and plan sources are found, trusted, run and listed by the same code
+  (`server/plugins.mjs`), so a new kind of plugin is a registry entry. `toucan plugins` (and `/api/plugins`) lists every plugin by
+  kind with its path and what it says of itself (an optional `describe` verb), and, for one found on PATH but refused, why: its
+  folder is writable by others, it's inside the data directory, it isn't executable. Existing `toucan-profiles-NAME` sources work unchanged.
+  The trust rule: a plugin's folder and file must be yours or root's and not writable by anyone else (your own private group is
+  fine), with nothing above them world-writable or someone else's; plugins installed with `npm i -g` work. `TOUCAN_PLUGIN_PATH`
+  (or `toucan start --plugin-path`) names folders you vouch for, such as a Homebrew prefix. Every refusal says why and what to do.
+  A plugin that runs past its time limit is killed with everything it started.
+- A plan control in the app bar (state, Sync now, views, group-by, add and remove), and the Details card of a plan's card shows
+  the item's fields, with stage, owner and dates editable there.
+
+### Fixed
+
+- Excalidraw: an edit made in one tab (an import, a routine) took the text off boxes in every other tab that had the canvas open,
+  because each update's bindings were repaired without the unchanged labels it didn't carry.
+
+- `import --move` (and applyGraph with `move`) put a frame nested in another frame at its page position counted from the parent's
+  corner, so it landed offset by wherever the parent was. A nested frame now goes where the graph says (tldraw).
+
 ## [0.14.0] — 2026-11-12
 
 ### Added

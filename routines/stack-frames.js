@@ -6,7 +6,10 @@
 // args: direction (DOWN or RIGHT, default DOWN); gap (px, default 80)
 
 const scene = toucan.scene
-const frames = scene.items().filter((i) => i.kind === 'frame' && !i.parent)
+// A plan's frames, and frames holding its shapes, stay where they are; the others are stacked clear of them.
+const every = scene.items().filter((i) => i.kind === 'frame' && !i.parent)
+const stays = every.filter((f) => scene.skipPlan(f.id) || scene.skipHolder(f.id))
+const frames = every.filter((f) => !stays.includes(f))
 if (frames.length < 2) return { summary: 'Fewer than two frames on this page: nothing to stack.', changed: 0 }
 const down = (args.direction ?? 'DOWN').toUpperCase() !== 'RIGHT'
 const gap = args.gap ?? 80
@@ -16,7 +19,12 @@ const startX = Math.min(...frames.map((f) => f.x)), startY = Math.min(...frames.
 let at = down ? startY : startX, changed = 0
 scene.batch(() => {
 	for (const f of ordered) {
-		const x = down ? startX : at, y = down ? at : startY
+		let x = down ? startX : at, y = down ? at : startY
+		for (let hit; (hit = stays.find((s) => x < s.maxX + gap && s.x < x + f.w + gap && y < s.maxY + gap && s.y < y + f.h + gap)); ) {
+			at = (down ? hit.maxY : hit.maxX) + gap
+			if (down) y = at
+			else x = at
+		}
 		if (Math.abs(x - f.x) > 0.5 || Math.abs(y - f.y) > 0.5) scene.place(f.id, { x, y, w: f.w, h: f.h }, { carry: true }), changed++
 		at += (down ? f.h : f.w) + gap
 	}

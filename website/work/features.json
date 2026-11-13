@@ -297,6 +297,42 @@
    "who": "person"
   },
   {
+   "id": "plans",
+   "group": "together",
+   "name": "Plans: views of a system of record",
+   "summary": "Bind a canvas to a project kept elsewhere and see it as a board, gantt, timeline, dependency graph or table that follows upstream changes and writes a person's drags and edits back.",
+   "app": "Plan menu · Details card",
+   "cli": "plan bind SOURCE REF · plan sync · new NAME --plan SOURCE REF",
+   "since": "0.15.0",
+   "docs": "agents.html#plans-a-canvas-over-a-system-of-record",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "plan-views",
+   "group": "together",
+   "name": "Views as specs",
+   "summary": "Agents compose and reshape plan views by writing small declarative specs from a catalog: group by any option field, swimlanes, filter, sort, card fields, roll-ups, a real date axis. A spec that doesn't fit is refused with what would.",
+   "app": "Plan menu",
+   "cli": "plan catalog · plan view add KIND · plan view set ID · plan view put FILE · plan view rm ID",
+   "since": "0.15.0",
+   "docs": "agents.html#plans-a-canvas-over-a-system-of-record",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "plan-write",
+   "group": "together",
+   "name": "Writing the plan from the canvas",
+   "summary": "An agent updates the system of record through the same versioned write as a person's gesture; a conflict or refusal puts the canvas back to upstream and tells people.",
+   "app": "Notice above the canvas",
+   "cli": "plan items · plan set ITEM field=value · plan add --title T · plan dismiss",
+   "since": "0.15.0",
+   "docs": "agents.html#plans-a-canvas-over-a-system-of-record",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
    "id": "details",
    "group": "reading",
    "name": "Details cards",
@@ -614,6 +650,17 @@
    "who": "agent"
   },
   {
+   "id": "plan-file",
+   "group": "formats",
+   "name": "A plan as a file",
+   "summary": "The built-in file source: a plan in one JSON file in the canvas's files or its project, rewritten by edits on the canvas, with nothing else installed.",
+   "cli": "plan bind file files/PATH · sources",
+   "since": "0.15.0",
+   "docs": "extending.html#plan-sources",
+   "engines": "both",
+   "who": "person"
+  },
+  {
    "id": "install",
    "group": "running",
    "name": "One-line install",
@@ -655,6 +702,17 @@
    "cli": "--public-url · --allow-host · TOUCAN_URL · TOUCAN_TOKEN",
    "since": "0.11.0",
    "docs": "how-it-works.html",
+   "engines": "both",
+   "who": "operator"
+  },
+  {
+   "id": "plugins",
+   "group": "running",
+   "name": "Plugins",
+   "summary": "One mechanism for programs on PATH that connect toucan to your own systems (agent profiles, plan sources), with one trust rule; lists what was found and, for anything refused, why.",
+   "cli": "plugins · sources · profiles",
+   "since": "0.15.0",
+   "docs": "extending.html#plugins",
    "engines": "both",
    "who": "operator"
   }

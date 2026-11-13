@@ -37,7 +37,9 @@ const through = (path, b, pad = 6) => {
 }
 const length = (p) => p.slice(1).reduce((s, q, i) => s + Math.hypot(q.x - p[i].x, q.y - p[i].y), 0)
 
+// A plan's own arrows keep the route the plan gave them (they still count as arrows to stay clear of).
 const arrowsWithEnds = () => scene.arrows().map((a) => ({ id: a.id, ends: new Set([a.from, a.to].filter(Boolean)) })).filter((a) => a.ends.size === 2)
+const free = (arrows) => arrows.filter((a) => !scene.skipPlan(a.id))
 const solids = () => scene.items().filter((s) => s.kind !== 'arrow' && s.kind !== 'frame').map((s) => ({ id: s.id, b: s }))
 
 /** Boxes an arrow could run through: anything but arrows, frames, and the shapes it connects (and their frames). */
@@ -72,7 +74,7 @@ function tidy() {
 	const paths = new Map(arrows.map((a) => [a.id, scene.arrowPath(a.id)]))
 	const candidates = [...BENDS.map((bend) => ({ kind: 'arc', bend, elbowMid: 0.5 })), ...ELBOW_MIDPOINTS.map((elbowMid) => ({ kind: 'elbow', bend: 0, elbowMid }))]
 	for (let pass = 0; pass < 2; pass++) {
-		for (const a of arrows) {
+		for (const a of free(arrows)) {
 			const obstacles = obstaclesFor(a, boxes)
 			const others = arrows.filter((o) => o.id !== a.id && ![...a.ends].some((e) => o.ends.has(e)))
 			let best = null

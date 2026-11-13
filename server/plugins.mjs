@@ -1,0 +1,361 @@
+// Plugins: programs on PATH that extend toucan, found and run in one way whatever they are for.
+//
+// A plugin is an executable named `toucan-<kind>-<name>`. Each *kind* is an entry in KINDS below: the prefix its
+// programs carry, and the verbs they answer. A plugin answers a verb with JSON on stdout and exit 0; on failure it exits
+// non-zero and says why on stderr, as one JSON object {"error": CODE, "message": TEXT} or as plain text. Any plugin may
+// also answer `describe` with {"name", "description", "version"?}.
+//
+//   profiles   toucan-profiles-NAME   named agents a canvas can work with    (server/profiles.mjs)
+//   source     toucan-source-NAME     plans a canvas can show and write to   (server/sources.mjs)
+//
+// A new kind is an entry here and the code that calls it: finding, trusting, running and listing come with it.
+// (Extension commands, `toucan-NAME`, are the older, simpler sort: the CLI runs them as the person, with the terminal,
+// so they follow no protocol and need no trust rule. `scanCommands` lists them for `toucan plugins`.)
+//
+// The server runs a plugin outside any sandbox, so the rule keeps out a program someone other than the operator put there:
+// an agent (which writes in toucan's data and its own workdir) or another user of the machine. It looks in PATH folders
+// given as absolute paths, outside toucan's own folder and its data, that belong to this user or root and that nobody
+// else can write to: not everyone (unless the folder is sticky, where nobody can replace another's file), and not a group,
+// unless it is this user's own group with nobody else in it (the 775 that a umask of 002 leaves). No folder above may
+// belong to another user or be open to everyone without being sticky. The program, once links are followed, is a file
+// under the same rule in a folder under the same rule; where that folder is (a node_modules, say, for a package installed
+// with `npm i -g`) doesn't matter. This is deliberately narrow, and an operator widens it in one way only: folders named
+// in TOUCAN_PLUGIN_PATH are theirs to vouch for, searched first, and asked only to be outside toucan's folder and data.
+// One found but refused is remembered with what is wrong and the fix, since that is what people get stuck on:
+// `toucan plugins`.
+//
+// A plugin runs in a process group of its own, so that when it takes too long everything it started ends with it.
+
+import { spawn } from 'node:child_process'
+import { accessSync, constants, existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
+import { delimiter, dirname, isAbsolute, join, resolve, sep } from 'node:path'
+
+export const KINDS = {
+	profiles: { prefix: 'toucan-profiles-', title: 'Agent profiles', about: 'named agents a canvas can work with', verbs: ['list', 'get ID'], env: { TOUCAN_PROFILES_PROTOCOL: '1' }, reserved: ['local'] },
+	source: { prefix: 'toucan-source-', title: 'Plan sources', about: 'systems of record a canvas can show views of, and write to', verbs: ['list', 'read -- REF', 'changes --after CURSOR -- REF', 'write -- REF'], env: { TOUCAN_SOURCE_PROTOCOL: '1' }, reserved: ['file'] },
+}
+export const ERROR_CODES = ['not_found', 'invalid', 'conflict', 'forbidden', 'unavailable']
+const ID = /^[a-z0-9][a-z0-9_-]{0,63}$/i
+const EXT = /\.(m?js|py|sh|exe|cmd)$/i
+// Who owns a folder, and who may write to it, mean something only where there are uids.
+const POSIX = process.platform !== 'win32' && typeof process.getuid === 'function'
+
+/** A plugin failed: `code` is one of ERROR_CODES, `why` the reason on its own, `message` the reason with what was asked. */
+export class PluginError extends Error {
+	constructor(code, why, what = '') {
+		super(what ? `${what}: ${why}` : why)
+		this.code = code
+		this.why = why
+	}
+}
+
+/**
+ * Whether group `gid` is user `uid`'s own and nobody else's, going by the text of /etc/group and /etc/passwd: the user
+ * has it as their primary group, no other account does, and the group lists no other member. Anything it can't be sure
+ * of is a no: a file that couldn't be read, a user or group that isn't in them (macOS, a network directory), a line that
+ * hands the question to another database.
+ */
+export function privateGroup({ uid, gid, group, passwd }) {
+	if (typeof group !== 'string' || typeof passwd !== 'string' || !Number.isInteger(uid) || !Number.isInteger(gid)) return false
+	const rows = (text) => text.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')).map((l) => l.split(':'))
+	const accounts = rows(passwd), groups = rows(group)
+	// A line that starts with + or - sends the lookup elsewhere (NIS), and what is there can't be read from here.
+	if ([...accounts, ...groups].some((r) => /^[+-]/.test(r[0]))) return false
+	const num = (v) => (/^\d+$/.test(v ?? '') ? Number(v) : NaN)
+	const mine = accounts.filter((r) => num(r[2]) === uid)
+	if (!mine.some((r) => num(r[3]) === gid)) return false
+	if (accounts.some((r) => num(r[3]) === gid && num(r[2]) !== uid)) return false
+	const names = new Set(mine.map((r) => r[0]))
+	const lines = groups.filter((r) => num(r[2]) === gid)
+	return lines.length > 0 && lines.every((r) => (r[3] ?? '').split(',').map((m) => m.trim()).filter(Boolean).every((m) => names.has(m)))
+}
+
+/** Who the server runs as, for the rule: `uid` (null where there are none), `gid`, and `groupIsPrivate(gid)`. */
+function whoAmI() {
+	if (!POSIX) return { uid: null, gid: null, groupIsPrivate: () => false }
+	const uid = process.getuid()
+	const read = (file) => {
+		try {
+			return readFileSync(file, 'utf8')
+		} catch {
+			return null
+		}
+	}
+	return { uid, gid: process.getgid(), groupIsPrivate: (gid) => privateGroup({ uid, gid, group: read('/etc/group'), passwd: read('/etc/passwd') }) }
+}
+
+/**
+ * Every plugin of every kind (or of `kinds`): { found: [{ kind, id, command }], refused: [{ kind, id, path, reason }] }.
+ * `pluginPath` is the folders the operator vouches for, looked in before `path` (PATH); the first of a name wins.
+ * `exclude` and `data` are folders nothing is trusted inside. `who` replaces who the server runs as, for tests:
+ * any of { uid, gid, groupIsPrivate(gid) }.
+ */
+export function scan({ data, path = process.env.PATH ?? '', pluginPath = process.env.TOUCAN_PLUGIN_PATH ?? '', exclude = [], kinds = Object.keys(KINDS), who } = {}) {
+	const found = [], refused = []
+	const me = { ...whoAmI(), ...who }
+	const seen = new Map(kinds.flatMap((k) => (KINDS[k].reserved ?? []).map((id) => [`${k}/${id}`, null])))
+	const fenced = [data, ...exclude].filter(Boolean).map((d) => (existsSync(d) ? realpathSync(d) : resolve(d)))
+	const inside = (p) => fenced.some((f) => p === f || p.startsWith(f + sep))
+	const INSIDE = `inside toucan's own folder or its data, where agents can write`
+	const privately = new Map() // gid -> whether it is this user's alone: the group database is read once a scan
+	const myGroup = (gid) => gid === me.gid && (privately.has(gid) ? privately : privately.set(gid, !!me.groupIsPrivate(gid))).get(gid)
+	const others = (uid) => uid !== me.uid && uid !== 0
+	const sticky = (st) => st.isDirectory() && (st.mode & 0o1000) !== 0
+	// What is wrong with who may write to one folder or file, as { why, fix }, or null. In a sticky folder anyone may add a
+	// file and nobody replace another's, and a program found there is still asked whose it is.
+	const open = (p, st) => {
+		if (st.mode & 0o002) return sticky(st) ? null : { why: 'can be written to by other users', fix: `chmod o-w ${p}` }
+		if (st.mode & 0o020 && !myGroup(st.gid)) return { why: `can be written to by group ${st.gid}, which ${st.gid === me.gid ? `isn't known to be yours alone` : `isn't your own`}`, fix: `chmod g-w ${p}` }
+		return null
+	}
+	// Why a folder (a real path) can't hold a plugin, as { why, fix }, or null; `why` follows "its folder" or "whose folder".
+	// Whoever owns a folder above it, or anyone where all may write, can swap what is below. A group that may write above
+	// is let be (/usr/local is like that on some systems): it is asked about only for the folder itself.
+	const distrust = (real) => {
+		if (me.uid === null) return null
+		const own = statSync(real)
+		if (others(own.uid)) return { why: `belongs to another user, uid ${own.uid}` }
+		if (open(real, own)) return open(real, own)
+		for (let last = real, dir = dirname(real); dir !== last; last = dir, dir = dirname(dir)) {
+			const st = statSync(dir)
+			if (others(st.uid)) return { why: `is inside ${dir}, which belongs to another user, uid ${st.uid}` }
+			if (st.mode & 0o002 && !sticky(st)) return { why: `is inside ${dir}, which other users can write to`, fix: `chmod o-w ${dir}` }
+		}
+		return null
+	}
+	const judged = new Map() // folder -> why not, or null: many plugins share a folder
+	const whyNotIn = (real) => (judged.has(real) ? judged : judged.set(real, distrust(real))).get(real)
+	const kindOf = (file) => kinds.find((k) => file.startsWith(KINDS[k].prefix))
+	const dirs = (list, vouched) => list.split(delimiter).filter(Boolean).map((dir) => ({ dir, vouched }))
+	const looked = new Set() // a folder named twice is looked in once, so a plugin is never refused in favour of itself
+	for (const { dir, vouched } of [...dirs(pluginPath, true), ...dirs(path, false)]) {
+		let names
+		try {
+			names = readdirSync(dir).filter(kindOf)
+		} catch {
+			continue
+		}
+		if (!names.length) continue
+		// How a refusal the operator could overrule ends: the fix, if there is one, and the way to overrule it.
+		const said = ({ why, fix }) => `${why} (${fix ? `${fix}, or ` : ''}add ${dir} to TOUCAN_PLUGIN_PATH if you trust it)`
+		// Why nothing in this folder can be trusted, if so.
+		let folder = null, home = null
+		if (!isAbsolute(dir)) folder = `its folder is on ${vouched ? 'TOUCAN_PLUGIN_PATH' : 'PATH'} as a relative path, which means a different folder in every directory`
+		else {
+			try {
+				home = realpathSync(dir)
+				if (looked.has(home)) continue
+				looked.add(home)
+				if (inside(home)) folder = `its folder is ${INSIDE}`
+				else if (!vouched && whyNotIn(home)) folder = `its folder ${said(whyNotIn(home))}`
+			} catch (e) {
+				folder = `its folder can't be read: ${e.code ?? e.message}`
+			}
+		}
+		for (const file of names.sort()) {
+			const kind = kindOf(file)
+			const id = file.slice(KINDS[kind].prefix.length).replace(EXT, '')
+			const full = join(dir, file)
+			const refuse = (reason) => refused.push({ kind, id, path: full, reason })
+			if (!ID.test(id)) {
+				refuse(`"${id}" isn't a name: letters, digits, - and _`)
+				continue
+			}
+			const key = `${kind}/${id}`
+			if (seen.has(key)) {
+				const first = seen.get(key)
+				refuse(first ? `${first.full} comes first${first.vouched ? ', in TOUCAN_PLUGIN_PATH' : ' on PATH'}` : `"${id}" is the name of toucan's built-in one`)
+				continue
+			}
+			if (folder) {
+				refuse(folder)
+				continue
+			}
+			try {
+				accessSync(full, constants.X_OK)
+			} catch {
+				refuse(`it isn't executable (chmod +x ${full})`)
+				continue
+			}
+			try {
+				const target = realpathSync(full)
+				const st = statSync(target)
+				const it = target === join(home, file) ? 'it' : `it links to ${target}, which`
+				// Whose the program is and who may write to it. A folder the operator vouches for is asked neither.
+				const flaw = vouched || me.uid === null ? null : others(st.uid) ? { why: `belongs to another user, uid ${st.uid}` } : open(target, st)
+				// Asked only of a program that is a link to elsewhere: its own folder has just been answered for.
+				const elsewhere = vouched || dirname(target) === home ? null : whyNotIn(dirname(target))
+				if (!st.isFile()) refuse('it isn\'t a file')
+				else if (inside(target)) refuse(`it links to ${target}, ${INSIDE}`)
+				else if (flaw) refuse(said({ ...flaw, why: `${it} ${flaw.why}` }))
+				else if (elsewhere) refuse(`it links to ${target}, whose folder ${said(elsewhere)}`)
+				else {
+					seen.set(key, { full, vouched })
+					found.push({ kind, id, command: full })
+				}
+			} catch (e) {
+				refuse(`it can't be read: ${e.code ?? e.message}`)
+			}
+		}
+	}
+	return { found, refused }
+}
+
+// A group of its own is a POSIX thing; elsewhere a plugin is killed alone.
+const GROUPS = process.platform !== 'win32'
+const running = new Set()
+function killGroup(child) {
+	try {
+		if (GROUPS && child.pid) process.kill(-child.pid, 'SIGKILL')
+		else child.kill('SIGKILL')
+	} catch {
+		// Already gone.
+	}
+}
+// A plugin in its own group no longer hears the terminal's Ctrl-C, so the ones still running end with the server.
+process.on('exit', () => running.forEach(killGroup))
+
+/**
+ * Runs a plugin: arguments as an array (never through a shell), `input` on stdin, a time limit, and its answer parsed.
+ * Rejects with a PluginError carrying the code it gave, or `unavailable` (it couldn't run, took too long, or failed
+ * without saying how) or `invalid` (it answered with something that isn't JSON).
+ *
+ * It runs in a process group of its own. One that takes too long or says too much is killed with everything it started:
+ * a wrapper script's real work is a child of the script, and killing the script alone would leave that running.
+ */
+export function ask(command, args, { input, timeout = 15000, env = {}, maxBuffer = 32 << 20 } = {}) {
+	return new Promise((resolve, reject) => {
+		const what = `${command.split(/[\\/]/).pop()} ${args.join(' ')}`.trim()
+		let child
+		try {
+			child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, ...env }, detached: GROUPS, windowsHide: true })
+		} catch (e) {
+			return reject(new PluginError('unavailable', e.message, what))
+		}
+		running.add(child)
+		let out = '', err = '', size = 0, done = false
+		const finish = (f) => (v) => {
+			if (done) return
+			done = true
+			clearTimeout(timer)
+			f(v)
+		}
+		const ok = finish(resolve), fail = finish(reject)
+		// Given up on: the whole group is killed and nothing of it is waited for. Something that left the group and still
+		// holds the pipes would otherwise keep them, and so the server, open.
+		const stop = () => {
+			killGroup(child)
+			running.delete(child)
+			for (const s of [child.stdin, child.stdout, child.stderr]) s?.destroy()
+			child.unref()
+		}
+		const timer = setTimeout(() => {
+			stop()
+			fail(new PluginError('unavailable', 'took too long', what))
+		}, timeout)
+		child.stdout.on('data', (d) => {
+			if (done) return
+			if ((size += d.length) > maxBuffer) (stop(), fail(new PluginError('invalid', `answered with more than ${maxBuffer >> 20} MB`, what)))
+			else out += d
+		})
+		child.stderr.on('data', (d) => (err = (err + d).slice(-8192)))
+		child.on('error', (e) => (running.delete(child), fail(new PluginError('unavailable', e.message, what))))
+		child.stdin.on('error', () => {}) // it may not read what it's given
+		child.on('close', (code) => {
+			running.delete(child)
+			if (code !== 0) {
+				const lines = err.trim().split('\n').filter(Boolean)
+				let said = null
+				try {
+					said = JSON.parse(lines.at(-1) ?? '')
+				} catch {}
+				const structured = said && typeof said === 'object' && ERROR_CODES.includes(said.error)
+				return fail(new PluginError(structured ? said.error : 'unavailable', String((structured ? said.message : lines[0]) || `failed (exit ${code})`).slice(0, 500), structured ? '' : what))
+			}
+			try {
+				ok(JSON.parse(out))
+			} catch {
+				fail(new PluginError('invalid', "didn't answer with JSON", what))
+			}
+		})
+		child.stdin.end(input ?? '')
+	})
+}
+
+/**
+ * The plugins on this machine, looked for again at most every `ttl` ms (so one put on PATH is found without a restart,
+ * and a poll every few seconds doesn't read PATH each time). `pluginPath` is the folders the operator vouches for
+ * (TOUCAN_PLUGIN_PATH when not given); `who` is `scan`'s, for tests.
+ */
+export function createPlugins({ data, exclude = [], path, pluginPath, who, ttl = 3000 } = {}) {
+	let cache = null, at = 0
+	const described = new Map() // command -> { stamp, said }: what it said about itself (or null), and of which file
+	// A plugin replaced by another is asked again: the file's time and size tell them apart.
+	const stampOf = (command) => {
+		try {
+			const st = statSync(command)
+			return `${st.mtimeMs}:${st.size}:${st.ino}`
+		} catch {
+			return ''
+		}
+	}
+	const all = ({ fresh = false } = {}) => {
+		if (fresh || !cache || Date.now() - at > ttl) (cache = scan({ data, exclude, who, ...(path !== undefined && { path }), ...(pluginPath !== undefined && { pluginPath }) })), (at = Date.now())
+		return cache
+	}
+	const of = (kind, opts) => all(opts).found.filter((p) => p.kind === kind)
+	const get = (kind, id) => of(kind).find((p) => p.id === id) ?? of(kind, { fresh: true }).find((p) => p.id === id) ?? null
+	/** Why a plugin someone named isn't there: refused, with the reason, or simply not on PATH. */
+	const whyNot = (kind, id) => {
+		const r = all().refused.find((p) => p.kind === kind && p.id === id)
+		return r ? `${r.path} was found but not trusted: ${r.reason}` : `toucan looks for ${KINDS[kind].prefix}${id} on PATH, and in TOUCAN_PLUGIN_PATH`
+	}
+	const call = (plugin, args, opts = {}) => ask(plugin.command, args, { ...opts, env: { ...KINDS[plugin.kind].env, ...opts.env } })
+	/** What a plugin says about itself. One that doesn't answer `describe` is none the worse for it. */
+	async function describe(plugin) {
+		const stamp = stampOf(plugin.command)
+		if (described.get(plugin.command)?.stamp !== stamp) {
+			const d = await call(plugin, ['describe'], { timeout: 4000 }).catch(() => null)
+			const str = (v, max) => (typeof v === 'string' && v ? v.slice(0, max) : undefined)
+			described.set(plugin.command, { stamp, said: d && typeof d === 'object' ? { ...(str(d.name, 80) && { name: str(d.name, 80) }), ...(str(d.description, 400) && { description: str(d.description, 400) }), ...(str(d.version, 40) && { version: str(d.version, 40) }) } : null })
+		}
+		return described.get(plugin.command).said
+	}
+	/** Everything, for `toucan plugins`: each kind with what it is, the plugins found, and the ones refused with why. */
+	async function list() {
+		const { found, refused } = all({ fresh: true })
+		const rows = await Promise.all(found.map(async (p) => ({ ...p, ...(await describe(p)) })))
+		return {
+			kinds: Object.entries(KINDS).map(([kind, k]) => ({ kind, title: k.title, about: k.about, prefix: k.prefix, verbs: [...k.verbs, 'describe'], plugins: rows.filter((p) => p.kind === kind).map(({ kind: _, id, command, name, ...rest }) => ({ name: id, path: command, ...(name && { title: name }), ...rest })), refused: refused.filter((p) => p.kind === kind).map(({ kind: _, id, ...rest }) => ({ name: id, ...rest })) })),
+		}
+	}
+	return { all, of, get, whyNot, call, describe, list }
+}
+
+/** Extension commands on a PATH: `toucan-NAME` programs that aren't a plugin of some kind. The CLI runs these, as the person. */
+export function scanCommands(path = process.env.PATH ?? '') {
+	const out = [], seen = new Set()
+	const prefixes = Object.values(KINDS).map((k) => k.prefix)
+	for (const dir of path.split(delimiter).filter((d) => d && isAbsolute(d))) {
+		let names
+		try {
+			names = readdirSync(dir)
+		} catch {
+			continue
+		}
+		for (const file of names.sort()) {
+			if (!file.startsWith('toucan-') || prefixes.some((p) => file.startsWith(p))) continue
+			const name = file.slice('toucan-'.length).replace(EXT, '')
+			if (!/^[a-z0-9][a-z0-9-]*$/i.test(name) || seen.has(name)) continue
+			try {
+				accessSync(join(dir, file), constants.X_OK)
+				if (!statSync(join(dir, file)).isFile()) continue
+			} catch {
+				continue
+			}
+			seen.add(name)
+			out.push({ name, path: join(dir, file) })
+		}
+	}
+	return out
+}
