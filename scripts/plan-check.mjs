@@ -3,12 +3,13 @@
 // source, and an adapter on PATH speaking the protocol. No browser and no server: scripts/plan-e2e.mjs has those.
 //   node scripts/plan-check.mjs
 import assert from 'node:assert/strict'
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as P from '../lib/plan.mjs'
 import { createSources } from '../server/sources.mjs'
+import { createPlans } from '../server/plan.mjs'
 import { ask, createPlugins, scan } from '../server/plugins.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -446,6 +447,41 @@ else console.log('<html>')
 	await assert.rejects(broken.read('x'), (e) => e.code === 'invalid' && /didn't answer with JSON/.test(e.message))
 	await assert.rejects(ask(join(bin, 'toucan-source-broken'), ['read', 'slow'], { timeout: 300 }), (e) => e.code === 'unavailable' && e.why === 'took too long')
 	ok('plugins: found by kind under one trust rule, refusals with reasons, describe; the example adapter speaks the whole protocol')
+
+	// ---- a binding with nobody at the canvas: the plan is read and written, and the drawing waits ------------------------------
+	{
+		writeFileSync(file, readFileSync(join(ROOT, 'examples/website-relaunch.plan.json')))
+		const said = []
+		const plans = createPlans({ data, sources, graphOf: () => ({ groups: [], nodes: [], edges: [] }), engineOf: () => 'tldraw', exec: async () => assert.fail('nothing to draw in'), people: () => 0, canDraw: () => false, busy: () => false, changedAt: () => 0, broadcast: (c, m) => said.push(m), pollMs: 0 })
+		assert.deepEqual(plans.status('c'), { bound: false })
+		await assert.rejects(plans.bind('c', { name: 'file', ref: REF, views: [{ kind: 'kanban' }] }), /unknown view kind "kanban"/)
+		assert.equal(plans.has('c'), false, 'a binding that can\'t be made leaves nothing behind')
+		const st = await plans.bind('c', { name: 'file', ref: REF, views: [{ kind: 'board' }, { kind: 'gantt', groupBy: 'assignee' }] })
+		assert.deepEqual([st.state, st.items, st.views.map((v) => v.id), st.views[1].title], ['waiting', 25, ['board', 'gantt'], 'Website relaunch: Gantt by Owner'])
+		assert.ok(existsSync(join(data, 'c.plan.json')), 'the binding is a file beside the canvas')
+		const brief = plans.brief('c').join('\n')
+		assert.match(brief, /shows a plan: "Website relaunch" from the file source \(files\/relaunch\.plan\.json\), 25 items\. Views: board \(board\), gantt \(gantt by assignee\)/)
+		assert.match(brief, /never change them with `exec`.*`plan set ITEM field=value`/)
+		const done = await plans.change('c', [{ op: 'update', id: 'audit', set: { stage: 'In review', end: '' } }])
+		assert.deepEqual([done.results[0].ok, done.results[0].item.stage, done.results[0].item.version, 'end' in done.results[0].item], [true, 'review', 2, false], 'an option by its label, an empty value clears')
+		assert.equal(JSON.parse(readFileSync(file, 'utf8')).items[0].stage, 'review')
+		assert.equal(plans.items('c').items[0].version, 2, 'and the binding knows the item as it now stands')
+		await assert.rejects(plans.change('c', [{ op: 'update', id: 'audit', set: { labels: 'build' } }]), /labels can't be written; writable fields: title, stage/)
+		await assert.rejects(plans.change('c', [{ op: 'update', id: 'nope', set: { stage: 'todo' } }]), /no item "nope"/)
+		const stale = await plans.change('c', [{ op: 'update', id: 'audit', version: 1, set: { stage: 'todo' } }])
+		assert.deepEqual([stale.results[0].ok, stale.results[0].error, stale.plan.problems.length], [false, 'conflict', 0], 'a refusal is the asker\'s answer, not news for the canvas')
+		await assert.rejects(plans.setView('c', 'board', { groupBy: 'start' }), /groupBy "start" is a date field/)
+		assert.deepEqual((await plans.setView('c', 'board', { groupBy: 'assignee', fields: ['end'] })).view, { kind: 'board', id: 'board', groupBy: 'assignee', fields: ['end'] })
+		assert.deepEqual((await plans.removeView('c', 'gantt')).views.map((v) => v.id), ['board'])
+		// A second server starting on the same data finds the binding.
+		const again = createPlans({ data, sources, graphOf: () => ({}), engineOf: () => 'tldraw', exec: async () => null, people: () => 0, canDraw: () => false, busy: () => false, changedAt: () => 0, broadcast: () => {}, pollMs: 0 })
+		assert.deepEqual([again.has('c'), again.status('c').views.map((v) => v.groupBy)], [true, ['assignee']])
+		assert.deepEqual(await plans.unbind('c'), { ok: true, left: 0 })
+		assert.ok(!existsSync(join(data, 'c.plan.json')) && said.at(-1).plan.bound === false)
+		plans.close()
+		again.close()
+		ok('binding: kept beside the canvas, read and written with no page open, views checked, and a brief for the chat agent')
+	}
 
 	// The docs name what the catalog has.
 	const guide = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8')
