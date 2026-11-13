@@ -89,7 +89,15 @@ function PlanFields({ item, fields, readonly }: { item: PlanItem; fields: PlanFi
 										))}
 									</select>
 								) : editable && f.type === 'date' ? (
-									<input type="date" aria-label={f.label} className={CONTROL} value={typeof value === 'string' ? value.slice(0, 10) : ''} disabled={saving === f.id} onChange={(e) => set(f, e.target.value)} />
+									// A date is cleared here, on purpose, and not by dragging a bar off the chart.
+									<span className="flex items-center gap-1">
+										<input type="date" aria-label={f.label} className={CONTROL} value={typeof value === 'string' ? value.slice(0, 10) : ''} disabled={saving === f.id} onChange={(e) => set(f, e.target.value)} />
+										{typeof value === 'string' && value && (
+											<button type="button" aria-label={`Clear ${f.label}`} title={`Clear ${f.label.toLowerCase()}`} className="shrink-0 rounded px-1 text-muted-foreground outline-none hover:bg-muted focus-visible:bg-muted" disabled={saving === f.id} onClick={() => set(f, '')}>
+											×
+											</button>
+										)}
+									</span>
 								) : (
 									<span className="break-words">{shown(f, value)}</span>
 								)}

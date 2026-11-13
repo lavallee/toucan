@@ -18,7 +18,8 @@ export function PlanNotice() {
 	return (
 		<div className="toucan-ui absolute top-12 left-1/2 z-[400] flex w-max max-w-[min(36rem,calc(100%-1rem))] -translate-x-1/2 flex-col gap-1 !bg-transparent text-xs">
 			{newest.map((p) => (
-				<div key={p.id} role="alert" className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-100 py-1 pr-1 pl-3 text-amber-950 shadow-sm dark:bg-amber-950 dark:text-amber-100">
+				// Something that went wrong is an alert; something that was done (a box became an item) is only said.
+				<div key={p.id} role={p.kind === 'created' ? 'status' : 'alert'} className={p.kind === 'created' ? 'flex items-start gap-2 rounded-lg border bg-background py-1 pr-1 pl-3 shadow-sm' : 'flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-100 py-1 pr-1 pl-3 text-amber-950 shadow-sm dark:bg-amber-950 dark:text-amber-100'}>
 					<span className="min-w-0 flex-1 py-0.5 break-words">{p.text}</span>
 					<Button variant="ghost" size="icon-xs" aria-label="Dismiss" title="Dismiss" onClick={() => dismiss(p.id)}>
 						<XIcon />
