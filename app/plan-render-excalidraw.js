@@ -15,8 +15,18 @@ export function planBusy({ api, all, keyOf }) {
 	return els.filter((e) => ids.has(e.id) && !(e.type === 'text' && e.containerId)).map(keyOf)
 }
 
-export async function planRender({ api, ex, all, get, keyOf, applyGraph }, { tg, remove = [], release = [], rev, reveal = false, skip = [] }) {
+export async function planRender({ api, ex, all, get, keyOf, applyGraph }, { tg, remove = [], release = [], rev, reveal = false, skip = [], seen = {} }) {
 	const held = new Set([...skip, ...planBusy({ api, all, keyOf })])
+	// A box that isn't where the server last saw it was moved here a moment ago, and the server hasn't heard (this tab sends its
+	// edits a moment after they are made): it is left alone, so the move is read before anything is drawn over it.
+	const byId = new Map(all().map((e) => [e.id, e]))
+	for (const [key, was] of Object.entries(seen)) {
+		const e = get(key)
+		if (!e || e.angle) continue
+		const frame = e.frameId && byId.get(e.frameId)
+		const now = [frame && !frame.isDeleted ? keyOf(frame) : '', Math.round(e.x), Math.round(e.y), Math.round(e.width)].join('|')
+		if (now !== was) held.add(key)
+	}
 	const skipped = new Set()
 	const isHeld = (key, group) => (held.has(key) || (group && held.has(group)) ? (skipped.add(key), true) : false)
 	const draw = { ...tg, groups: tg.groups.filter((g) => !isHeld(g.key)), nodes: tg.nodes.filter((n) => !isHeld(n.key, n.group)), edges: tg.edges.filter((e) => !get(`edge:${e.from}->${e.to}`)) }
@@ -44,6 +54,8 @@ export async function planRender({ api, ex, all, get, keyOf, applyGraph }, { tg,
 		if (gone.has(key) && managed(host)) return (host === e && removed++, ex.newElementWith(e, { isDeleted: true }))
 		// A person's own element in a frame that is going: it stays, where it is, outside any frame.
 		if (e.frameId && goneFrames.has(e.frameId) && !managed(host)) return ex.newElementWith(e, { frameId: null })
+		// A shape someone turned is stood up again: what the plan draws is upright.
+		if (frameOf.has(key) && managed(host) && e.angle) e = ex.newElementWith(e, { angle: 0 })
 		if (frameOf.has(key) && managed(host) && (e.frameId ?? null) !== frameOf.get(key)) return ex.newElementWith(e, { frameId: frameOf.get(key) })
 		if (host !== e) return e
 		if (freed.has(key) && managed(e)) return (released++, ex.newElementWith(e, { customData: { ...e.customData, meta: { ...e.customData.meta, plan: null } } }))

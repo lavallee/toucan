@@ -37,13 +37,18 @@
 
 import { COLORS, colorName } from '../lib/tg.mjs'
 import { GAP, endAt as endOn, outline as outlineOf, routePath } from '../lib/route.mjs'
+import { getPlan } from './plan-store'
 
 const FONT = { s: 18, m: 22, l: 26, xl: 32 } // tldraw's label sizes
 const withEdges = (b) => ({ x: b.x, y: b.y, w: b.w, h: b.h, maxX: b.x + b.w, maxY: b.y + b.h })
 /** Is this meta a plan shape's? A shape let go by its plan keeps `plan: null`, and is an ordinary shape again. */
 const managed = (meta) => !!meta?.plan && typeof meta.plan === 'object'
 /** The plan's part of a scene, from the engine's two ways of asking: which shapes are left alone, and how many were. */
-function planGuard(isPlan, holdsPlan) {
+function planGuard(carriesPlan, holdsPlanShapes) {
+	// Only on a canvas that is bound to a plan. On one that isn't (unbound, then put back to a version from when it was), shapes
+	// that still carry meta.plan are nobody's but the person's, and everything may move them.
+	const isPlan = (id) => getPlan().bound && carriesPlan(id)
+	const holdsPlan = (id) => getPlan().bound && holdsPlanShapes(id)
 	const skipped = new Set()
 	const skipPlan = (id) => isPlan(id) && (skipped.add(id), true)
 	const skipHolder = (id) => holdsPlan(id) && (skipped.add(id), true)

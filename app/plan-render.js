@@ -21,8 +21,17 @@ export function planBusy(editor, keyOf) {
 	return [...editor.getShapeAndDescendantIds([...ids])].map((id) => editor.getShape(id)).filter(Boolean).map(keyOf)
 }
 
-export function planRender(editor, { idFor, get, keyOf, text, edge }, { tg, remove = [], release = [], rev, reveal = false, skip = [], pages = {} }) {
+export function planRender(editor, { idFor, get, keyOf, text, edge }, { tg, remove = [], release = [], rev, reveal = false, skip = [], pages = {}, seen = {} }) {
 	const held = new Set([...skip, ...planBusy(editor, keyOf)])
+	// A box that isn't where the server last saw it was moved here a moment ago, and the server hasn't heard: it is left alone,
+	// like one still being dragged, so the move is read before anything is drawn over it.
+	for (const [key, was] of Object.entries(seen)) {
+		const s = get(key)
+		if (!s || s.rotation) continue
+		const at = editor.getShapePageTransform(s).point(), parent = editor.getShape(s.parentId)
+		const now = [parent?.type === 'frame' ? keyOf(parent) : '', Math.round(at.x), Math.round(at.y), Math.round(s.props.w ?? 0)].join('|')
+		if (now !== was) held.add(key)
+	}
 	// What is inside a frame someone has hold of goes with it.
 	for (const key of [...held]) {
 		const s = get(key)
@@ -45,11 +54,13 @@ export function planRender(editor, { idFor, get, keyOf, text, edge }, { tg, remo
 		const place = (s, parentId, box, props, meta) => {
 			if (s.parentId !== parentId) editor.reparentShapes([s.id], parentId)
 			const at = within(parentId, box), now = editor.getShape(s.id)
-			const moved = Math.round(now.x) !== Math.round(at.x) || Math.round(now.y) !== Math.round(at.y)
+			// A shape someone turned is stood up again: what the plan draws is upright, and its place is read upright.
+			const turned = !!now.rotation
+			const moved = turned || Math.round(now.x) !== Math.round(at.x) || Math.round(now.y) !== Math.round(at.y)
 			const changed = Object.entries(props).filter(([k, v]) => !same(now.props[k], v))
 			const metaChanged = Object.entries(meta).some(([k, v]) => !same(now.meta?.[k], v))
 			if (!moved && !changed.length && !metaChanged && s.parentId === parentId) return
-			editor.updateShape({ id: s.id, type: s.type, ...(moved && at), props: Object.fromEntries(changed), meta: { ...now.meta, ...meta } })
+			editor.updateShape({ id: s.id, type: s.type, ...(moved && at), ...(turned && { rotation: 0 }), props: Object.fromEntries(changed), meta: { ...now.meta, ...meta } })
 			updated++
 		}
 		// Frames, the view's own first.
@@ -75,7 +86,7 @@ export function planRender(editor, { idFor, get, keyOf, text, edge }, { tg, remo
 			const st = n.style ?? {}
 			const meta = { plan: n.meta.plan, ...(n.meta.detail !== undefined && { detail: n.meta.detail }), key: n.key }
 			// A title standing beside its bar starts at the bar, rather than floating in the middle of the room left for it.
-			const props = { geo: st.geo ?? 'rectangle', w: n.box.w, h: n.box.h, growY: 0, color: st.color ?? 'black', fill: st.fill ?? 'semi', dash: st.dash ?? 'solid', size: st.size ?? 's', align: n.meta.plan.label ? 'start' : 'middle' }
+			const props = { geo: st.geo ?? 'rectangle', w: n.box.w, h: n.box.h, growY: 0, color: st.color ?? 'black', fill: st.fill ?? 'semi', dash: st.dash ?? 'solid', size: st.size ?? 's', scale: 1, align: n.meta.plan.label ? 'start' : 'middle' }
 			if (s?.type === 'geo') {
 				// Text is compared as text: the same words are the same, however the editor stores them.
 				if (text(s) !== (n.text ?? '')) props.richText = toRichText(n.text ?? '')
