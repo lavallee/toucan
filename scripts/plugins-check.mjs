@@ -1,15 +1,15 @@
 // Plugins and plan sources as things that run other people's programs and write other people's files
 // (server/plugins.mjs, server/sources.mjs): what a ref can and can't do to an adapter's arguments, what is left running
-// after a time limit, when a plugin is asked about itself again, which folders are trusted, and a file plan swapped for
+// after a time limit, when a plugin is asked about itself again, which programs are trusted, and a file plan swapped for
 // a link under a write. scripts/plan-check.mjs has the protocol itself; no browser and no server here.
 import assert from 'node:assert/strict'
 import { execFile, execFileSync } from 'node:child_process'
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { delimiter, dirname, join, resolve } from 'node:path'
+import { delimiter, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
-import { KINDS, ask, createPlugins, scan } from '../server/plugins.mjs'
+import { KINDS, ask, createPlugins, privateGroup, scan } from '../server/plugins.mjs'
 import { createSources } from '../server/sources.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -185,67 +185,211 @@ else process.exit(1)
 		ok('describe: kept while the program is the same file, asked again when its time, size or file changes')
 	}
 
-	// ---- which folders are trusted -------------------------------------------------------------------------------------------
+	// ---- which programs are trusted -------------------------------------------------------------------------------------------
+	// Whether a group is one user's alone, from the text of the two files that say.
+	{
+		const passwd = 'root:x:0:0::/root:/bin/sh\n# a comment\nme:x:1000:1000:Me:/home/me:/bin/sh\nother:x:1001:1001::/home/other:/bin/sh\n'
+		const group = 'root:x:0:\nme:x:1000:\nother:x:1001:\nwheel:x:998:me,other\n'
+		const mine = (over = {}) => privateGroup({ uid: 1000, gid: 1000, group, passwd, ...over })
+		assert.equal(mine(), true, 'the user\'s primary group, with nobody else in it')
+		assert.equal(mine({ group: group.replace('me:x:1000:', 'me:x:1000:me') }), true, 'listing the user is the same thing')
+		assert.equal(mine({ group: group.replace('me:x:1000:', 'me:x:1000:other') }), false, 'another member listed')
+		assert.equal(mine({ group: group.replace('me:x:1000:', 'me:x:1000:me,other') }), false)
+		assert.equal(mine({ passwd: passwd + 'guest:x:1002:1000::/home/guest:/bin/sh\n' }), false, 'another account with it as its primary group')
+		assert.equal(mine({ gid: 998 }), false, 'a group the user is merely in')
+		assert.equal(mine({ uid: 1001 }), false, 'somebody else\'s group')
+		assert.equal(mine({ group: null }), false, 'the group file can\'t be read')
+		assert.equal(mine({ passwd: null }), false, 'nor the accounts')
+		assert.equal(mine({ group: '', passwd: '' }), false)
+		assert.equal(mine({ passwd: passwd.replace(/^me:.*\n/m, '') }), false, 'the user isn\'t in the file: kept somewhere else')
+		assert.equal(mine({ group: group.replace('me:x:1000:\n', '') }), false, 'nor the group')
+		assert.equal(mine({ group: group + '+:::\n' }), false, 'a line that sends the question elsewhere')
+		assert.equal(mine({ passwd: passwd + '+::::::\n' }), false)
+		ok('private group: the user\'s primary group with no other member and no other account; anything unclear is a no')
+	}
 	{
 		const t = join(tmp, 'trust')
 		const plug = (dir, name = 'toucan-source-p') => program(join(t, dir, name), '#!/bin/sh\necho {}\n')
-		const judge = (dir, name) => {
-			const r = scan({ data, path: join(t, dir), kinds: ['source'] })
+		const link = (to, dir, name = 'toucan-source-p') => (mkdirSync(join(t, dir), { recursive: true }), symlinkSync(to, join(t, dir, name)))
+		// The one plugin in a PATH folder: 'found', or why not, with the test's own folder cut out of the words.
+		const judge = (dir, opts = {}) => {
+			const r = scan({ data, path: join(t, dir), pluginPath: '', kinds: ['source'], ...opts })
 			assert.equal(r.found.length + r.refused.length, 1, `${dir}: one plugin`)
 			return r.found.length ? 'found' : r.refused[0].reason.replaceAll(t, '')
 		}
-		plug('good/bin')
-		assert.equal(judge('good/bin'), 'found', `a folder of one's own under ${tmpdir()}`)
-		// Where installing a package puts programs.
+		const orAdd = (dir) => `or add ${dir} to TOUCAN_PLUGIN_PATH if you trust it`
+		// The one plugin in a folder the operator vouches for, with nothing on PATH.
+		const vouch = (dir, opts = {}) => judge('nowhere', { pluginPath: dir, ...opts })
+		const noHint = (reason) => assert.doesNotMatch(reason, /TOUCAN_PLUGIN_PATH/, 'naming the folder there would not help')
+
+		// A folder of one's own.
+		plug('mine/bin')
+		assert.equal(judge('mine/bin'), 'found', `a folder of one's own under ${tmpdir()}`)
+		// A program installed with a package manager: a link in a bin folder to a file under a node_modules.
+		program(join(t, 'global/lib/node_modules/pkg/bin/cli.js'), '#!/bin/sh\necho {}\n')
+		link('../lib/node_modules/pkg/bin/cli.js', 'global/bin')
+		assert.equal(judge('global/bin'), 'found', 'npm i -g')
 		plug('proj/node_modules/.bin')
-		plug('proj/node_modules/pkg/bin')
-		plug('node_modules')
-		assert.match(judge('proj/node_modules/.bin'), /^its folder is inside a node_modules folder \(\/proj\/node_modules\), where installing a package puts programs \(move the plugin to a folder of your own/)
-		assert.match(judge('proj/node_modules/pkg/bin'), /^its folder is inside a node_modules folder \(\/proj\/node_modules\)/)
-		assert.match(judge('node_modules'), /^its folder is a node_modules folder \(\/node_modules\)/)
-		// A program that is a link into one: a package installed for every project is this.
-		mkdirSync(join(t, 'global/bin'), { recursive: true })
-		program(join(t, 'global/lib/node_modules/pkg/cli.js'), '#!/bin/sh\necho {}\n')
-		symlinkSync('../lib/node_modules/pkg/cli.js', join(t, 'global/bin/toucan-source-p'))
-		assert.match(judge('global/bin'), /^it links to \/global\/lib\/node_modules\/pkg\/cli\.js, whose folder is inside a node_modules folder \(\/global\/lib\/node_modules\)/)
-		// A link to a program in another good folder is fine.
-		mkdirSync(join(t, 'linked/bin'), { recursive: true })
-		symlinkSync(join(t, 'good/bin/toucan-source-p'), join(t, 'linked/bin/toucan-source-p'))
+		assert.equal(judge('proj/node_modules/.bin'), 'found', 'a node_modules that isn\'t toucan\'s is a folder like any other')
+		// A link to a program in another good folder.
+		link(join(t, 'mine/bin/toucan-source-p'), 'linked/bin')
 		assert.equal(judge('linked/bin'), 'found')
+
+		// Inside toucan's data or its own folder: refused, and nothing the operator sets changes that.
+		program(join(data, 'pbin/toucan-source-p'), '#!/bin/sh\necho {}\n')
+		const INSIDE = `inside toucan's own folder or its data, where agents can write`
+		const inData = scan({ data, path: join(data, 'pbin'), pluginPath: '', kinds: ['source'] })
+		assert.deepEqual([inData.found, inData.refused.map((r) => r.reason)], [[], [`its folder is ${INSIDE}`]])
+		plug('root/node_modules/.bin')
+		assert.equal(judge('root/node_modules/.bin', { exclude: [join(t, 'root')] }), `its folder is ${INSIDE}`, 'toucan\'s own node_modules/.bin')
+		link(join(t, 'root/node_modules/.bin/toucan-source-p'), 'intoroot/bin')
+		assert.equal(judge('intoroot/bin', { exclude: [join(t, 'root')] }), `it links to /root/node_modules/.bin/toucan-source-p, ${INSIDE}`)
+		assert.equal(judge('intoroot/bin'), 'found', 'the same link, with nothing fenced off')
+		// Not executable.
+		writeFileSync(plug('noexec/bin'), '')
+		chmodSync(join(t, 'noexec/bin/toucan-source-p'), 0o644)
+		// (Root may run anything with an x bit anywhere on it, and this file has none.)
+		assert.equal(judge('noexec/bin'), `it isn't executable (chmod +x /noexec/bin/toucan-source-p)`)
+		// Not a file.
+		mkdirSync(join(t, 'adir/bin/toucan-source-p'), { recursive: true })
+		assert.equal(judge('adir/bin'), 'it isn\'t a file')
+		for (const reason of [inData.refused[0].reason, judge('noexec/bin'), judge('adir/bin'), judge('intoroot/bin', { exclude: [join(t, 'root')] })]) noHint(reason)
+
 		if (posix) {
-			// A folder above it that others can write to: they can put another folder in its place.
+			const uid = process.getuid(), gid = process.getgid()
+			const shared = { who: { groupIsPrivate: () => false } }, alone = { who: { groupIsPrivate: () => true } }
+
+			// A folder its group can write to (what a umask of 002 leaves): fine when the group is the user's alone.
+			plug('grp/bin')
+			chmodSync(join(t, 'grp/bin'), 0o775)
+			const G = statSync(join(t, 'grp/bin')).gid
+			const groupRefusal = (what, path, dir, which = `isn't known to be yours alone`) => `${what} can be written to by group ${G}, which ${which} (chmod g-w ${path}, ${orAdd(dir)})`
+			assert.equal(judge('grp/bin', alone), 'found', 'a group of one')
+			assert.equal(judge('grp/bin', shared), groupRefusal('its folder', '/grp/bin', '/grp/bin'), 'a group with others in it')
+			assert.equal(judge('grp/bin', { who: { ...alone.who, gid: G + 1 } }), groupRefusal('its folder', '/grp/bin', '/grp/bin', `isn't your own`), 'a group that isn\'t the user\'s primary one, whoever is in it')
+			// And on this machine, as it is: read the way a person would check it.
+			const rows = (file) => {
+				try {
+					return readFileSync(file, 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#')).map((l) => l.split(':'))
+				} catch {
+					return null
+				}
+			}
+			const accounts = rows('/etc/passwd'), groups = rows('/etc/group')
+			const me = (accounts ?? []).filter((r) => Number(r[2]) === uid)
+			const here = !!accounts && !!groups && G === gid
+				&& ![...accounts, ...groups].some((r) => /^[+-]/.test(r[0]))
+				&& me.some((r) => Number(r[3]) === gid)
+				&& !accounts.some((r) => Number(r[3]) === gid && Number(r[2]) !== uid)
+				&& groups.some((r) => Number(r[2]) === gid)
+				&& groups.filter((r) => Number(r[2]) === gid).every((r) => (r[3] ?? '').split(',').filter(Boolean).every((m) => me.some((a) => a[0] === m.trim())))
+			if (here) assert.equal(judge('grp/bin'), 'found', 'this user\'s group is private here')
+			else assert.match(judge('grp/bin'), /^its folder can be written to by group \d+, which isn't (known to be yours alone|your own) \(chmod g-w \/grp\/bin, or add \/grp\/bin to TOUCAN_PLUGIN_PATH if you trust it\)$/, 'this user\'s group is shared here, or can\'t be read')
+			chmodSync(join(t, 'grp/bin'), 0o755)
+			assert.equal(judge('grp/bin', shared), 'found', 'and the fix is the one it names')
+			// The program itself, the same.
+			plug('gfile/bin')
+			chmodSync(join(t, 'gfile/bin/toucan-source-p'), 0o775)
+			assert.equal(judge('gfile/bin', alone), 'found')
+			assert.equal(judge('gfile/bin', shared), groupRefusal('it', '/gfile/bin/toucan-source-p', '/gfile/bin'))
+			// The group database is read once a scan, however many folders ask.
+			plug('grp2/bin', 'toucan-source-q')
+			chmodSync(join(t, 'grp2/bin'), 0o775)
+			let asked = 0
+			const both = scan({ data, path: [join(t, 'gfile/bin'), join(t, 'grp2/bin')].join(delimiter), pluginPath: '', kinds: ['source'], who: { groupIsPrivate: () => (asked++, true) } })
+			assert.deepEqual([both.found.length, both.refused.length, asked], [2, 0, 1])
+
+			// Open to everyone: refused, the folder or the program.
+			plug('open/bin')
+			chmodSync(join(t, 'open/bin'), 0o777)
+			assert.equal(judge('open/bin', alone), `its folder can be written to by other users (chmod o-w /open/bin, ${orAdd('/open/bin')})`)
+			plug('ofile/bin')
+			chmodSync(join(t, 'ofile/bin/toucan-source-p'), 0o777)
+			assert.equal(judge('ofile/bin', alone), `it can be written to by other users (chmod o-w /ofile/bin/toucan-source-p, ${orAdd('/ofile/bin')})`)
+			chmodSync(join(t, 'ofile/bin/toucan-source-p'), 0o755)
+			assert.equal(judge('ofile/bin'), 'found')
+
+			// A folder above that everyone can write to: they can put another folder in its place.
 			plug('loose/deep/bin')
 			chmodSync(join(t, 'loose'), 0o777)
-			assert.equal(judge('loose/deep/bin'), `its folder is inside /loose, which other users can write to (chmod go-w /loose)`)
+			assert.equal(judge('loose/deep/bin'), `its folder is inside /loose, which other users can write to (chmod o-w /loose, ${orAdd('/loose/deep/bin')})`)
+			// …and a link to a program under one, or in an open folder.
+			link(join(t, 'loose/deep/bin/toucan-source-p'), 'tolink/bin')
+			assert.equal(judge('tolink/bin'), `it links to /loose/deep/bin/toucan-source-p, whose folder is inside /loose, which other users can write to (chmod o-w /loose, ${orAdd('/tolink/bin')})`)
+			link(join(t, 'open/bin/toucan-source-p'), 'toopen/bin')
+			assert.equal(judge('toopen/bin', alone), `it links to /open/bin/toucan-source-p, whose folder can be written to by other users (chmod o-w /open/bin, ${orAdd('/toopen/bin')})`)
+			// A group that can write above is let be, whoever is in it.
 			chmodSync(join(t, 'loose'), 0o775)
-			assert.equal(judge('loose/deep/bin'), `its folder is inside /loose, which other users can write to (chmod go-w /loose)`, 'a group counts')
-			// …and a link to a program under one.
-			mkdirSync(join(t, 'tolink/bin'), { recursive: true })
-			symlinkSync(join(t, 'loose/deep/bin/toucan-source-p'), join(t, 'tolink/bin/toucan-source-p'))
-			assert.equal(judge('tolink/bin'), `it links to /loose/deep/bin/toucan-source-p, whose folder is inside /loose, which other users can write to (chmod go-w /loose)`)
-			chmodSync(join(t, 'loose'), 0o755)
-			assert.equal(judge('loose/deep/bin'), 'found', 'and the fix is the one it names')
-			assert.equal(judge('tolink/bin'), 'found')
+			assert.equal(judge('loose/deep/bin', shared), 'found', 'a group-writable folder above')
+			assert.equal(judge('tolink/bin', shared), 'found')
 			// A sticky folder, like /tmp: anyone can add to it, nobody can replace another's folder in it.
 			plug('sticky/mine/bin')
 			chmodSync(join(t, 'sticky'), 0o1777)
-			assert.equal(judge('sticky/mine/bin'), 'found', 'a private folder under a sticky one')
-			// The folder itself open is refused whatever its sticky bit: anyone can add a program to it.
+			assert.equal(judge('sticky/mine/bin', shared), 'found', 'a private folder under a sticky one')
+			// …or another's program: one found in a sticky folder itself is still asked whose it is.
 			plug('stickybin')
 			chmodSync(join(t, 'stickybin'), 0o1777)
-			assert.match(judge('stickybin'), /^its folder can be written to by other users \(chmod go-w /)
-			// (A folder that belongs to another user is refused too. Only root can make one, so nothing here tries it.)
+			assert.equal(judge('stickybin', shared), 'found')
+
+			// Somebody else's: seen from another uid, everything here is. (Only root can make one for real.)
+			if (uid !== 0) {
+				const stranger = { who: { uid: uid + 1, gid: gid + 1, groupIsPrivate: () => true } }
+				assert.equal(judge('mine/bin', stranger), `its folder belongs to another user, uid ${uid} (add /mine/bin to TOUCAN_PLUGIN_PATH if you trust it)`)
+				assert.equal(judge('stickybin', stranger), `its folder belongs to another user, uid ${uid} (add /stickybin to TOUCAN_PLUGIN_PATH if you trust it)`)
+			}
+
+			// What the operator vouches for is asked none of that…
+			chmodSync(join(t, 'loose'), 0o777)
+			assert.equal(vouch(join(t, 'open/bin'), shared), 'found', 'a folder PATH would refuse')
+			assert.equal(vouch(join(t, 'loose/deep/bin')), 'found')
+			assert.equal(vouch(join(t, 'grp2/bin'), shared), 'found')
+			if (uid !== 0) assert.equal(vouch(join(t, 'mine/bin'), { who: { uid: uid + 1 } }), 'found', 'another user\'s')
 		}
+		assert.equal(vouch(join(t, 'mine/bin')), 'found')
+		// …but still to be outside toucan's data and folder, executable, and a file, in a folder named in full.
+		const vouchedData = scan({ data, path: '', pluginPath: join(data, 'pbin'), kinds: ['source'] })
+		assert.deepEqual([vouchedData.found, vouchedData.refused.map((r) => r.reason)], [[], [`its folder is ${INSIDE}`]])
+		assert.equal(vouch(join(t, 'root/node_modules/.bin'), { exclude: [join(t, 'root')] }), `its folder is ${INSIDE}`)
+		assert.equal(vouch(join(t, 'intoroot/bin'), { exclude: [join(t, 'root')] }), `it links to /root/node_modules/.bin/toucan-source-p, ${INSIDE}`)
+		assert.equal(vouch(join(t, 'noexec/bin')), `it isn't executable (chmod +x /noexec/bin/toucan-source-p)`)
+		assert.equal(vouch(join(t, 'adir/bin')), 'it isn\'t a file')
+		assert.equal(vouch(relative(process.cwd(), join(t, 'mine/bin'))), 'its folder is on TOUCAN_PLUGIN_PATH as a relative path, which means a different folder in every directory')
+		assert.equal(judge(relative(process.cwd(), join(t, 'mine/bin')), { path: relative(process.cwd(), join(t, 'mine/bin')) }), 'its folder is on PATH as a relative path, which means a different folder in every directory')
+
+		// The operator's folders come first, so theirs wins a name; and a folder named twice is looked in once.
+		const clash = scan({ data, path: join(t, 'mine/bin'), pluginPath: join(t, 'global/bin'), kinds: ['source'] })
+		assert.deepEqual(clash.found, [{ kind: 'source', id: 'p', command: join(t, 'global/bin/toucan-source-p') }])
+		assert.deepEqual(clash.refused, [{ kind: 'source', id: 'p', path: join(t, 'mine/bin/toucan-source-p'), reason: `${join(t, 'global/bin/toucan-source-p')} comes first, in TOUCAN_PLUGIN_PATH` }])
+		const onPath = scan({ data, path: [join(t, 'mine/bin'), join(t, 'global/bin')].join(delimiter), pluginPath: '', kinds: ['source'] })
+		assert.deepEqual(onPath.refused.map((r) => r.reason), [`${join(t, 'mine/bin/toucan-source-p')} comes first on PATH`])
+		const twice = scan({ data, path: [join(t, 'mine/bin'), join(t, 'mine/bin')].join(delimiter), pluginPath: join(t, 'mine/bin'), kinds: ['source'] })
+		assert.deepEqual([twice.found.length, twice.refused], [1, []])
+		// Given nothing, the variable is what is read; and the server's own plugins take the option.
+		const had = process.env.TOUCAN_PLUGIN_PATH
+		process.env.TOUCAN_PLUGIN_PATH = join(t, 'global/bin')
+		try {
+			assert.deepEqual(scan({ data, path: '', kinds: ['source'] }).found.map((p) => p.command), [join(t, 'global/bin/toucan-source-p')])
+			assert.equal(createPlugins({ data, path: '', ttl: 0 }).get('source', 'p')?.command, join(t, 'global/bin/toucan-source-p'))
+			assert.equal(createPlugins({ data, path: '', pluginPath: '', ttl: 0 }).get('source', 'p'), null, 'the option, given, is the whole of it')
+		} finally {
+			if (had === undefined) delete process.env.TOUCAN_PLUGIN_PATH
+			else process.env.TOUCAN_PLUGIN_PATH = had
+		}
+		const vouched = createPlugins({ data, path: join(t, 'mine/bin'), pluginPath: join(t, 'global/bin'), ttl: 0 })
+		assert.equal(vouched.get('source', 'p')?.command, join(t, 'global/bin/toucan-source-p'))
+		assert.match(vouched.whyNot('source', 'nope'), /looks for toucan-source-nope on PATH, and in TOUCAN_PLUGIN_PATH/)
+
 		// A name can't start with "-", so it can't be taken for an option where a name is an argument.
 		plug('names', 'toucan-source--x')
 		plug('names', 'toucan-source---help')
 		plug('names', 'toucan-profiles--x')
-		const names = scan({ data, path: join(t, 'names') })
+		const names = scan({ data, path: join(t, 'names'), pluginPath: '' })
 		assert.deepEqual(names.found, [])
 		assert.deepEqual(names.refused.map((r) => [r.kind, r.id, r.reason]).sort(), [['profiles', '-x', '"-x" isn\'t a name: letters, digits, - and _'], ['source', '--help', '"--help" isn\'t a name: letters, digits, - and _'], ['source', '-x', '"-x" isn\'t a name: letters, digits, - and _']])
-		const plugins = createPlugins({ data, path: [join(t, 'proj/node_modules/.bin'), join(t, 'good/bin')].join(delimiter), ttl: 0 })
-		assert.equal(plugins.get('source', 'p')?.command, join(t, 'good/bin/toucan-source-p'), 'one refused does not hide a good one later on PATH')
-		ok('trust: no node_modules, no folder above that others can write to unless sticky, links judged where they lead; reasons name the folder and the fix')
+		const plugins = createPlugins({ data, path: [join(data, 'pbin'), join(t, 'mine/bin')].join(delimiter), pluginPath: '', ttl: 0 })
+		assert.equal(plugins.get('source', 'p')?.command, join(t, 'mine/bin/toucan-source-p'), 'one refused does not hide a good one later on PATH')
+		assert.match((await plugins.list()).kinds.find((k) => k.kind === 'source').refused[0].reason, /^its folder is inside toucan's own folder/)
+		ok('trust: one\'s own or root\'s, closed to everyone and to any group but one\'s own private one, under folders nobody else owns or all can write to unless sticky; npm i -g works; TOUCAN_PLUGIN_PATH vouches, and comes first; every refusal says what is wrong and the fix')
 	}
 
 	// ---- a file plan swapped for a link while it is written -------------------------------------------------------------------
