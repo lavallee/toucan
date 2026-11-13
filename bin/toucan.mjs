@@ -173,9 +173,12 @@ async function bindPlan(name, source, ref, { views = [], copy = false } = {}) {
 	if (source === 'file' && !/^(files|project(-\d+)?)\//.test(ref) && existsSync(ref) && statSync(ref).isFile()) {
 		if (copy) {
 			const { dir } = await call(`${at}/files`)
-			const file = `${basename(ref).replace(/(\.plan)?\.json$/, '')}.plan.json`
+			// Never over a file that's already there: it may be another canvas's plan, with edits in it.
+			const base = basename(ref).replace(/(\.plan)?\.json$/, '')
+			let file = `${base}.plan.json`
+			for (let i = 2; existsSync(join(dir, file)); i++) file = `${base}-${i}.plan.json`
 			mkdirSync(dir, { recursive: true })
-			copyFileSync(ref, join(dir, file))
+			copyFileSync(ref, join(dir, file), constants.COPYFILE_EXCL)
 			body.ref = `files/${file}`
 			console.error(`toucan: copied ${ref} to ${join(dir, file)}; that copy is the plan now, and edits on the canvas are written to it`)
 		} else body.path = resolve(ref)
