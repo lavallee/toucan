@@ -11,11 +11,17 @@
 // The protocol (website/content/extending.md has all of it): JSON on stdout and exit 0; on failure a non-zero exit and
 // {"error": CODE, "message": TEXT} on stderr, CODE one of not_found, invalid, conflict, forbidden, unavailable.
 //
-//   describe                       -> {"name", "description", "version"}          (optional)
-//   list                           -> {"sources": [{"ref", "title", "description"?}]}
-//   read REF                       -> a plan: {"plan": 1, "source", "cursor", "fields", "items"}
-//   changes REF --after CURSOR     -> {"cursor", "changed"}                        (cheap: toucan asks every few seconds)
-//   write REF   < {"changes": []}  -> {"cursor", "results": [{"mutation", "ok", "item"} | {"mutation", "ok": false, "error", "message", "item"?}]}
+//   describe                         -> {"name", "description", "version"}          (optional)
+//   list                             -> {"sources": [{"ref", "title", "description"?}]}
+//   read -- REF                      -> a plan: {"plan": 1, "source", "cursor", "fields", "items"}
+//   changes --after CURSOR -- REF    -> {"cursor", "changed"}                        (cheap: toucan asks every few seconds)
+//   write -- REF  < {"changes": []}  -> {"cursor", "results": [{"mutation", "ok", "item"} | {"mutation", "ok": false, "error", "message", "item"?}]}
+//
+// The arguments: the verb comes first, options next, then `--`, and REF is the one argument after it. Everything after
+// `--` is REF and never an option, whatever it looks like: a REF comes from whoever bound the canvas, and must not be
+// able to pass your program a flag. toucan sends a cursor as `--after CURSOR`, or as `--after=CURSOR` when it starts with
+// `-`; accept both. (An earlier draft sent `read REF` and `changes REF --after CURSOR`, with no `--`. This file still
+// takes that, and yours needn't.)
 
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -66,15 +72,35 @@ const save = (state) => {
 }
 // ---------------------------------------------------------------------------------------------------------------------------
 
-const [verb, ref, flag, cursor] = process.argv.slice(2)
+// The arguments (see the top): options anywhere before `--`, and nothing after it is one.
+const [verb, ...rest] = process.argv.slice(2)
+const given = [] // what isn't an option: REF
+let after // the cursor of `changes`, when one was given
+for (let i = 0; i < rest.length; i++) {
+	const arg = rest[i]
+	if (arg === '--') {
+		given.push(...rest.slice(i + 1))
+		break
+	}
+	if (arg === '--after') {
+		if (++i >= rest.length) fail('invalid', '--after takes a cursor')
+		after = rest[i]
+	} else if (arg.startsWith('--after=')) after = arg.slice('--after='.length)
+	else if (arg.startsWith('-')) fail('invalid', `unknown option ${arg}`)
+	else given.push(arg)
+}
+if (given.length > 1) fail('invalid', `${verb} takes one REF, after --: got ${given.length}`)
+const ref = given[0]
 if (verb === 'describe') answer({ name: 'Example', description: 'A made-up plan source to copy from: two small projects kept in a JSON file.', version: '1' })
 else if (verb === 'list') answer({ sources: Object.entries(load().projects).map(([r, p]) => ({ ref: r, title: p.title, ...(p.readonly && { readonly: true }) })) })
 else if (['read', 'changes', 'write'].includes(verb)) {
 	const state = load()
-	const project = state.projects[ref]
+	if (ref === undefined) fail('invalid', `${verb} takes a REF, after --`)
+	// Looked up among its own keys only: a REF like "constructor" names no project.
+	const project = Object.hasOwn(state.projects, ref) ? state.projects[ref] : null
 	if (!project) fail('not_found', `no project ${ref}; \`list\` says which there are`)
 	if (verb === 'read') answer({ plan: 1, source: { ref, title: project.title, readonly: project.readonly }, cursor: String(state.rev), fields: FIELDS, items: project.items })
-	else if (verb === 'changes') answer({ cursor: String(state.rev), changed: flag !== '--after' || cursor !== String(state.rev) })
+	else if (verb === 'changes') answer({ cursor: String(state.rev), changed: after !== String(state.rev) })
 	else {
 		let input
 		try {
@@ -119,4 +145,4 @@ else if (['read', 'changes', 'write'].includes(verb)) {
 		save(state)
 		answer({ cursor: String(state.rev), results })
 	}
-} else fail('invalid', `unknown verb ${verb}: describe, list, read REF, changes REF --after CURSOR, write REF`)
+} else fail('invalid', `unknown verb ${verb}: describe, list, read -- REF, changes --after CURSOR -- REF, write -- REF`)
