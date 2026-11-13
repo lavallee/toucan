@@ -11,6 +11,8 @@ export type PlanStatus = {
 	bound: boolean
 	source?: { name: string; ref: string; title: string; readonly: boolean }
 	state?: 'synced' | 'syncing' | 'waiting' | 'problem'
+	/** Do the views on the canvas show the plan as it now is? False while a redraw waits for a page, or is on its way. */
+	drawn?: boolean
 	error?: string
 	cursor?: string | number | null
 	syncedAt?: string | null

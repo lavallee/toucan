@@ -104,6 +104,7 @@ export function PlanMenu() {
 						) : (
 							<p className="min-w-0 flex-1 text-xs text-muted-foreground">
 								{plan.items ?? 0} {plan.items === 1 ? 'item' : 'items'} · {state === 'syncing' ? 'syncing' : ago(plan.syncedAt)}
+								{plan.drawn === false && state !== 'syncing' ? ' · drawing' : ''}
 							</p>
 						)}
 						<Button variant="outline" size="xs" disabled={busy === 'sync'} onClick={() => run('sync', '/sync', { method: 'POST' })}>

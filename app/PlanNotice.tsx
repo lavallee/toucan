@@ -11,7 +11,8 @@ const SHOWN = 3
  */
 export function PlanNotice() {
 	const plan = usePlan()
-	const problems = plan.bound ? (plan.problems ?? []) : []
+	// (An unbound canvas can have one thing to say: that its binding could not be read.)
+	const problems = plan.problems ?? []
 	if (!problems.length) return null
 	const newest = problems.slice(-SHOWN).reverse()
 	const dismiss = (id: string) => api(planUrl(`/problems?ids=${encodeURIComponent(id)}`), { method: 'DELETE' }).then(setPlan, (e) => console.warn('toucan: could not dismiss', messageOf(e)))
