@@ -6,6 +6,7 @@ import { Chat } from './Chat'
 import { ChatDock, DockButtons, useChatLayout } from './ChatDock'
 import { History, type VersionPreview } from './History'
 import { Routines } from './Routines'
+import { Reflexes } from './Reflexes'
 import { CommentButton, ThreadsButton, ThreadsPanel } from './Threads'
 import { update as updateThreads, useThreads } from './threads-store'
 import { AppearanceMenu } from './Appearance'
@@ -123,6 +124,12 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 					<span className="max-lg:hidden">History</span>
 				</Button>
 				<AnimateMenu />
+				<Reflexes
+					onAskAgent={(text) => {
+						setChatOpen(true)
+						setDraftRequest({ text })
+					}}
+				/>
 				<Routines
 					engine={engine}
 					onAskAgent={(text) => {

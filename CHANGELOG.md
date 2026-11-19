@@ -5,6 +5,43 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-11-18
+
+### Added
+
+- **Reflexes: what a canvas does by itself.** A canvas can answer some of what happens to it the moment it happens, without
+  calling the agent: a box whose text outgrew it is fitted, a frame that cuts off what's in it grows, an arrow through a box goes
+  round it. Each canvas has one tree of reflexes, empty at first, switched on from the **Reflexes** menu or `toucan reflexes`. A
+  reflex answers a situation when it begins and once: what was already the case when it was switched on is left alone, each fix
+  is one undo step labelled in the history, nothing runs while someone is dragging or typing or an agent is at work, and a fix a
+  person undoes stays undone (twice, and the reflex pauses itself and says so). Nodes under a node answer first; among nodes at
+  one place, the earlier answers first; a fix that doesn't settle its situation falls to what comes after it.
+- **Asks, and teaching the canvas.** What no reflex can settle becomes an ask: in the Reflexes menu, in the chat agent's brief
+  and, if a person allows it (`reflexes wake on`), in a comment thread whose agent takes it up. The agent can answer by teaching
+  the canvas a reflex (`reflexes add NAME --when CODE --routine R --answers N`), so the next time the canvas answers by itself. What
+  an agent teaches arrives watching: it counts what it would have done, and acts only once a person switches it on. `reflexes
+  suggest` names reflexes worth having from work, such as a routine run by hand again and again on the canvas.
+- **Try a reflex on a copy.** `reflexes try NAME --stage CODE` brings the situation about on a hidden copy of the canvas, lets the
+  reflex answer, and says whether the situation was over afterwards. The canvas itself never changes (tldraw; on Excalidraw it
+  judges the canvas as it is).
+- **Starters**: text-fits, frames-hold and arrows-clear under diagram-faults, and new-notes (tldraw), which asks the agent about a
+  sticky note as soon as it is pinned.
+
+### Changed
+
+- **Fit text and Fit frames take `on`**: given keys, they fit only those boxes, or only the frames those shapes are in, and Fit
+  frames then moves nothing clear. With no arguments they work on the whole canvas as before.
+
+### Credits
+
+- Reflexes follow Sihan Xu's essay [How to Control an Agent with a Growing Behavior Tree](https://sihanxu.me/harnesstree/): a
+  tree that is always judged handles what happens to an agent, the model handles what it sets out to do, and what the model
+  works out once becomes a node, so "the bigger the tree, the quieter the model". The rules for how the tree decides (a node's own
+  nodes first, the earlier before the later, a failure falling to what comes after, telling only what nothing answers) follow the
+  reactive layer of [The Harness](https://github.com/EvolvingLMMs-Lab/the-harness) by LMMs-Lab (MIT). toucan's version is written
+  from those ideas; no code of The Harness is used. Thanks to its authors, and to Wenhao Chai and Weiyang Jin, whom the essay
+  thanks for the discussions behind it.
+
 ## [0.15.1] — 2026-11-13
 
 ### Fixed

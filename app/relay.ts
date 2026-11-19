@@ -7,6 +7,7 @@ import { wsUrl, canvasName, token, headless } from './net'
 import { getThreads, setThreads } from './threads-store'
 import { setFormatId } from './formats'
 import { setPlan } from './plan-store'
+import { setReflexes } from './reflexes-store'
 import { openReference } from './references-store'
 import { activity, say, turn, setRunning } from './pulses'
 
@@ -50,6 +51,7 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 			if (msg.type === 'threads') return setThreads(msg.threads)
 			if (msg.type === 'format') return setFormatId(msg.format)
 			if (msg.type === 'plan') return setPlan(msg.plan)
+			if (msg.type === 'reflexes') return setReflexes(msg.reflexes)
 			// An agent ran `toucan show`: open it for people to read.
 			if (msg.type === 'show') return headless ? undefined : openReference(msg.ref, msg.agent)
 			// Another tab ran agent code: glow what it added or changed (agent presence, app/pulses.tsx).

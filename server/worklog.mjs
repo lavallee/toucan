@@ -21,6 +21,7 @@ export const logPath = (data) => join(data, '_work', 'log.jsonl')
 /** What a run was, from its label: a routine, an import or a drawing, or code an agent wrote. */
 export function kindOf(label = '') {
 	if (/^routine /.test(label)) return 'routine'
+	if (/^reflex /.test(label)) return 'reflex'
 	if (/^import\b/.test(label)) return 'import'
 	if (/^draw\b/.test(label)) return 'draw'
 	return 'exec'
@@ -41,9 +42,10 @@ export function record(data, { canvas, engine, agent, label, code, changes, ok =
 		agent: String(agent || 'agent').slice(0, 40),
 		kind,
 		...(kind === 'routine' && { routine: label.slice('routine '.length) }),
+		...(kind === 'reflex' && { reflex: label.slice('reflex '.length) }),
 		...(label && { label: String(label).slice(0, 200) }),
-		// A routine's code is in the bank already; keep the code of everything else.
-		...(kind !== 'routine' && { code: String(code ?? '').slice(0, MAX_CODE) }),
+		// A routine's code is in the bank already, and a reflex's is in its canvas's tree; keep the code of everything else.
+		...(kind !== 'routine' && kind !== 'reflex' && { code: String(code ?? '').slice(0, MAX_CODE) }),
 		changed,
 		ok,
 		...(!ok && { error: String(error ?? '').slice(0, 300) }),

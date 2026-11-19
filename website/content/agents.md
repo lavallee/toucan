@@ -427,6 +427,54 @@ exec path: one undo step, glowing edits, a labelled version. The `summary` it re
 - **Before doing a chore by hand:** check `routine list`, then `toucan --canvas NAME routine run NAME`.
 - Never remove a routine you didn't bank unless asked.
 
+## Reflexes: what the canvas does by itself
+
+A **reflex** answers something that happens to a canvas, the moment it happens, without calling you: a box whose text
+outgrew it is fitted, a frame that cuts off what's in it grows. A canvas has one tree of them, empty at first. Whatever
+the tree can't answer it **asks** you about, and what you work out can come back as a new reflex, so the next time the
+canvas answers by itself. The idea is Sihan Xu's "growing behavior tree" ([blog](https://sihanxu.me/harnesstree/)) and
+the reactive layer of [The Harness](https://github.com/EvolvingLMMs-Lab/the-harness) by LMMs-Lab: the tree handles what
+happens to the agent, the model what it sets out to do, and "the bigger the tree, the quieter the model".
+
+A node is `{ name, about, when, do, under, status }`:
+
+- `when` is the body of a function of `view` that returns the situations the canvas is in **now**: nothing, `true`, or a
+  list of `{ on: [keys], text }` (one per box with the problem). It is judged a moment after edits go quiet, so it says
+  what is the case, not what just happened. It must be quick and change nothing. `view` has `items(kind)`, `get(key)`,
+  `arrows()`, `findings(kind)` (from `toucan.measure()`, measured once per judgement), `notes()`, `engine`, and
+  `toucan`/`editor` for anything else. A plan's shapes are left out of all of it.
+- `do` is the answer: `--routine NAME` (it gets the situation's shapes as `args.on`; fit-text and fit-frames touch only
+  those), `--do CODE` (a function body with `situations`, `editor`, `tl` and `toucan` in scope), or `--tell` (ask the
+  agent). A node with no answer only groups the ones under it.
+- `--under NODE` puts it under another: it is judged only while that one holds, and answers before it. Order is
+  priority: among nodes at one place the earlier takes a situation from the later. A new node goes under the narrowest
+  node its situation falls in.
+
+How it behaves, because a person is editing the same canvas:
+
+- A reflex answers a situation **when it begins**, once. What was already the case when it was switched on is left.
+- It runs as an agent exec named **Reflex**: one undo step, glowing, labelled `reflex NAME` in the history. Nothing runs
+  while someone is dragging or typing, while an agent is at work on the canvas, or with no tab open.
+- If the situation is still there after it acted, it **failed**: the next node at its place or the node above may take it,
+  and if none does, it asks. A situation back soon after a reflex settled it was most likely **undone**: the reflex
+  leaves it, and after two it pauses itself and asks. More than eight runs in thirty seconds rests the tree for a minute.
+
+What to do:
+
+- **An ask** is in your brief ("Reflex ask #N"). Handle it like a request. If it will happen again, teach the canvas:
+  `reflexes add NAME --when CODE --routine R --answers N`, then `reflexes try NAME`. `--answers` closes the ask.
+- **What you add starts watching**: it is judged and counts what it would have done, and does nothing. Tell the person
+  it's there; switching it on (`reflexes on NAME`, or **On** in the Reflexes menu) is theirs, unless they asked you to.
+- **Try before you hand it over.** `reflexes try NAME --stage CODE` runs CODE on a hidden copy of the canvas to bring the
+  situation about, judges, answers, and judges again: `passed` means the situation was over afterwards. The canvas
+  itself never changes. Without `--stage` it tries on what's there now. (tldraw only; on Excalidraw it only judges.)
+- `reflexes starters` lists ready ones (text-fits, frames-hold, arrows-clear under diagram-faults; new-notes on tldraw),
+  and `reflexes suggest` names the ones worth having from work: a routine run by hand again and again on this canvas.
+- `reflexes wake on` lets the tree hand an ask to a comment thread's agent by itself, at most one every ten minutes.
+  It's off unless a person turns it on. Don't turn it on yourself.
+
+A reflex is for what happens **to** the canvas. Something you set out to do, however often, is a routine.
+
 ## Canvas scripts (growing features)
 
 A script is a function body run in the browser with `editor`, `tl`, `toucan` whenever the canvas
