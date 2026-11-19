@@ -9,7 +9,7 @@
 
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { ReflexError, SETTLE_MS, STARTERS, addAsk, askPrompt, braked, cleanNode, decide, judgeProgram, actProgram, mark, observe, placeNode, rebase, starter, subtree, suggest, treeLines, tryProgram, withParents } from '../lib/reflexes.mjs'
+import { ReflexError, SETTLE_MS, STARTERS, routineBody, settled, addAsk, askPrompt, braked, cleanNode, decide, judgeProgram, actProgram, mark, observe, placeNode, rebase, starter, subtree, suggest, treeLines, tryProgram, withParents } from '../lib/reflexes.mjs'
 
 export { ReflexError }
 export const reflexesPath = (dir, canvas) => join(dir, `${canvas}.reflexes.json`)
@@ -28,6 +28,7 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 	const ticking = new Set()
 	const recent = new Map() // canvas -> times of its last runs, for the brake
 	const restUntil = new Map()
+	const forgotten = new Set() // archived: nothing of a tick still in flight is written back
 
 	function load(canvas) {
 		if (cache.has(canvas)) return cache.get(canvas)
@@ -46,6 +47,7 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 		return state
 	}
 	function save(canvas) {
+		if (forgotten.has(canvas)) return
 		const f = reflexesPath(data, canvas)
 		writeFileSync(`${f}.tmp`, JSON.stringify(load(canvas), null, 1) + '\n')
 		renameSync(`${f}.tmp`, f)
@@ -71,10 +73,12 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 
 	/** Adds or replaces a node. People and agents both come here; an agent's starts watching unless it says otherwise. */
 	function add(canvas, input, { before } = {}) {
+		forgotten.delete(canvas)
 		const s = load(canvas)
 		const node = cleanNode(input, { nodes: s.nodes.filter((n) => n.name !== input?.name), routineExists: routineExists(canvas), compile })
 		s.nodes = placeNode(s.nodes, node, { before })
-		rebase(s.memory, node.name)
+		rebase(s.memory, node.name, s.nodes)
+		s.rev = (s.rev ?? 0) + 1
 		// An ask the agent answered by teaching the canvas: the ask is done, and the node says where it came from.
 		if (node.answers) {
 			const a = s.asks.find((x) => x.id === node.answers)
@@ -102,8 +106,9 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 		if (!n) throw new ReflexError(`no reflex ${name}`)
 		if (!['on', 'watching', 'off'].includes(status)) throw new ReflexError('status: on, watching or off')
 		n.status = status
-		// Switched on or back on: it answers what happens from now, not what is already there.
-		rebase(s.memory, name)
+		// Switched on or back on: it (and what's under it) answers what happens from now, not what is already there.
+		rebase(s.memory, name, s.nodes)
+		s.rev = (s.rev ?? 0) + 1
 		save(canvas)
 		touched(canvas)
 		return n
@@ -115,6 +120,7 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 		const gone = new Set(subtree(s.nodes, name))
 		s.nodes = s.nodes.filter((n) => !gone.has(n.name))
 		for (const g of gone) delete s.memory[g]
+		s.rev = (s.rev ?? 0) + 1
 		save(canvas)
 		return [...gone]
 	}
@@ -140,15 +146,15 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 		const n = s.nodes.find((x) => x.name === name)
 		if (!n) throw new ReflexError(`no reflex ${name}`)
 		if (typeof stage === 'string') compile('editor', 'tl', 'toucan', stage)
-		const result = await judge(canvas, tryProgram(s.nodes, name, n.do && !n.do.tell ? bodyOf(n, []) : null, stage), 60000)
+		const result = await judge(canvas, tryProgram(s.nodes, name, n.do && !n.do.tell ? bodyOf(n) : null, stage), 60000)
 		s.memory[name] ??= { sits: {}, stats: {} }
 		s.memory[name].tried = { verdict: result?.verdict, t: new Date().toISOString(), ...(stage && { staged: true }) }
 		save(canvas)
 		return result
 	}
 
-	// A routine gets the situation's shapes as `on` (the shipped ones that take it touch only those) and the situations themselves.
-	const bodyOf = (n, situations) => (n.do.routine ? routines.program(routines.get(n.do.routine), { ...(n.do.args ?? {}), situations, ...(situations.some((s) => s.on?.length) && { on: [...new Set(situations.flatMap((s) => s.on))] }) }) : n.do.code)
+	// A routine gets the situations in scope as `args.situations`, and their shapes as `args.on`: the same in a run and a trial.
+	const bodyOf = (n) => (n.do.routine ? routineBody((args) => routines.program(routines.get(n.do.routine), args), n.do.args ?? {}) : n.do.code)
 
 	// ---- the tick ------------------------------------------------------------------------------------------------------
 
@@ -177,6 +183,7 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 
 	async function step(canvas) {
 		const s = load(canvas)
+		const rev = s.rev ?? 0
 		let judged
 		try {
 			judged = (await judge(canvas, judgeProgram(s.nodes), 8000))?.judged ?? {}
@@ -184,6 +191,8 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 			// No tab answered, or it closed: try when the canvas next changes.
 			return
 		}
+		// The tree changed while it was being judged: what came back is about another tree. Judge this one.
+		if ((s.rev ?? 0) !== rev || forgotten.has(canvas)) return forgotten.has(canvas) ? undefined : touched(canvas, 0)
 		const now = Date.now()
 		let changed = false
 		for (const e of observe(s.nodes, s.memory, judged, now)) {
@@ -225,7 +234,7 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 		if (d.act) return act(canvas, d.act)
 		if (changed) save(canvas)
 		// A run waiting to be judged settled or not, which may have changed nothing (and so touches nothing): judge again.
-		if (Object.values(s.memory).some((m) => Object.values(m.sits ?? {}).some((x) => x.s === 'acted'))) touched(canvas, SETTLE_MS)
+		if (s.nodes.some((n) => Object.values(s.memory[n.name]?.sits ?? {}).some((x) => x.s === 'acted'))) touched(canvas, SETTLE_MS)
 	}
 
 	async function act(canvas, { node: name, situations }) {
@@ -241,10 +250,11 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 		}
 		let out
 		try {
-			out = await exec(canvas, actProgram(bodyOf(n, situations), situations), 60000, `reflex ${name}`, { agent: 'Reflex', doing: n.about })
+			out = await exec(canvas, actProgram(bodyOf(n), situations, s.nodes, name), 60000, `reflex ${name}`, { agent: 'Reflex', doing: n.about })
 		} catch (e) {
-			const m = s.memory[name]
+			if (!s.nodes.some((x) => x.name === name)) return // removed meanwhile
 			mark(s.memory, name, situations, 'known')
+			const m = s.memory[name]
 			m.last = { t: new Date().toISOString(), ok: false, error: String(e.message ?? e).slice(0, 300) }
 			ask(canvas, { node: name, why: 'error', situation: situations[0], text: m.last.error })
 			save(canvas)
@@ -252,7 +262,10 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 		}
 		if (out?.busy) return touched(canvas, RETRY_MS) // someone started an edit just then
 		recent.set(canvas, [...runs, Date.now()])
+		if (!s.nodes.some((x) => x.name === name)) return save(canvas) // removed while it ran: nothing to remember
 		mark(s.memory, name, situations, 'acted')
+		// Judged in the tab straight after it ran: what it settled is done now, so an undo, however quick, reads as one.
+		if (Array.isArray(out?.still)) settled(s.memory, name, situations.map((x) => x.id).filter((id) => !out.still.includes(id)))
 		const summary = typeof out?.result?.summary === 'string' ? out.result.summary : null
 		s.memory[name].last = { t: new Date().toISOString(), ok: true, on: [...new Set(situations.flatMap((x) => x.on))].slice(0, 20), ...(summary && { summary: summary.slice(0, 200) }) }
 		save(canvas)
@@ -301,7 +314,7 @@ export function createReflexes({ data, engineOf, routines, exec, judge, busy, ag
 		tree: (canvas) => treeLines(load(canvas).nodes, load(canvas).memory),
 		asks: (canvas, all = false) => load(canvas).asks.filter((a) => all || a.status === 'open'),
 		suggest: (canvas) => suggest({ nodes: load(canvas).nodes, asks: load(canvas).asks, runs: runsOf(canvas) }),
-		forget: (canvas) => (clearTimeout(timers.get(canvas)), cache.delete(canvas)),
+		forget: (canvas) => (clearTimeout(timers.get(canvas)), cache.delete(canvas), forgotten.add(canvas)),
 		// For tests: judge now.
 		_tick: tick,
 	}

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { ReflexError, SETTLE_MS, UNDO_MS, actProgram, addAsk, braked, cleanNode, decide, judgeProgram, mark, observe, placeNode, postOrder, rebase, subtree, suggest, tryProgram, withParents } from '../lib/reflexes.mjs'
+import { ReflexError, SETTLE_MS, UNDO_MS, actProgram, addAsk, braked, cleanNode, decide, judgeProgram, mark, observe, placeNode, postOrder, rebase, routineBody, settled, subtree, suggest, tryProgram, withParents } from '../lib/reflexes.mjs'
 import { createReflexes } from '../server/reflexes.mjs'
 import { kindOf } from '../server/worklog.mjs'
 
@@ -29,6 +29,7 @@ const step = (m) => console.log(`ok  ${m}`)
 	const tree = [node('a'), node('b', { under: 'a' })]
 	assert.throws(() => cleanNode({ name: 'a', when: 'return 1', under: 'b' }, { nodes: tree, compile }), /is under a/)
 	assert.equal(cleanNode({ name: 'x', when: 'return 1', status: 'paused' }, { compile }).status, 'watching', 'nobody sets paused: the canvas does')
+	assert.throws(() => cleanNode({ name: 'wake', when: 'return 1' }, { compile }), /taken/, "names the API uses for its own parts are refused")
 	step('a node: checked, compiled, and watching until switched on')
 }
 
@@ -109,7 +110,24 @@ const step = (m) => console.log(`ok  ${m}`)
 	assert.equal(d.act, null)
 	assert.deepEqual(d.would, [{ node: 'fits', situations: [sit('b1')] }])
 	assert.deepEqual(d.tells, [{ node: 'notes', situations: [sit('n1')] }], "a group's situation claims nothing")
-	step('groups, watching and telling nodes')
+	// A watching node takes nothing from a node that's on: switching an agent's node in to watch changes nothing that acts.
+	const w = [node('new', { status: 'watching', do: { code: 'x' } }), node('live')]
+	d = decide(w, {}, { new: { held: true, situations: [{ id: '*', on: [] }] }, live: { held: true, situations: [sit('b1')] } })
+	assert.deepEqual([d.act?.node, d.would.length], ['live', 1])
+	step('groups, watching and telling nodes; watching takes nothing from what acts')
+
+	// A run that settled its situation, judged straight after in the tab: done at once, so even a quick undo reads as undone.
+	const q = {}
+	mark(q, 'fits', [sit('b3')], 'acted', t0)
+	settled(q, 'fits', ['b3'], t0)
+	assert.equal(q.fits.sits.b3.s, 'done')
+	assert.deepEqual(observe([node('fits')], q, { fits: { held: true, situations: [sit('b3')] } }, t0 + 300).map((e) => e.kind), ['undone'], 'undone, not failed')
+	// Switching a node back on starts the nodes under it from what's there now too.
+	const sub = [node('p', { do: null }), node('c', { under: 'p' })]
+	const sm = { c: { sits: {}, stats: {} } }
+	rebase(sm, 'p', sub)
+	assert.ok(sm.c.baseline, 'the node under it starts from what is there')
+	step('a quick undo is an undo; switching a node on resets what is under it')
 
 	// 5. Switched on: what is already the case is left as it is.
 	const bm = {}
@@ -166,7 +184,13 @@ const step = (m) => console.log(`ok  ${m}`)
 	assert.ok(!('off' in judged), 'a node switched off is not judged')
 	// The answer runs with its situations in scope, and waits while someone in the tab is mid-edit.
 	const act = new AsyncFunction('editor', 'tl', 'toucan', actProgram('return { summary: situations.map((s) => s.id).join() }', [{ id: 'b1', on: ['b1'] }]))
-	assert.deepEqual(await act({}, {}, toucan), { _quiet: true, result: { summary: 'b1' } })
+	assert.deepEqual(await act({}, {}, toucan), { _quiet: true, still: null, result: { summary: 'b1' } })
+	// With the tree, it judges its node straight after, in the same tab.
+	const judgedAct = new AsyncFunction('editor', 'tl', 'toucan', actProgram('return 1', [{ id: 'b1', on: ['b1'] }], nodes, 'fits'))
+	assert.deepEqual((await judgedAct({}, {}, toucan)).still, ['b1'], 'still there: nothing changed it')
+	// A routine's args come from the situations in scope when it runs.
+	const rb = routineBody((args) => `const args = ${JSON.stringify(args)};\nreturn args`, { pad: 4 })
+	assert.deepEqual(await new AsyncFunction('situations', rb)([{ id: 'a', on: ['a', 'b'] }]), { pad: 4, situations: [{ id: 'a', on: ['a', 'b'] }], on: ['a', 'b'] })
 	assert.deepEqual(await act({}, {}, { ...toucan, _busyKeys: () => ['b2'] }), { _quiet: true, busy: true })
 	// A trial on a copy. Here the "copy" is a fresh pretend canvas the answer can change.
 	const copyOf = () => {
@@ -248,6 +272,17 @@ const step = (m) => console.log(`ok  ${m}`)
 		// Persisted beside the canvas, and read back.
 		const saved = JSON.parse(readFileSync(join(dir, 'c.reflexes.json'), 'utf8'))
 		assert.equal(saved.nodes.length, 3)
+		// The tree changes while a judgement is out: what comes back is set aside and the tree judged again.
+		let release
+		const gate = new Promise((res) => (release = res))
+		const r2 = createReflexes({ data: dir, engineOf: () => 'tldraw', routines, exec: async () => ({}), judge: async (canvas) => (await gate, { judged: { late: { held: true, situations: [{ id: 'x', on: ['x'] }] } } }), busy: () => false, agentBusy: () => false, live: () => true, broadcast: () => {} })
+		r2.add('d', { name: 'early', when: 'return []', do: { code: 'return 1' }, status: 'on' })
+		const pendingTick = r2._tick('d')
+		r2.add('d', { name: 'late', when: 'return []', do: { code: 'return 1' }, status: 'on' })
+		release()
+		await pendingTick
+		assert.ok(r2.load('d').memory.late.baseline, 'a node added mid-judgement keeps its baseline for a judgement that includes it')
+		r2.forget('d')
 		assert.deepEqual(r.remove('c', 'text-fits'), ['text-fits', 'wide-boxes'], 'removing a node removes what is under it')
 		assert.match(r.brief('c')[0], /Reflexes: 1 on/)
 		assert.equal(kindOf('reflex text-fits'), 'reflex', "the work log knows a reflex's run from code an agent wrote")

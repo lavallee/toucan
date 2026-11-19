@@ -23,7 +23,11 @@ export function makeCopy(editor: Editor, makeHelpers: Helpers, assetUrls?: Recor
 			const page = editor.getCurrentPageId()
 			if (copy.getPage(page)) copy.setCurrentPage(page)
 			await document.fonts?.ready
-			return await fn(copy, makeHelpers(copy))
+			// What the copy would show people (a glow, the view moving to new shapes) has nowhere to go: its ids are the canvas's own.
+			const helpers = makeHelpers(copy)
+			helpers.pulse = () => {}
+			helpers.reveal = () => {}
+			return await fn(copy, helpers)
 		} finally {
 			root.unmount()
 			host.remove()
