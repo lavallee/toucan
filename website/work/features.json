@@ -1,7 +1,7 @@
 {
  "product": "toucan",
- "version": "0.14.0",
- "updated": "2026-11-12",
+ "version": "0.16.0",
+ "updated": "2026-11-18",
  "note": "The full feature list. scripts/build-features.mjs renders it to website/content/features.md; keep it in step with CHANGELOG.md.",
  "groups": [
   {
@@ -460,6 +460,41 @@
    "docs": "agents.html#routines-chores-worth-keeping",
    "engines": "both",
    "who": "person"
+  },
+  {
+   "id": "reflexes",
+   "group": "tidy",
+   "name": "Reflexes",
+   "summary": "The canvas fixes some things by itself the moment they happen, without the agent: text that outgrew its box, a frame cutting off what's in it, an arrow through a box. A tree of them, switched on per canvas; each fix is one undo step, a fix someone undoes stays undone, and what's already there when one is switched on is left. After Sihan Xu's growing behavior tree and The Harness.",
+   "app": "Reflexes menu",
+   "cli": "reflexes · reflexes starters · reflexes add --starter NAME --on · reflexes on|watch|off NAME",
+   "since": "0.16.0",
+   "docs": "agents.html#reflexes-what-the-canvas-does-by-itself",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "reflex-asks",
+   "group": "tidy",
+   "name": "Asks, and teaching the canvas",
+   "summary": "What no reflex can settle is asked about, in the Reflexes menu and the agent's brief (or, if you allow it, in a comment thread its agent takes). The agent can answer by teaching the canvas a new reflex, which arrives watching until you switch it on.",
+   "app": "Reflexes menu: Asking",
+   "cli": "reflexes asks · reflexes add NAME --when CODE --routine R --answers N · reflexes wake on|off · reflexes suggest",
+   "since": "0.16.0",
+   "docs": "agents.html#reflexes-what-the-canvas-does-by-itself",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "reflex-trial",
+   "group": "tidy",
+   "name": "Try a reflex on a copy",
+   "summary": "Bring a reflex's situation about on a hidden copy of the canvas, let it answer, and see whether the situation was over afterwards. The canvas itself never changes.",
+   "cli": "reflexes try NAME [--stage CODE]",
+   "since": "0.16.0",
+   "docs": "agents.html#reflexes-what-the-canvas-does-by-itself",
+   "engines": "tldraw",
+   "who": "agent"
   },
   {
    "id": "scripts",

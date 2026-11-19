@@ -203,12 +203,12 @@ export function makeTidy(scene) {
 
 	/**
 	 * Each frame fits what's in it, with even padding (`pad`), and nothing inside moves on the page: the frame's edges move round
-	 * its contents. Empty frames are left alone.
+	 * its contents. Empty frames are left alone. `only` limits it to some frames (ids).
 	 */
-	function fitFrames({ pad = 30 } = {}) {
+	function fitFrames({ pad = 30, only } = {}) {
 		let changed = 0
 		// A plan's frames are the size the plan drew them, and a frame round a plan's shapes would move them as its edges moved.
-		const frames = scene.items().filter((s) => s.kind === 'frame' && !fixed(s))
+		const frames = scene.items().filter((s) => s.kind === 'frame' && !fixed(s) && (!only || only.includes(s.id)))
 		// Innermost first, so an outer frame fits the inner one's new size.
 		const depth = (s) => scene.ancestors(s.id).length
 		for (const f of frames.sort((a, b) => depth(b) - depth(a))) {

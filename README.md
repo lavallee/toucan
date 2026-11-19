@@ -198,6 +198,10 @@ node bin/toucan.mjs setup      # builds the app, puts `toucan` on your PATH, and
 - **Routines.** Bank a chore once and run it on any canvas from the Routines menu or `toucan routine run`, as
   one undo step. About twenty ship with toucan, grouped by kind (tidy, arrows, layout, style, content, check), and toucan
   learns more from work: it notices chores agents keep doing by hand and offers to bank them.
+- **Reflexes.** A canvas can fix some things by itself the moment they happen, without the agent: text that outgrew its
+  box, a frame cutting off what's in it, an arrow through a box. Switch them on from the Reflexes menu. Each fix is one
+  undo step, a fix you undo stays undone, and what a reflex can't settle it asks the agent about. The agent can answer by
+  teaching the canvas a new reflex, which waits for you to switch it on. See [Credits](#credits).
 - **Your look.** A light/dark/system override, and clean lettering by default in place of tldraw's handwritten
   font (switch back under Appearance). It's per browser, and it doesn't change the canvases.
 - **An index of canvases** at `/`, with previews, titles, descriptions and which ones are open.
@@ -362,6 +366,12 @@ that agent with toucan, and check the chat's and your harness's approval setting
 Headless mode adds no new way in: the headless page is a local Chromium the server starts itself. It
 gets the token through a script that puts it in the page's (in-memory, throwaway) local storage, never
 in a URL, and then authenticates like any tab.
+
+## Credits
+
+Reflexes (a canvas answering what happens to it by itself, and asking the agent about the rest) follow Sihan Xu's
+[How to Control an Agent with a Growing Behavior Tree](https://sihanxu.me/harnesstree/) and the reactive layer of
+[The Harness](https://github.com/EvolvingLMMs-Lab/the-harness) by LMMs-Lab. The ideas are theirs; toucan's code is its own.
 
 ## Licences
 

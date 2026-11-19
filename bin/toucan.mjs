@@ -54,6 +54,12 @@
 //     routine learn --codex [DIR] [--since 30d]  bring the chat agent's past Codex sessions into the work log, so suggest sees them
 //                                 chores banked once and run on any canvas (no --canvas needed to list, show, save or rm)
 //     say TEXT [--at KEY,KEY]     tell people what you're about to do; --at moves your cursor to those shapes
+//     reflexes [--json]           what --canvas does by itself when something happens to it: its tree, and what each node has done
+//     reflexes add NAME --when CODE (--routine R [--args JSON] | --do CODE | --tell) [--under NODE] [--before NODE] [--about TEXT] [--answers ASK] [--on]
+//                                 a node (CODE: a function body, or a file holding one); it starts watching unless --on
+//     reflexes add --starter NAME [--on]   one of the starters (`reflexes starters`), with the node it hangs under
+//     reflexes on|watch|off NAME | rm NAME | try NAME [--stage CODE] | starters | suggest
+//     reflexes asks [--all] | asks dismiss ID | wake on|off   what the tree couldn't answer; whether it may wake the agent for it
 //     plugins                     every plugin on PATH by kind (profiles, plan sources), with any found but refused and why; and extension commands
 //     sources                     where plans can come from: the built-in file source, and toucan-source-* adapters with what each lists
 //     plan                        the plan --canvas shows: source, state, views, problems
@@ -114,7 +120,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'plan', 'sources', 'plugins']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'plan', 'sources', 'plugins', 'reflexes']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -454,6 +460,44 @@ switch (cmd) {
 		if (sub === 'resolve' && key && typeof reply === 'string') print(await exec(`${tldrawOnly}return toucan.resolveNote(${JSON.stringify(key)}, ${JSON.stringify(reply)})`, undefined, undefined, 'answering a note'))
 		else if (!sub) print(await exec(`${tldrawOnly}return toucan.notes(${JSON.stringify({ all })})`, undefined, undefined, 'reading the notes'))
 		else die('usage: notes [--all] | notes resolve KEY --reply TEXT')
+		break
+	}
+	case 'reflexes': {
+		const asJson = flag('json')
+		const when = flag('when'), routine = flag('routine'), does = flag('do'), tell = flag('tell'), under = flag('under'), before = flag('before'), about = flag('about'), answers = flag('answers'), on = flag('on'), stage = flag('stage'), all = flag('all'), starterName = flag('starter'), args = flag('args')
+		const [, sub, name, extra] = argv
+		const base = (rest = '') => cpath(`/reflexes${rest}`)
+		// Code given inline, or the name of a file that holds it.
+		const code = (v, what) => {
+			if (v === undefined) return undefined
+			if (typeof v !== 'string') die(`--${what} needs a value: code, or a file holding it`)
+			return existsSync(v) && statSync(v).isFile() ? readFileSync(v, 'utf8') : v === '-' ? readFileSync(0, 'utf8') : v
+		}
+		const tree = (r) => {
+			const lines = [...(r.tree.length ? r.tree : ['No reflexes yet. `toucan reflexes starters` lists some to begin with.'])]
+			if (r.resting) lines.push(`Resting until ${r.resting}: they acted too often in a short time.`)
+			for (const a of r.asks) lines.push(`ask #${a.id} from ${a.node} (${a.why})${a.on?.length ? ` on ${a.on.join(', ')}` : ''}${a.text ? `: ${a.text}` : ''}`)
+			if (r.wake) lines.push('The agent may be woken for an ask (wake on).')
+			return lines.join('\n')
+		}
+		if (!sub) print(asJson ? await call(base()) : tree(await call(base())))
+		else if (sub === 'starters') print((await call(base())).starters)
+		else if (sub === 'suggest') print((await call(base('/suggest'))).suggestions)
+		else if (sub === 'add' && typeof starterName === 'string') print(await call(base(), { method: 'POST', body: JSON.stringify({ starter: starterName, status: on ? 'on' : 'watching', agent }) }))
+		else if (sub === 'add' && name) {
+			const node = { name, when: code(when, 'when'), about: typeof about === 'string' ? about : undefined, under: typeof under === 'string' ? under : undefined, status: on ? 'on' : 'watching', ...(typeof answers === 'string' && { answers: Number(answers) }) }
+			if ([routine, does, tell].filter(Boolean).length > 1) die('one of --routine, --do or --tell')
+			if (typeof routine === 'string') node.do = { routine, ...(typeof args === 'string' && { args: JSON.parse(args) }) }
+			else if (does !== undefined) node.do = { code: code(does, 'do') }
+			else if (tell) node.do = { tell: true }
+			print(await call(base(), { method: 'POST', body: JSON.stringify({ node, before: typeof before === 'string' ? before : undefined, agent }) }))
+		} else if (['on', 'watch', 'off'].includes(sub) && name) print(await call(base(`/${name}`), { method: 'PATCH', body: JSON.stringify({ status: sub === 'watch' ? 'watching' : sub }) }))
+		else if (sub === 'rm' && name) print(await call(base(`/${name}`), { method: 'DELETE' }))
+		else if (sub === 'try' && name) print(await call(base(`/${name}/try`), { method: 'POST', body: JSON.stringify({ stage: code(stage, 'stage') }) }))
+		else if (sub === 'asks' && name === 'dismiss' && extra) print(await call(base(`/asks/${extra}/dismiss`), { method: 'POST' }))
+		else if (sub === 'asks' && !name) print((await call(base(`/asks${all ? '?all' : ''}`))).asks)
+		else if (sub === 'wake' && ['on', 'off'].includes(name)) print(await call(base('/wake'), { method: 'POST', body: JSON.stringify({ on: name === 'on' }) }))
+		else die('usage: reflexes | add NAME --when CODE (--routine R [--args JSON] | --do CODE | --tell) [--under NODE] [--before NODE] [--about TEXT] [--answers ASK] [--on] | add --starter NAME [--on] | on|watch|off NAME | rm NAME | try NAME [--stage CODE] | starters | suggest | asks [--all] | asks dismiss ID | wake on|off')
 		break
 	}
 	case 'say': {

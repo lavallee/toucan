@@ -3,8 +3,12 @@
 // engines: tldraw, excalidraw
 // kind: tidy
 // when: Text spills out of boxes, or check-diagram says text outgrew its box.
+// args: on (keys: only these boxes)
 
 let fitted = 0
+// Given keys (a reflex's situation), only those boxes; otherwise every box.
+const on = Array.isArray(args.on) && args.on.length ? new Set(args.on) : null
+const wanted = (key) => !on || on.has(key)
 if (toucan.engine === 'excalidraw') {
 	// A container whose bound text is taller than it: grow it, and centre the text again.
 	const all = editor.getSceneElements()
@@ -14,7 +18,7 @@ if (toucan.engine === 'excalidraw') {
 	for (const t of all) {
 		if (t.type !== 'text' || !t.containerId) continue
 		const box = byId.get(t.containerId)
-		if (!box || box.type === 'arrow') continue
+		if (!box || box.type === 'arrow' || !wanted(toucan.keyOf(box))) continue
 		const need = t.height + PAD * 2
 		if (box.height >= need - 1) continue
 		// A plan's boxes are the size the plan drew them.
@@ -28,7 +32,7 @@ if (toucan.engine === 'excalidraw') {
 } else {
 	// tldraw grows a box with too much text by growY; fold it into the height, so the box is simply that tall.
 	// (Not a plan's boxes: those are the size the plan drew them.)
-	const grown = editor.getCurrentPageShapes().filter((s) => s.type === 'geo' && s.props.growY > 0 && !toucan.scene.skipPlan(s.id))
+	const grown = editor.getCurrentPageShapes().filter((s) => s.type === 'geo' && s.props.growY > 0 && wanted(toucan.keyOf(s)) && !toucan.scene.skipPlan(s.id))
 	editor.updateShapes(grown.map((s) => ({ id: s.id, type: s.type, props: { h: s.props.h + s.props.growY, growY: 0 } })))
 	fitted = grown.length
 }

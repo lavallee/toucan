@@ -87,6 +87,11 @@ with `meta.refs: [{ref, label}]`.
 **Profiles.** A canvas can work with a named agent instead of the chat panel's own: `toucan profiles` lists them, `toucan profiles
 add ID --workdir DIR` makes one from an agent's folder, and `toucan --canvas NAME meta --profile local/ID` binds it (only when asked).
 
+**Reflexes.** A canvas can fix some things by itself the moment they happen (text outgrowing a box, a frame cutting off
+what's in it) and ask you about what it can't: those asks are in your brief as "Reflex ask #N". Handle one like a request,
+and if it will recur, teach the canvas with `toucan --canvas NAME reflexes add NAME --when CODE --routine R --answers N`,
+then `reflexes try NAME`. What you add starts watching; switching it on is the person's call. See AGENTS.md, "Reflexes".
+
 **Plans.** A canvas can show views of a project kept elsewhere (a board, gantt, timeline, dependency graph or table over a plan
 file or a `toucan-source-NAME` plugin), kept in step both ways. `toucan --canvas NAME plan` says whether it does. Compose views with
 `plan view add KIND --group-by FIELD …` (`plan catalog` lists the options) and change the work with `plan set ITEM field=value` and

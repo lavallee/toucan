@@ -6,6 +6,7 @@ import { useSync } from '@tldraw/sync'
 import { makeHelpers } from './helpers.js'
 import { wsUrl, headless } from './net'
 import { connectRelay, keepThumbnail, applySeed } from './relay'
+import { makeCopy } from './sandbox'
 import { CanvasFrame } from './CanvasFrame'
 import { AgentCursor, PulseBoxes, useAgents, usePulses } from './pulses'
 import { ProposalBar } from './ProposalBar'
@@ -116,6 +117,8 @@ export function App() {
 		setEditor(editor)
 		keepPicturesWhole(editor)
 		const toucan = makeHelpers(editor)
+		// A hidden copy of the canvas, for trying a reflex without touching the real one (app/sandbox.tsx).
+		;(toucan as any)._copy = makeCopy(editor, makeHelpers, assetUrls)
 		setHelpers({ toucan, subscribe: (f) => editor.store.listen(f) })
 		window.editor = editor
 		window.toucan = toucan

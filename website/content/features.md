@@ -1,5 +1,5 @@
 ---
-description: Everything toucan 0.14.0 does, in one list: where to find each feature, and when it arrived.
+description: Everything toucan 0.16.0 does, in one list: where to find each feature, and when it arrived.
 kicker: Reference
 ---
 # Features
@@ -67,6 +67,9 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Check this diagram](tour.html#tidy-it-up) | Scores what's drawn out of 100 and names the shapes at fault (overlaps, arrows through boxes, labels on boxes or crossed by other arrows), so an agent can fix what it finds. | **Routines menu**; CLI: `routine run check-diagram` | 0.7.0 |
 | [Bank your own routine](agents.html#routines-chores-worth-keeping) | Ask the chat to make a chore a routine, paste code, or save one from the CLI; it appears in the menu for every canvas. | **Chat · Routines menu**; CLI: `routine save NAME FILE` | 0.3.0 |
 | [Routines learned from work](agents.html#routines-chores-worth-keeping) | A work log of what agents do on canvases; toucan suggests the code they keep writing by hand as routines to bank, and shows which routines get used. | **Routines menu: From your work**; CLI: `routine suggest` · `routine stats` · `routine learn --codex` | 0.13.0 |
+| [Reflexes](agents.html#reflexes-what-the-canvas-does-by-itself) | The canvas fixes some things by itself the moment they happen, without the agent: text that outgrew its box, a frame cutting off what's in it, an arrow through a box. A tree of them, switched on per canvas; each fix is one undo step, a fix someone undoes stays undone, and what's already there when one is switched on is left. After Sihan Xu's growing behavior tree and The Harness. | **Reflexes menu**; CLI: `reflexes` · `reflexes starters` · `reflexes add --starter NAME --on` · `reflexes on\|watch\|off NAME` | 0.16.0 |
+| [Asks, and teaching the canvas](agents.html#reflexes-what-the-canvas-does-by-itself) | What no reflex can settle is asked about, in the Reflexes menu and the agent's brief (or, if you allow it, in a comment thread its agent takes). The agent can answer by teaching the canvas a new reflex, which arrives watching until you switch it on. | **Reflexes menu: Asking**; CLI: `reflexes asks` · `reflexes add NAME --when CODE --routine R --answers N` · `reflexes wake on\|off` · `reflexes suggest` | 0.16.0 |
+| [Try a reflex on a copy](agents.html#reflexes-what-the-canvas-does-by-itself) (tldraw) | Bring a reflex's situation about on a hidden copy of the canvas, let it answer, and see whether the situation was over afterwards. The canvas itself never changes. | CLI: `reflexes try NAME [--stage CODE]` | 0.16.0 |
 | [Canvas scripts](agents.html#canvas-scripts-growing-features) | Persistent behaviour stored with a canvas, such as a button that re-routes arrows. | CLI: `script list\|put\|rm` | 0.1.0 |
 | Timeline-aware tidying | On a timeline, tidying keeps dates where they are: positions and widths are dates. | — | 0.7.0 |
 
@@ -111,4 +114,4 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Remote and behind a proxy](how-it-works.html) | Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to. | **Sign-in page**; CLI: `--public-url` · `--allow-host` · `TOUCAN_URL` · `TOUCAN_TOKEN` | 0.11.0 |
 | [Plugins](extending.html#plugins) | One mechanism for programs on PATH that connect toucan to your own systems (agent profiles, plan sources), with one trust rule; lists what was found and, for anything refused, why. | CLI: `plugins` · `sources` · `profiles` | 0.15.0 |
 
-*60 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
+*63 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
