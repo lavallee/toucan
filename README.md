@@ -370,6 +370,16 @@ in a URL, and then authenticates like any tab.
 
 ## Credits
 
+Screenshot review was inspired by [Rounds by Kris Puckett](https://github.com/krispuckett/rounds). Rounds
+showed how to pin feedback to the screenshot a session produced, return the note to that session, and
+compare its update with the original.
+
+That fit the round trips we were already building in Toucan. A keyed import can bring changes back to the
+same shapes, and a card moved on a [Daymark board](https://github.com/lavallee/toucan-source-daymark)
+writes back to the task it came from. Screenshot review gives feedback the same continuity. Toucan
+keeps the pinned revision, and its producer picks up the note through an inbox and can reply with an
+updated image.
+
 Reflexes (a canvas answering what happens to it by itself, and asking the agent about the rest) follow Sihan Xu's
 [How to Control an Agent with a Growing Behavior Tree](https://sihanxu.me/harnesstree/) and the reactive layer of
 [The Harness](https://github.com/EvolvingLMMs-Lab/the-harness) by LMMs-Lab. The ideas are theirs; toucan's code is its own.

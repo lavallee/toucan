@@ -21,7 +21,11 @@ already have.
 
 ## Examples
 
-`scripts/build-docs.mjs` makes the tour and gallery pages and every picture and map, from a running toucan. Agent scenes are real turns, so don't hand-write what an agent said. Don't edit `content/tour.md` or `content/gallery.md` directly. `site/explorer.html` and `site/assets/explore.{js,css}` are hand-written.
+`scripts/build-docs.mjs` makes the tour and gallery pages and the tour and gallery illustrations and the explorer maps, from a running toucan. Agent scenes are real turns, so don't hand-write what an agent said. Don't edit `content/tour.md` or `content/gallery.md` directly. `site/explorer.html` and `site/assets/explore.{js,css}` are hand-written.
+
+`scripts/capture-use-cases.mjs` builds the examples for the landing page and Use cases in a
+disposable Toucan instance. Run it after `npm run build`. The figures in `site/assets/use-cases/`
+show synthetic projects recorded through the real canvas, plan, and review interfaces.
 
 ## Sources
 

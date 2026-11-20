@@ -1,67 +1,60 @@
-# toucan
+---
+label: Home
+description: Draw, review, and plan on a live canvas you share with your agents.
+image: https://lavallee.github.io/toucan/assets/use-cases/radio-map.png
+image_alt: A Toucan canvas showing how a community radio recording reaches the web player and podcast feed.
+---
+# A canvas you and your agents can edit
 
-toucan puts a [tldraw](https://tldraw.dev) or [Excalidraw](https://excalidraw.com) canvas in a browser
-tab and gives agents a way in. A chat panel drives [Codex](https://github.com/openai/codex) on your own
-ChatGPT sign-in; any terminal agent (Claude Code, Codex, pi, …) uses the same `toucan` CLI. Both read the
-canvas, send JavaScript to the live editor, look at a screenshot, or merge a Mermaid, JSON Canvas or
-Excalidraw file in by key. You keep drawing the whole time, and every edit, yours or theirs, lands on
-one shared document.
-
-[See it work →](tour.html) · [Every feature →](features.html) · [Click through a canvas →](explore.html) · [Get started →](quickstart.html) · [Source on GitHub ↗](https://github.com/lavallee/toucan)
-
-![The canvas with the chat panel open. Asked for a sequence diagram of a password reset, the agent has drawn four participants and a column of messages between them.](assets/tour/chat.png "A real turn of the chat agent, from a one-line request.")
-
-## For your agent
-
-toucan gives an agent a canvas you can see. It draws diagrams of your code, systems and plans in a browser tab while you watch, and reads back your edits, sticky notes and comments. To set it up, paste this to your agent:
-
-> Install toucan from https://github.com/lavallee/toucan and draw how this project fits together.
-
-**If you're an agent,** this is all you need to start (Node 22+):
-
-```sh
-curl -fsSL https://github.com/lavallee/toucan/releases/latest/download/install.sh | sh
-toucan init --open    # the canvas for the project you're in, opened in the person's browser
-toucan guide          # how to work on it
-```
-
-Don't run `npm install toucan`: that's an unrelated package. A one-page brief for agents is at [llms.txt](llms.txt), and the [Agent guide](agents.html) has everything.
-
-## What you can do with it
-
-- **Start from a known shape.** 22 [templates](gallery.html) cover flowcharts, org charts, sequences, architecture, roadmaps, kanban and more, and agents draw their own in the same form.
-- **Read a canvas, not just look at it.** Boxes stay short, with the rest a click away. [Walk the Odyssey](explorer.html?map=odyssey) with the arrow keys to see how.
-- **Comment where the problem is.** [Threads](tour.html#comment-and-have-it-answered) on a box or region drive their own agent, and a sticky note is a message to one.
-- **Grow a diagram by talking to it.** Ask the chat to add a service, regroup a cluster or draw the arrows between two systems. Then fix the layout by hand.
-- **Generate a canvas from your own data.** A script reads your inventory, your dependency graph or your notes and upserts shapes by key. It reruns without disturbing what people moved or annotated.
-- **Give a canvas behaviour.** *Canvas scripts* are small JavaScript functions stored with a canvas and run whenever it loads: a button, a live overlay, a reaction to edits.
-- **Move diagrams between tools.** Export any canvas as JSON Canvas (Obsidian), Mermaid, DOT, `.excalidraw` or toucan's own graph format, and import the first four back.
-
-## The shape of it
-
-```
-browser tab ── canvas + chat panel
-   ▲ exec relay     ▲ chat relay
-   │                │
-toucan server (Node)
-   ├─ sync room per canvas → data dir
-   ├─ canvas scripts       → data dir
-   └─ codex app-server (your sign-in)
-         └─ runs `toucan …`
-
-terminal agents ── `toucan …` (same path)
-```
-
-One small Node server holds a sync room per canvas, relays agent code into the most recently focused
-tab, and hosts the chat. Agents never hold a model API key for toucan: the chat runs inside Codex's own
-client on your sign-in, and terminal agents bring their own.
-
-## Where to go next
-
-- [See it work](tour.html): the whole thing in screenshots of real runs.
-- [Explore](explore.html): click through real canvases, with nothing to install.
-- [Gallery](gallery.html): every diagram toucan starts from.
-- [Quick start](quickstart.html): install, sign in, and make your first canvas.
-- [Agent guide](agents.html): the CLI, the `toucan.*` helpers, and the graph format agents work with.
-- [How it works](how-it-works.html): sync, exec routing, the chat relay and the security model.
-- [Extending](extending.html): extension commands, deployment notes, configuration and licences.
+::: html
+<div class="article-full toucan-home">
+  <link rel="stylesheet" href="assets/use-cases.css">
+  <section class="home-hero" aria-label="Toucan in use">
+    <div class="home-intro">
+      <p>Draw a system from your code, move the pieces by hand, and leave feedback where it belongs. Your agents can read and edit the same live canvas.</p>
+      <div class="home-actions">
+        <a class="home-primary" href="quickstart.html">Install Toucan</a>
+        <a href="explorer.html?map=shop">Explore a canvas</a>
+      </div>
+      <p class="home-runtime">Open source. Runs on your machine with tldraw or Excalidraw.</p>
+    </div>
+    <figure>
+      <a href="assets/use-cases/radio-map.png"><img src="assets/use-cases/radio-map.png" width="1440" height="650" fetchpriority="high" alt="Toucan system map showing how a radio recording moves through ingest, catalog, archive, and scheduling to the web player and podcast feed."></a>
+      <figcaption>A community radio system drawn in Toucan.</figcaption>
+    </figure>
+  </section>
+  <section class="home-work" aria-labelledby="home-work-title">
+    <div class="home-work-lead">
+      <h2 id="home-work-title">Start with something you need to do</h2>
+      <a href="use-cases.html">All use cases</a>
+    </div>
+    <div class="home-cases">
+      <section>
+        <h3><a href="use-cases.html#map-a-system">Map a system</a></h3>
+        <p>Trace a recording from upload to playback. Refresh the map as services change.</p>
+      </section>
+      <section>
+        <h3><a href="use-cases.html#review-a-screenshot">Review a screenshot</a></h3>
+        <p>Pin a note to the exact revision. Compare it with the update when the producer replies.</p>
+      </section>
+      <section>
+        <h3><a href="use-cases.html#run-a-project-board">Run a project board</a></h3>
+        <p>Move a card in Toucan and update the task at its source.</p>
+      </section>
+      <section>
+        <h3><a href="use-cases.html#work-through-a-handoff">Work through a handoff</a></h3>
+        <p>Follow a story from tip to publication and mark what still needs an editor’s decision.</p>
+      </section>
+    </div>
+  </section>
+  <section class="home-next" aria-labelledby="home-next-title">
+    <h2 id="home-next-title">Bring the agent you already use</h2>
+    <p>Use the built-in Codex chat or connect a terminal agent through the CLI or MCP. In a project, ask it to draw how the repo fits together and open the canvas.</p>
+    <div class="home-actions">
+      <a href="agents.html">Agent guide</a>
+      <a href="tour.html">Product tour</a>
+      <a href="https://github.com/lavallee/toucan">Source on GitHub</a>
+    </div>
+  </section>
+</div>
+:::
