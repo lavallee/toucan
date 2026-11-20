@@ -1,0 +1,262 @@
+{
+  "groups": [],
+  "nodes": [
+    {
+      "key": "title",
+      "text": "Thanksgiving, one oven",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "w": 1050,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "xl",
+        "color": "black"
+      }
+    },
+    {
+      "key": "subtitle",
+      "text": "Eight at the table. Dinner at 5:15.",
+      "box": {
+        "x": 0,
+        "y": 67,
+        "w": 1000,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "m",
+        "color": "black"
+      }
+    },
+    {
+      "key": "time-0",
+      "text": "3:30",
+      "box": {
+        "x": 184,
+        "y": 135,
+        "w": 90,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "s",
+        "color": "black"
+      }
+    },
+    {
+      "key": "time-30",
+      "text": "4:00",
+      "box": {
+        "x": 454,
+        "y": 135,
+        "w": 90,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "s",
+        "color": "black"
+      }
+    },
+    {
+      "key": "time-60",
+      "text": "4:30",
+      "box": {
+        "x": 724,
+        "y": 135,
+        "w": 90,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "s",
+        "color": "black"
+      }
+    },
+    {
+      "key": "time-90",
+      "text": "5:00",
+      "box": {
+        "x": 994,
+        "y": 135,
+        "w": 90,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "s",
+        "color": "black"
+      }
+    },
+    {
+      "key": "time-105",
+      "text": "5:15",
+      "box": {
+        "x": 1129,
+        "y": 135,
+        "w": 90,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "s",
+        "color": "black"
+      }
+    },
+    {
+      "key": "main-label",
+      "text": "Main oven",
+      "box": {
+        "x": 0,
+        "y": 191,
+        "w": 170,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "m",
+        "color": "black"
+      }
+    },
+    {
+      "key": "toaster-label",
+      "text": "Toaster oven",
+      "box": {
+        "x": 0,
+        "y": 375,
+        "w": 175,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "m",
+        "color": "black"
+      }
+    },
+    {
+      "key": "table-label",
+      "text": "At the table",
+      "box": {
+        "x": 0,
+        "y": 480,
+        "w": 180,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "m",
+        "color": "black"
+      }
+    },
+    {
+      "key": "hands-note",
+      "text": "Maya brings dressing · Eli brings rolls and a toaster oven",
+      "box": {
+        "x": 0,
+        "y": 103,
+        "w": 1120,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "s",
+        "color": "black"
+      }
+    },
+    {
+      "key": "turkey",
+      "text": "Turkey · final oven block",
+      "box": {
+        "x": 184,
+        "y": 188,
+        "w": 540,
+        "h": 62
+      },
+      "style": {
+        "color": "orange",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "m"
+      },
+      "meta": {
+        "detail": "The turkey is already roasting when this board starts. This bar reserves the last stretch in the main oven."
+      }
+    },
+    {
+      "key": "dressing",
+      "text": "Maya’s dressing",
+      "box": {
+        "x": 454,
+        "y": 271,
+        "w": 360,
+        "h": 62
+      },
+      "style": {
+        "color": "red",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "m"
+      },
+      "meta": {
+        "detail": "Maya brings the dressing. It needs a main-oven slot."
+      }
+    },
+    {
+      "key": "rolls",
+      "text": "Eli’s rolls",
+      "box": {
+        "x": 859,
+        "y": 188,
+        "w": 180,
+        "h": 62
+      },
+      "style": {
+        "color": "yellow",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "m"
+      },
+      "meta": {
+        "detail": "Eli brings the rolls and a toaster oven."
+      }
+    },
+    {
+      "key": "table",
+      "text": "Set out drinks and salad",
+      "box": {
+        "x": 508,
+        "y": 477,
+        "w": 468,
+        "h": 62
+      },
+      "style": {
+        "color": "light-blue",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "m"
+      },
+      "meta": {
+        "detail": "Sam sets the table while the ovens are busy."
+      }
+    },
+    {
+      "key": "serve",
+      "text": "Serve",
+      "box": {
+        "x": 1129,
+        "y": 490,
+        "w": 90,
+        "h": 40
+      },
+      "style": {
+        "geo": "text",
+        "size": "m",
+        "color": "green"
+      }
+    }
+  ],
+  "edges": []
+}

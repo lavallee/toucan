@@ -42,8 +42,8 @@ image_alt: A Toucan canvas showing how a community radio recording reaches the w
         <p>Move a card in Toucan and update the task at its source.</p>
       </section>
       <section>
-        <h3><a href="use-cases.html#work-through-a-handoff">Work through a handoff</a></h3>
-        <p>Follow a story from tip to publication and mark what still needs an editor’s decision.</p>
+        <h3><a href="use-cases.html#plan-thanksgiving-dinner">Plan Thanksgiving dinner</a></h3>
+        <p>Watch a family plan dinner around one crowded oven and one borrowed toaster oven.</p>
       </section>
     </div>
   </section>

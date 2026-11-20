@@ -1,7 +1,37 @@
 ---
-description: Five ways to use Toucan, from mapping a system to getting a screenshot fix back from the session that made it.
+description: Use Toucan to plan a Thanksgiving dinner, map a system, review a screenshot, or run a project board.
 ---
 # Use cases
+
+## Plan Thanksgiving dinner
+
+Eight people are coming at 5:15. Maya brings dressing, Eli brings rolls and a toaster oven, and the turkey already has the main oven. Put the dishes on a timeline and you can see two people counting on the same oven at four o’clock.
+
+::: html
+<figure class="article-breakout case-capture">
+  <link rel="stylesheet" href="assets/use-cases.css">
+  <video controls playsinline preload="none" width="1440" height="900" poster="assets/use-cases/thanksgiving-clash.jpg" aria-label="Thanksgiving dinner planning in Toucan">
+    <source src="assets/use-cases/thanksgiving-dinner.mp4" type="video/mp4">
+    <a href="assets/use-cases/thanksgiving-dinner.mp4">Download the Thanksgiving screen recording</a>
+  </video>
+  <figcaption>Watch the oven schedule change in Toucan. The screen recording is silent with on-screen captions.</figcaption>
+</figure>
+:::
+
+**What changes in the video.** Move the dressing behind the turkey and you uncover a second clash with the rolls. Move the rolls down to the toaster oven and keep their time. Sam can put out the drinks and salad while both ovens are busy. Save the settled board as a named version so the household has one plan to refer to.
+
+The bars reserve equipment for the example. Use your own recipe timings and the equipment you actually have. The same setup works for a potluck kitchen, a holiday brunch, or a bake sale when everyone wants the oven at once.
+
+::: html
+<p><a href="assets/use-cases/thanksgiving.tg.json" download>Download the editable board</a> · <a href="assets/use-cases/thanksgiving-clash.jpg">See the original clash</a> · <a href="assets/use-cases/thanksgiving-dinner.jpg">See the settled schedule</a> · <a href="assets/use-cases/thanksgiving-dinner.mp4" download>Download the video</a></p>
+:::
+
+With the board file in your current folder, open it in Toucan.
+
+```sh
+toucan new thanksgiving --from thanksgiving.tg.json
+toucan open thanksgiving
+```
 
 ## Map a system
 
@@ -11,7 +41,6 @@ When services change, update the map using stable keys. A keyed import can refre
 
 ::: html
 <figure class="article-breakout case-capture">
-  <link rel="stylesheet" href="assets/use-cases.css">
   <a href="assets/use-cases/radio-map.png"><img src="assets/use-cases/radio-map.png" width="1440" height="650" alt="Community radio system map with labelled connections from show hosts through ingest to the audio archive, episode catalog, scheduler, player, and podcast feed."></a>
   <figcaption>The example traces recordings, metadata, and release timing through a fictional station.</figcaption>
 </figure>

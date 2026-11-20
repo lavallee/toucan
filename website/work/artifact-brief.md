@@ -27,6 +27,10 @@ already have.
 disposable Toucan instance. Run it after `npm run build`. The figures in `site/assets/use-cases/`
 show synthetic projects recorded through the real canvas, plan, and review interfaces.
 
+`scripts/capture-thanksgiving.mjs` records the Thanksgiving walkthrough from two real mouse drags
+in Toucan and checks the saved arrangement through the server. It also emits the starting board
+and stills. The dish timings represent example equipment reservations.
+
 ## Sources
 
 The repo itself: `AGENTS.md` (mirrored on the agent guide page), `README.md`, `server/`, `lib/tg.mjs`.

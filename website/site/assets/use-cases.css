@@ -121,7 +121,7 @@ body:has(.toucan-home) .article-title {
 
 .home-next p { max-width: 60ch; }
 .case-capture { margin-block: 1.25rem 2.25rem; }
-.case-capture img { display: block; width: 100%; height: auto; border: 1px solid var(--border); }
+.case-capture :is(img, video) { display: block; width: 100%; height: auto; border: 1px solid var(--border); }
 .case-capture a { display: block; }
 
 @media (max-width: 59rem) {
