@@ -345,7 +345,7 @@ disagree with himself?". Every quotation was checked word for word against its s
 | `TOUCAN_TOKEN` | from `~/.config/toucan/server.json` | with `TOUCAN_URL`: for a server on another machine or outside a container |
 | `TOUCAN_NO_AUTOSTART` | — | never start a server from a command |
 | `TOUCAN_BROWSER` | the system's | program `toucan open` launches |
-| `VITE_TLDRAW_LICENSE_KEY` | — | tldraw licence key, read at build time (see below) |
+| `TLDRAW_LICENSE_KEY` | — | tldraw licence key, read when the server starts (see below) |
 
 ## Security
 
@@ -389,8 +389,9 @@ Reflexes (a canvas answering what happens to it by itself, and asking the agent 
 toucan's own code is [MIT](LICENSE). It builds on **tldraw**, which is *not* MIT: the
 [tldraw licence](https://github.com/tldraw/tldraw/blob/main/LICENSE.md) allows development use freely,
 but production use (anything served over HTTPS) needs a licence key, including tldraw's free hobby
-licence for non-commercial projects. The key is read at build time, so [install from source](#install-from-source), put it
-in `.env` as `VITE_TLDRAW_LICENSE_KEY=…` and rebuild. A release served from your own machine doesn't need one.
+licence for non-commercial projects. Set `TLDRAW_LICENSE_KEY` in the server environment or in the
+`.env` beside Toucan’s `package.json`, then restart the server. Use a key that covers your deployment
+host. Toucan loads it at runtime, and the SDK displays the required tldraw attribution for hobby keys.
 Excalidraw canvases need no key (MIT).
 
 ## Develop

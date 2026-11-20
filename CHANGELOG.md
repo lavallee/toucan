@@ -5,6 +5,10 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Load each deployment’s tldraw licence at server startup. The live editor, history and hidden preview use the same key, and release builds contain no deployment key.
+
 ## [0.17.0] — 2026-11-20
 
 ### Added

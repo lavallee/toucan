@@ -1,198 +1,226 @@
-// npm run build && CHROMIUM=/usr/bin/chromium node scripts/capture-thanksgiving.mjs
-// Records a real Toucan tab. Requires Playwright Chromium and ffmpeg.
+// Real two-turn Codex recording. Run after building Toucan.
+// CODEX_BIN and CODEX_HOME can point to a signed-in Codex. Provide TLDRAW_LICENSE_KEY
+// in the environment, or set MEAL_LICENSE_ENV to a local dotenv file. No key is published.
 import assert from 'node:assert/strict'
 import { execFile, spawn } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { homedir, tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
-import { promisify } from 'node:util'
+import { parseEnv, promisify } from 'node:util'
 import { chromium } from 'playwright-core'
+import { recipes, seed } from './thanksgiving/board.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const out = join(root, 'website/site/assets/use-cases')
-mkdirSync(out, { recursive: true })
-const home = mkdtempSync(join(tmpdir(), 'toucan-thanksgiving-'))
+const temp = mkdtempSync(join(tmpdir(), 'toucan-meal-'))
+const data = join(temp, 'data')
+const cwd = join(temp, 'app')
+mkdirSync(data)
+mkdirSync(cwd)
+for (const name of ['bin','lib','server','templates','routines','scripts','website','dist','node_modules','package.json','AGENTS.md']) {
+	// The server resolves its root relative to its own files. Place the server in a
+	// disposable root to isolate the chat's saved thread map.
+	if (name === 'server') cpSync(join(root, name), join(cwd, name), { recursive: true })
+	else symlinkSync(join(root, name), join(cwd, name))
+}
 const socket = createServer().listen(0, '127.0.0.1')
 await once(socket, 'listening')
 const port = socket.address().port
 await new Promise((done) => socket.close(done))
 const origin = `http://127.0.0.1:${port}`
-const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('TOUCAN_')))
-Object.assign(env, { HOME: home, XDG_CONFIG_HOME: join(home, '.config'), TOUCAN_URL: origin })
-const server = spawn(process.execPath, ['server/index.mjs', '--port', String(port), '--data', join(home, 'data')], { cwd: root, env, stdio: 'ignore' })
+const keyNames = ['TLDRAW_LICENSE_KEY', 'TLDRAW_LICENSE', 'VITE_TLDRAW_LICENSE_KEY']
+const fileEnv = process.env.MEAL_LICENSE_ENV ? parseEnv(readFileSync(process.env.MEAL_LICENSE_ENV, 'utf8')) : {}
+const license = [process.env, fileEnv].flatMap((source) => keyNames.map((name) => source[name]?.trim())).find(Boolean)
+assert.ok(license, 'Set the deployment license in TLDRAW_LICENSE_KEY or MEAL_LICENSE_ENV')
+const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('TOUCAN_') && !keyNames.includes(name)))
+const codex = process.env.CODEX_BIN
+assert.ok(codex && existsSync(codex), 'Set CODEX_BIN to the signed-in Codex executable')
+mkdirSync(join(temp, 'bin'))
+writeFileSync(join(temp, 'bin/codex'), '#!/bin/sh\nexec "$MEAL_CODEX_BIN" -c sandbox_workspace_write.network_access=true "$@"\n', { mode: 0o700 })
+Object.assign(env, {
+	HOME: temp, XDG_CONFIG_HOME: join(temp, '.config'), TOUCAN_URL: origin,
+	CODEX_HOME: process.env.CODEX_HOME ?? join(homedir(), '.codex'),
+	MEAL_CODEX_BIN: codex, PATH: join(temp, 'bin') + ':' + dirname(process.execPath) + ':' + process.env.PATH,
+})
+const tool = 'scripts/thanksgiving/agent-tool.mjs'
+const connection = join(temp, 'connection.json')
+const demoInstructions = `This is a demo Thanksgiving board. Recipe facts are captured locally from the five links. Run all shell commands with the tool's structured workdir set to ${cwd}. Use relative command paths only. Read the recipe notes with node ${tool} recipes. Use exactly these two canvas tools for this meal so the menu and schedule share a layout. For the first request, make an array of five objects with id, ingredients (short plain-language list, 16–130 characters), and prep (one short paraphrased line, 16–130 characters). Write it to stdin with node ${tool} menu - using a quoted heredoc. The tool adds the photographs and source links.
+For the second request, solve the schedule yourself, then run node ${tool} schedule - with a JSON object on stdin. Shape: {oven:[{id:"turkey",temp:325,start:"HH:MM",end:"HH:MM"},{id:"dressing",temp:350,start:"HH:MM",end:"HH:MM"},{id:"rolls",temp:375,start:"HH:MM",end:"HH:MM"}],salad:{start:"HH:MM",end:"HH:MM"},dayBefore:"22–140 chars",morning:"22–140 chars",serve:"22–140 chars"}. 24-hour times between 10:00 and 18:00. Use only one oven. Reserve 180 minutes for turkey, 65 for dressing, 24 for rolls and at least 8 minutes for each temperature change. Finish the rolls by 17:55 and toss salad late. Include cranberry sauce and bread drying the day before, roll dough/proof in earlier prep, and say to verify turkey doneness before resting and to confirm safe hot-holding equipment outside the oven. These are scheduling reservations, not cooking instructions. Don't browse or use unrelated tools, since the sources were already captured. Keep replies short. The recording harness checks the visual layout, so don't make a separate screenshot.`
+const isolatedChat = join(cwd, 'server/codex.mjs')
+const chatSource = readFileSync(isolatedChat, 'utf8')
+const hook = "const developerInstructions = profile ?"
+assert.ok(chatSource.includes(hook), 'Recording hook is missing')
+writeFileSync(isolatedChat, chatSource.replace(hook, "const developerInstructions = " + JSON.stringify(demoInstructions + "\n\n") + " + (profile ?").replace(" : withRoutines\n", " : withRoutines)\n"))
+const server = spawn(process.execPath, [join(cwd, 'server/index.mjs'), '--port', String(port), '--data', data], { cwd, env: { ...env, TLDRAW_LICENSE_KEY: license }, stdio: ['ignore', 'ignore', 'pipe'] })
+server.stderr.on('data', (chunk) => { if (process.env.MEAL_DEBUG) process.stderr.write(chunk) })
 const run = promisify(execFile)
-const canvas = 'thanksgiving'
-const cli = (...args) => run(process.execPath, ['bin/toucan.mjs', ...args], { cwd: root, env }).then((res) => res.stdout)
-const onCanvas = (...args) => cli('--canvas', canvas, ...args)
-const x = (minutes) => 184 + minutes * 9
-const label = (key, text, left, y, w, size = 'm', color = 'black') => ({
-	key, text, box: { x: left, y, w, h: 40 }, style: { geo: 'text', size, color },
-})
-const bar = (key, text, start, end, y, color, detail) => ({
-	key, text, box: { x: x(start), y, w: (end - start) * 9, h: 62 },
-	style: { color, fill: 'semi', dash: 'solid', size: 'm' }, meta: { detail },
-})
-const graph = {
-	groups: [],
-	nodes: [
-		label('title', 'Thanksgiving, one oven', 0, 0, 1050, 'xl'),
-		label('subtitle', 'Eight at the table. Dinner at 5:15.', 0, 67, 1000, 'm'),
-		...[['3:30', 0], ['4:00', 30], ['4:30', 60], ['5:00', 90], ['5:15', 105]]
-			.map(([time, minute]) => label(`time-${minute}`, time, x(minute), 135, 90, 's')),
-		label('main-label', 'Main oven', 0, 191, 170, 'm'),
-		label('toaster-label', 'Toaster oven', 0, 375, 175, 'm'),
-		label('table-label', 'At the table', 0, 480, 180, 'm'),
-		label('hands-note', 'Maya brings dressing · Eli brings rolls and a toaster oven', 0, 103, 1120, 's', 'black'),
-		bar('turkey', 'Turkey · final oven block', 0, 60, 188, 'orange', 'The turkey is already roasting when this board starts. This bar reserves the last stretch in the main oven.'),
-		bar('dressing', 'Maya’s dressing', 30, 70, 271, 'red', 'Maya brings the dressing. It needs a main-oven slot.'),
-		bar('rolls', 'Eli’s rolls', 75, 95, 188, 'yellow', 'Eli brings the rolls and a toaster oven.'),
-		bar('table', 'Set out drinks and salad', 36, 88, 477, 'light-blue', 'Sam sets the table while the ovens are busy.'),
-		label('serve', 'Serve', x(105), 490, 90, 'm', 'green'),
-	],
-	edges: [],
-}
-const fixture = join(out, 'thanksgiving.tg.json')
-writeFileSync(fixture, JSON.stringify(graph, null, 2) + '\n')
-
+const cli = (...args) => run(process.execPath, [join(root, 'bin/toucan.mjs'), ...args], { cwd, env })
 let browser, context
 try {
 	let token
-	for (let attempt = 0; attempt < 100 && !token; attempt++) {
+	for (let i = 0; i < 130 && !token; i++) {
 		try {
-			const config = JSON.parse(readFileSync(join(home, '.config/toucan/server.json')))
-			if ((await fetch(`${origin}/api/health`, { headers: { authorization: `Bearer ${config.token}` } })).ok) token = config.token
+			const config = JSON.parse(readFileSync(join(temp, '.config/toucan/server.json')))
+			const res = await fetch(origin + '/api/tldraw-license', { headers: { authorization: 'Bearer ' + config.token } })
+			if (res.ok && (await res.json()).licenseKey === license) token = config.token
 		} catch {}
 		if (!token) await sleep(50)
 	}
-	assert.ok(token, 'local Toucan started')
-	await cli('new', canvas, '--title', 'Thanksgiving dinner', '--from', fixture)
+	assert.ok(token, 'The recording server did not load its license')
+	assert.equal((await fetch(origin + '/api/tldraw-license')).status, 401)
+	writeFileSync(connection, JSON.stringify({ url: origin, token }), { mode: 0o600 })
+	const start = join(temp, 'meal.tg.json')
+	writeFileSync(start, JSON.stringify(seed))
+	await cli('new', 'thanksgiving', '--title', 'Thanksgiving dinner', '--from', start)
+
 	browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {})
-	const viewport = { width: 1440, height: 900 }
-	context = await browser.newContext({ viewport, recordVideo: { dir: home, size: viewport } })
+	const viewport = { width: 1600, height: 1000 }
+	context = await browser.newContext({ viewport, recordVideo: { dir: temp, size: viewport } })
 	await context.addInitScript(() => {
-		localStorage.setItem('toucan.chat', 'closed')
+		localStorage.setItem('toucan.chat', 'open')
 		localStorage.setItem('toucan.theme', 'light')
+		window.mealTurnEnds = 0
+		window.mealTurnStarts = 0
+		const Socket = window.WebSocket
+		window.WebSocket = class extends Socket {
+			constructor(...args) {
+				super(...args)
+				if (!String(args[0]).includes('/ws/chat')) return
+				this.addEventListener('message', ({ data }) => {
+					try {
+						const event = JSON.parse(data)
+						if (event.type === 'turn') {
+							if (event.status === 'inProgress') window.mealTurnStarts++
+							else window.mealTurnEnds++
+						}
+					} catch {}
+				})
+			}
+		}
 	})
 	const page = await context.newPage()
 	const video = page.video()
-	await page.goto(`${origin}/?canvas=${canvas}#token=${token}`)
-	await page.waitForFunction(() => window.toucan?.get('dressing'), null, { timeout: 30000 })
-	await page.addStyleTag({ content: '.tlui-style-panel__wrapper { visibility: hidden }' })
+	const tick = Date.now()
+	const when = () => (Date.now() - tick) / 1000
+	const cuts = []
+	let begin = 0
+	const end = () => cuts.push([begin, when()])
+	const input = page.getByRole('textbox', { name: 'Message', exact: true })
+	await page.goto(`${origin}/?canvas=thanksgiving#token=${token}`)
+	await page.waitForFunction(() => window.toucan?.get('menu-title'), null, { timeout: 30000 })
+	await page.addStyleTag({ content: '.tlui-style-panel__wrapper { visibility:hidden }' })
 	await page.evaluate(() => {
-		const e = window.editor
-		e.selectNone()
-		const bounds = e.getCurrentPageBounds()
-		e.zoomToBounds(bounds, { inset: 105, animation: { duration: 0 } })
-		e.centerOnPoint({ x: bounds.center.x, y: bounds.center.y + 35 }, { animation: { duration: 0 } })
 		const style = document.createElement('style')
-		style.textContent = `
-			.film-card{position:fixed;z-index:9999;bottom:62px;left:48px;max-width:520px;padding:15px 22px 17px;border-radius:10px;background:#2f241c;color:#fff5e1;font:22px/1.34 system-ui,sans-serif;pointer-events:none;box-shadow:0 5px 24px #261c2540}
-			.film-card strong{display:block;margin-bottom:5px;color:#ffbc69;font-size:15px;letter-spacing:.015em}
-			.film-cursor{position:fixed;z-index:9999;width:28px;height:28px;border:3px solid #a23726;border-radius:50%;background:#ffcf7870;pointer-events:none;transform:translate(-50%,-50%);display:none}
-			.film-cursor.pressed{background:#ffb44eaa}
-			.film-focus{position:fixed;z-index:9998;border:2px dashed #a23726;border-radius:7px;pointer-events:none;box-sizing:border-box;background:#d65b2415}
-		`
+		style.textContent = '.meal-caption{position:fixed;z-index:9999;bottom:66px;left:30px;max-width:560px;padding:14px 21px;border-radius:8px;background:#321e25;color:#fff2eb;font:23px/1.27 system-ui,sans-serif;pointer-events:none}.meal-caption strong{display:block;font-size:15px;color:#ffbb79;margin-bottom:4px}'
 		document.head.append(style)
-		const card = Object.assign(document.createElement('div'), { className: 'film-card' })
-		const kicker = document.createElement('strong')
-		const words = document.createElement('span')
-		card.append(kicker, words)
-		const focus = Object.assign(document.createElement('div'), { className: 'film-focus', hidden: true })
-		const cursor = Object.assign(document.createElement('div'), { className: 'film-cursor' })
-		document.body.append(card, focus, cursor)
-		window.film = { kicker, words, focus, cursor }
-		window.addEventListener('pointermove', (event) => Object.assign(cursor.style, { display: 'block', left: event.clientX + 'px', top: event.clientY + 'px' }))
-		window.addEventListener('pointerdown', () => cursor.classList.add('pressed'))
-		window.addEventListener('pointerup', () => cursor.classList.remove('pressed'))
+		const note = Object.assign(document.createElement('div'), { className: 'meal-caption' })
+		note.append(document.createElement('strong'), document.createElement('span'))
+		document.body.append(note)
 	})
-	const caption = (heading, copy, focus = null) => page.evaluate(({ heading, copy, focus }) => {
-		const { kicker, words, focus: marker } = window.film
-		kicker.textContent = heading
-		words.textContent = copy
-		marker.hidden = !focus
-		if (!focus) return
-		const a = window.editor.pageToScreen({ x: focus.x, y: focus.y })
-		const b = window.editor.pageToScreen({ x: focus.x + focus.w, y: focus.y + focus.h })
-		Object.assign(marker.style, { left: a.x + 'px', top: a.y + 'px', width: b.x - a.x + 'px', height: b.y - a.y + 'px' })
-	}, { heading, copy, focus })
-	const box = (key) => page.evaluate((key) => {
-		const b = window.editor.getShapePageBounds(window.toucan.get(key).id)
-		return { x: b.x, y: b.y, w: b.w, h: b.h }
-	}, key)
-	const overlap = (a, b) => Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
-	const drag = async (key, dx, dy) => {
-		const { x: sx, y: sy, endX, endY } = await page.evaluate(({ key, dx, dy }) => {
-			const e = window.editor
-			const c = e.getShapePageBounds(window.toucan.get(key).id).center
-			const start = e.pageToScreen(c)
-			const end = e.pageToScreen({ x: c.x + dx, y: c.y + dy })
-			return { x: start.x, y: start.y, endX: end.x, endY: end.y }
-		}, { key, dx, dy })
-		await page.mouse.move(sx, sy, { steps: 24 })
-		await sleep(360)
-		await page.mouse.down()
-		for (let step = 1; step <= 40; step++) {
-			await page.mouse.move(sx + (endX - sx) * step / 40, sy + (endY - sy) * step / 40)
-			await sleep(25)
-		}
-		await page.mouse.up()
-		await page.keyboard.press('Escape')
+	const title = (tag, copy) => page.evaluate(([tag, copy]) => {
+		const note = document.querySelector('.meal-caption')
+		note.firstElementChild.textContent = tag
+		note.lastElementChild.textContent = copy
+	}, [tag, copy])
+	const focus = (keys, inset = 75) => page.evaluate(({keys,inset}) => {
+		const { editor, toucan } = window
+		const shapes = keys.map((key) => toucan.get(key)).filter(Boolean)
+		const bounds = editor.getShapesPageBounds(shapes.map((shape) => shape.id))
+		if (bounds) editor.zoomToBounds(bounds, { inset, animation: { duration: 480 } })
+	}, {keys,inset})
+	const noUpsell = () => page.getByText('Get a license for production', { exact: true }).count().then((count) => assert.equal(count, 0, 'The tldraw SDK still displays the production license prompt'))
+	await page.getByTestId('tl-watermark-licensed').waitFor()
+	await noUpsell()
+
+	const send = async (prompt) => {
+		await input.fill(prompt)
+		await sleep(1400)
+		await input.press('Enter')
 	}
-	await caption('Dinner at 5:15', 'Eight people, three hot dishes, one main oven.')
-	await sleep(3700)
-	const turkey = await box('turkey')
-	const before = await box('dressing')
-	const rolls = await box('rolls')
-	assert.equal(overlap(turkey, before), 270)
-	await caption('Spot the clash', 'The turkey and the dressing both need the main oven at 4:00.', { x: x(30), y: 178, w: 270, h: 167 })
-	await sleep(5100)
-	await page.screenshot({ path: join(out, 'thanksgiving-clash.jpg'), quality: 91 })
-	await caption('Make room for the dressing', 'Drag it to the 4:30 slot, right after the turkey.')
-	await sleep(2500)
-	await drag('dressing', turkey.x + turkey.w - before.x + 1, 0)
-	const updated = await box('dressing')
-	assert.ok(Math.abs(updated.x - (turkey.x + turkey.w)) < 3)
-	assert.ok(overlap(updated, rolls) > 170)
-	await sleep(2400)
-	await caption('Use the toaster oven', 'The rolls now clash with the dressing. Eli is bringing a toaster oven, so move the rolls down.')
-	await sleep(4300)
-	await drag('rolls', 0, 183)
-	const moved = await box('rolls')
-	assert.ok(Math.abs(moved.y - 371) < 3)
-	assert.ok(Math.abs(moved.x - rolls.x) < 3)
-	assert.ok(updated.x + updated.w < x(105))
-	await page.mouse.move(55, 70)
-	await page.evaluate(() => { window.film.cursor.style.display = 'none' })
-	await caption('Dinner is on', 'Each oven has one job at a time. The dressing finishes with five minutes to spare.')
-	await sleep(5200)
-	await page.screenshot({ path: join(out, 'thanksgiving-dinner.jpg'), quality: 92 })
-
-	await caption('Save the plan', 'Give the settled schedule a name in History so it’s easy to find later.')
-	await page.getByRole('button', { name: 'History', exact: true }).click()
-	const history = page.getByRole('region', { name: 'Version history' })
-	await history.getByRole('textbox', { name: 'Version name' }).pressSequentially('Dinner schedule with both ovens', { delay: 40 })
-	await history.getByRole('button', { name: 'Save', exact: true }).click()
-	await history.getByText('Dinner schedule with both ovens', { exact: true }).waitFor()
-	await sleep(3100)
-
-	// Verify the saved edit through the server after closing the browser tab.
+	// Keep the real request and the real canvas write, cutting only idle time between them.
+	const waitForAgentEdit = async (key, count) => {
+		await page.waitForFunction((n) => window.mealTurnStarts >= n, count, { timeout: 35000 })
+		await sleep(1800)
+		const idleBegins = when()
+		await page.waitForFunction((key) => !!window.toucan?.get(key), key, { timeout: 150000 })
+		const edited = when()
+		if (edited - idleBegins > 5) {
+			cuts.push([begin, idleBegins])
+			begin = edited - 2
+		}
+		await page.waitForFunction((n) => window.mealTurnEnds >= n, count, { timeout: 95000 })
+		console.log(`Round ${count} committed by the chat agent.`)
+	}
+	begin = when()
+	await title('Round 1', 'Five recipe links in. An editable dinner board out.')
+	const prompt = 'Here are five Thanksgiving recipes. Add them to the canvas with a photo, ingredients, a prep summary, and a link back to each recipe.\n\n' + recipes.map((r) => r.url).join('\n')
+	await send(prompt)
+	await waitForAgentEdit('cranberry-prep', 1)
+	const menuKeys = ['menu-title', 'photo-turkey', 'cranberry-prep']
+	await focus(menuKeys)
+	await sleep(2700)
+	await noUpsell()
+	await page.getByRole('button', { name: 'Hide chat', exact: true }).click()
+	await focus(menuKeys, 105)
+	await title('The menu', 'Five recipe cards the family can browse and edit.')
+	await sleep(3000)
+	await page.screenshot({ path: join(out, 'thanksgiving-menu.jpg'), quality: 91 })
+	await focus(['photo-dressing', 'dressing-prep', 'recipe-dressing'], 180)
+	await title('Zoom into a dish', 'Ingredients and prep stay next to the original recipe link.')
+	await sleep(3600)
+	await page.screenshot({ path: join(out, 'thanksgiving-prep.jpg'), quality: 91 })
+	await page.getByRole('button', { name: 'Show chat', exact: true }).click()
+	await focus(menuKeys)
+	await title('Round 2', 'Dinner at 6. Make the oven schedule.')
+	await send('We want to eat at 6:00 p.m. with one oven. Draw the whole schedule from scratch below the recipes. Show what we can prep ahead, what goes in the oven when, and when to turn the temperature up or down.')
+	await waitForAgentEdit('schedule-title', 2)
+	const scheduleKeys = ['schedule-title', 'schedule-transitions', 'schedule-serve', 'schedule-day-before']
+	await focus(scheduleKeys)
+	await sleep(3200)
+	await page.getByRole('button', { name: 'Hide chat', exact: true }).click()
+	await focus(scheduleKeys, 90)
+	await title('The oven plan', 'The agent sequenced 325°F, 350°F, and 375°F, with time to change settings.')
+	await sleep(4900)
+	await page.screenshot({ path: join(out, 'thanksgiving-dinner.jpg'), quality: 91 })
+	await noUpsell()
+	await focus([...menuKeys, ...scheduleKeys], 95)
+	await title('One board for dinner', 'Zoom out to see the recipes and oven plan together.')
+	await sleep(3900)
+	await page.screenshot({ path: join(out, 'thanksgiving-overview.jpg'), quality: 91 })
+	const board = await page.evaluate(() => {
+		const store = window.editor.store
+		const records = store.allRecords().filter((r) => ['document', 'page', 'shape', 'binding', 'asset'].includes(r.typeName))
+		return { tldrawFileFormatVersion: 1, schema: store.schema.serialize(), records }
+	})
+	assert.equal(board.records.filter((r) => r.type === 'image' && r.typeName === 'shape').length, 5)
+	assert.equal(board.records.filter((r) => r.meta?.key === 'schedule-title').length, 1)
+	assert.ok(existsSync(join(temp, 'menu.json')) && existsSync(join(temp, 'schedule.json')), 'Both agent tool calls produced receipts')
+	writeFileSync(join(out, 'thanksgiving-board.tldr.json'), JSON.stringify(board))
+	end()
 	await context.close()
 	context = null
-	const version = JSON.parse(await onCanvas('versions')).find((v) => v.label === 'Dinner schedule with both ovens')
-	assert.ok(version, 'named version was saved')
-	const saved = JSON.parse(await onCanvas('versions', 'show', String(version.n)))
-	assert.ok(Math.abs(saved.nodes.find((n) => n.key === 'rolls').box.y - moved.y) < 2)
-	assert.ok(Math.abs(saved.nodes.find((n) => n.key === 'dressing').box.x - updated.x) < 2)
 	const raw = await video.path()
-	// The first second contains startup frames. Preserve the live drags at their recorded speed.
-	await run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-ss', '1', '-i', raw,
-		'-c:v', 'libx264', '-preset', 'fast', '-crf', '19', '-pix_fmt', 'yuv420p',
-		'-movflags', '+faststart', '-an', join(out, 'thanksgiving-dinner.mp4')])
-	console.log('Recorded two browser drags and verified the saved schedule through the canvas API.')
+	const segments = []
+	for (const [i, [from, to]] of cuts.entries()) {
+		const segment = join(temp, 'segment-' + i + '.mp4')
+		await run('ffmpeg', ['-hide_banner','-loglevel','error','-y','-ss',String(from),'-i',raw,'-t',String(to-from),'-an','-c:v','libx264','-threads','3','-crf','19','-pix_fmt','yuv420p',segment])
+		segments.push(segment)
+	}
+	const list = join(temp, 'segments.txt')
+	writeFileSync(list, segments.map((f) => "file '" + f + "'").join('\n'))
+	await run('ffmpeg', ['-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',list,'-c','copy','-movflags','+faststart',join(out,'thanksgiving-dinner.mp4')])
+	if (process.env.MEAL_DEBUG) {
+		copyFileSync(join(temp, 'schedule.json'), '/tmp/toucan-meal-schedule.json')
+		copyFileSync(join(temp, 'menu.json'), '/tmp/toucan-meal-menu.json')
+	}
+	console.log('Verified two real chat rounds, five image cards, the generated schedule, and licensed rendering.')
+} catch (error) {
+	if (context && process.env.MEAL_DEBUG) await context.pages()[0]?.screenshot({ path: '/tmp/toucan-meal-debug.jpg' }).catch(() => {})
+	throw error
 } finally {
 	await context?.close()
 	await browser?.close()
@@ -201,5 +229,5 @@ try {
 		server.kill()
 		await stopped
 	}
-	rmSync(home, { force: true, recursive: true })
+	rmSync(temp, { recursive: true, force: true })
 }

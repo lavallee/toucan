@@ -27,9 +27,10 @@ already have.
 disposable Toucan instance. Run it after `npm run build`. The figures in `site/assets/use-cases/`
 show synthetic projects recorded through the real canvas, plan, and review interfaces.
 
-`scripts/capture-thanksgiving.mjs` records the Thanksgiving walkthrough from two real mouse drags
-in Toucan and checks the saved arrangement through the server. It also emits the starting board
-and stills. The dish timings represent example equipment reservations.
+`scripts/capture-thanksgiving.mjs` records a two-turn Thanksgiving workflow in Toucan’s Codex chat.
+The recipe summaries and schedule come from the agent, and the capture verifies both writes.
+It also emits the illustrated board and stills. The timings are example equipment reservations.
+Run `scripts/thanksgiving/social.mjs` afterward to frame the recording for a 4:5 feed.
 
 ## Sources
 

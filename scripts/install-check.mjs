@@ -23,9 +23,10 @@ const port = await new Promise((r) => {
 })
 const ok = (msg) => console.log(`ok  ${msg}`)
 
+const licenceCanary = 'toucan-install-check-licence-canary'
 let tarball = process.argv[2] && resolve(process.argv[2])
 if (!tarball) {
-	const r = spawnSync('npm', ['pack', '--json', '--pack-destination', base], { cwd: ROOT, encoding: 'utf8' })
+	const r = spawnSync('npm', ['pack', '--json', '--pack-destination', base], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, VITE_TLDRAW_LICENSE_KEY: licenceCanary } })
 	assert.equal(r.status, 0, r.stderr)
 	// The pack step prints the build log first; the JSON starts a line on its own: an array up to npm 11, an object
 	// keyed by package name from npm 12.
@@ -46,7 +47,7 @@ const served = await new Promise((r) => {
 	s.listen(0, '127.0.0.1', () => r(s))
 })
 const tarballUrl = `http://127.0.0.1:${served.address().port}/toucan.tgz`
-const env = { PATH: `${bin}:${dirname(process.execPath)}:/usr/bin:/bin`, HOME: home, TOUCAN_PORT: String(port), npm_config_prefix: prefix, TOUCAN_TARBALL: tarballUrl, ...(browsers && { PLAYWRIGHT_BROWSERS_PATH: browsers }) }
+const env = { PATH: `${bin}:${dirname(process.execPath)}:/usr/bin:/bin`, HOME: home, TOUCAN_PORT: String(port), npm_config_prefix: prefix, TOUCAN_TARBALL: tarballUrl, TLDRAW_LICENSE_KEY: licenceCanary, ...(browsers && { PLAYWRIGHT_BROWSERS_PATH: browsers }) }
 const run = promisify(execFile)
 const toucan = (args, opts = {}) => run(join(bin, 'toucan'), args, { env, maxBuffer: 64 << 20, ...opts }).then((r) => r.stdout.trim())
 
@@ -72,6 +73,15 @@ try {
 	const canvases = JSON.parse(await toucan(['canvases']))
 	assert.deepEqual(canvases.map((c) => c.name), ['welcome'], 'setup made the first canvas')
 	const cfg = JSON.parse((await run('cat', [join(home, '.config/toucan/server.json')])).stdout)
+	const licenceUrl = `${cfg.url}/api/tldraw-license`
+	assert.equal((await fetch(licenceUrl)).status, 401)
+	const licence = await fetch(licenceUrl, { headers: { authorization: `Bearer ${cfg.token}` } })
+	assert.equal(licence.headers.get('cache-control'), 'no-store')
+	assert.deepEqual(await licence.json(), { licenseKey: licenceCanary })
+	for (const file of readdirSync(join(pkg, 'dist/assets')).filter((name) => name.endsWith('.js'))) {
+		assert.ok(!readFileSync(join(pkg, 'dist/assets', file), 'utf8').includes(licenceCanary), 'no deployment key in the packaged client')
+	}
+	ok('tldraw licence loads at runtime and stays out of the package')
 	const page = await fetch(`${cfg.url}/`)
 	assert.match(await page.text(), /<div id="root"|<!doctype html/i, 'the app is served')
 	ok('server runs from the install, canvases in the data home, a welcome canvas waits')

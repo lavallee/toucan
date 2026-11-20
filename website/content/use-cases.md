@@ -5,33 +5,26 @@ description: Use Toucan to plan a Thanksgiving dinner, map a system, review a sc
 
 ## Plan Thanksgiving dinner
 
-Eight people are coming at 5:15. Maya brings dressing, Eli brings rolls and a toaster oven, and the turkey already has the main oven. Put the dishes on a timeline and you can see two people counting on the same oven at four o’clock.
+Five recipes, one oven, and dinner at six. Start with the links and ask the agent to put them on the canvas. The menu board fills with dish photos, ingredient lists, short prep notes, and links back to the recipes. Zoom in on any dish, then ask a second question. When should everything go in the oven?
 
 ::: html
 <figure class="article-breakout case-capture">
   <link rel="stylesheet" href="assets/use-cases.css">
-  <video controls playsinline preload="none" width="1440" height="900" poster="assets/use-cases/thanksgiving-clash.jpg" aria-label="Thanksgiving dinner planning in Toucan">
-    <source src="assets/use-cases/thanksgiving-dinner.mp4" type="video/mp4">
-    <a href="assets/use-cases/thanksgiving-dinner.mp4">Download the Thanksgiving screen recording</a>
+  <video controls playsinline preload="none" width="1600" height="1000" poster="assets/use-cases/thanksgiving-menu.jpg" aria-label="Two rounds of Thanksgiving dinner planning with the Toucan chat agent">
+    <source src="assets/use-cases/thanksgiving-dinner.mp4?v=recipe-rounds" type="video/mp4">
+    <a href="assets/use-cases/thanksgiving-dinner.mp4?v=recipe-rounds">Download the Thanksgiving screen recording</a>
   </video>
-  <figcaption>Watch the oven schedule change in Toucan. The screen recording is silent with on-screen captions.</figcaption>
+  <figcaption>Two real Codex turns in Toucan, edited to shorten the waits. The recording is silent with on-screen captions.</figcaption>
 </figure>
 :::
 
-**What changes in the video.** Move the dressing behind the turkey and you uncover a second clash with the rolls. Move the rolls down to the toaster oven and keep their time. Sam can put out the drinks and salad while both ovens are busy. Save the settled board as a named version so the household has one plan to refer to.
-
-The bars reserve equipment for the example. Use your own recipe timings and the equipment you actually have. The same setup works for a potluck kitchen, a holiday brunch, or a bake sale when everyone wants the oven at once.
+In the first round, Codex builds the menu from prepared notes on five linked recipes. The hero photos are generated illustrations. In the second round, Codex works backward from six and draws a timeline below the menu. The turkey, dressing, and rolls get separate oven windows at 325°F, 350°F, and 375°F, with time reserved for the temperature changes. Salad and cranberry sauce can be handled off the oven clock. The schedule uses example reservations and assumes the turkey can be held safely outside the oven while the sides bake.
 
 ::: html
-<p><a href="assets/use-cases/thanksgiving.tg.json" download>Download the editable board</a> · <a href="assets/use-cases/thanksgiving-clash.jpg">See the original clash</a> · <a href="assets/use-cases/thanksgiving-dinner.jpg">See the settled schedule</a> · <a href="assets/use-cases/thanksgiving-dinner.mp4" download>Download the video</a></p>
+<p><a href="assets/use-cases/thanksgiving-board.tldr.json" download="thanksgiving.tldr">Download the tldraw board</a> · <a href="assets/use-cases/thanksgiving-menu.jpg">View the menu</a> · <a href="assets/use-cases/thanksgiving-prep.jpg">Zoom into the dressing</a> · <a href="assets/use-cases/thanksgiving-dinner.jpg?v=recipe-rounds">View the schedule</a> · <a href="assets/use-cases/thanksgiving-overview.jpg">See the whole canvas</a> · <a href="assets/use-cases/thanksgiving-dinner.mp4?v=recipe-rounds" download>Download the video</a> · <a href="assets/use-cases/thanksgiving-social.mp4" download>Download the 4:5 social cut</a></p>
 :::
 
-With the board file in your current folder, open it in Toucan.
-
-```sh
-toucan new thanksgiving --from thanksgiving.tg.json
-toucan open thanksgiving
-```
+The board links to [roast turkey](https://www.butterball.com/recipes/classic-whole-roasted-turkey), [sage dressing](https://www.seriouseats.com/classic-sage-and-sausage-stuffing-or-dressing-recipe), [Parker House rolls](https://www.kingarthurbaking.com/recipes/small-batch-parker-house-rolls-recipe), [radicchio salad](https://smittenkitchen.com/2010/04/radicchio-apple-and-pear-salad/), and [cranberry sauce](https://www.oceanspray.com/recipes/homemade-whole-berry-cranberry-sauce).
 
 ## Map a system
 

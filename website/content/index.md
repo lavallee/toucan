@@ -43,7 +43,7 @@ image_alt: A Toucan canvas showing how a community radio recording reaches the w
       </section>
       <section>
         <h3><a href="use-cases.html#plan-thanksgiving-dinner">Plan Thanksgiving dinner</a></h3>
-        <p>Watch a family plan dinner around one crowded oven and one borrowed toaster oven.</p>
+        <p>Give an agent five recipe links, then watch it plan dinner around one oven.</p>
       </section>
     </div>
   </section>

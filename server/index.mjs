@@ -15,6 +15,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, rmSync
 import { hostname } from 'node:os'
 import { dirname, join, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { parseEnv } from 'node:util'
 import { WebSocketServer } from 'ws'
 import { TLSocketRoom } from '@tldraw/sync-core'
 import { CodexChat } from './codex.mjs'
@@ -43,6 +44,11 @@ import { CONFIG, ensureToken, readJson, resolveData, writeConfig } from '../lib/
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = join(ROOT, 'dist')
 const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version
+
+// Read just the tldraw key from the install's .env. The server environment takes precedence.
+const licenseFrom = (env) => env.TLDRAW_LICENSE_KEY?.trim() || env.TLDRAW_LICENSE?.trim() || env.VITE_TLDRAW_LICENSE_KEY?.trim()
+const envFile = join(ROOT, '.env')
+const tldrawLicenseKey = licenseFrom(process.env) ?? (existsSync(envFile) ? licenseFrom(parseEnv(readFileSync(envFile, 'utf8'))) : undefined)
 
 const args = Object.fromEntries(
 	process.argv.slice(2).map((a, i, all) => (a.startsWith('--') ? [a.slice(2), all[i + 1]?.startsWith('--') || all[i + 1] === undefined ? true : all[i + 1]] : null)).filter(Boolean),
@@ -441,6 +447,10 @@ const server = createServer(async (req, res) => {
 	try {
 		if (!url.pathname.startsWith('/api/')) return serveStatic(url, res)
 		if (!authed(req, url)) return json(res, 401, { error: 'missing or bad token' })
+		if (url.pathname === '/api/tldraw-license' && req.method === 'GET') {
+			res.setHeader('Cache-Control', 'no-store')
+			return json(res, 200, { licenseKey: tldrawLicenseKey })
+		}
 		const [, , route, canvas, sub, subName] = url.pathname.split('/')
 		if (route === 'health' && !canvas) return json(res, 200, { ok: true, version: VERSION, pid: process.pid, managed: MANAGED, data: CANVASES, headless: headless.enabled })
 		if (route === 'canvases' && !canvas && req.method === 'GET') {
