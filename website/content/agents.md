@@ -51,6 +51,10 @@ toucan --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region
 browser tab open on the canvas, unless the server runs in headless mode; `graph`, `canvases`, `new`,
 `meta`, `log`, `versions` and the routine bank work against the server alone; `routine run` needs a tab like `exec`.
 
+Screenshot review is available through `toucan --canvas NAME review`. Use `review post` to publish an
+image, `review inbox PRODUCER` for feedback on that producer's revisions, and `review reply` to answer a note.
+Run `toucan help` for arguments. The [review protocol](extending.html#screenshot-review) also supports external adapters.
+
 ## Headless mode
 
 If the server was started with `--headless`, `exec`, `summary`, `screenshot` and `import` still work

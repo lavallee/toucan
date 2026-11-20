@@ -20,6 +20,7 @@ import { AddMenu } from './AddMenu'
 import { PlanMenu } from './PlanMenu'
 import { PlanNotice } from './PlanNotice'
 import { AnimateMenu } from './AnimateMenu'
+import { ReviewButton } from './Review'
 import { close as closeReferences, openReference, toggle as toggleReferences, useReferences } from './references-store'
 
 document.title = `${canvasName} · toucan`
@@ -123,6 +124,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 					<HistoryIcon />
 					<span className="max-lg:hidden">History</span>
 				</Button>
+				{!headless && <ReviewButton />}
 				<AnimateMenu />
 				<Reflexes
 					onAskAgent={(text) => {

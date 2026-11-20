@@ -45,6 +45,9 @@
 //     notes resolve KEY --reply TEXT   mark a note handled: green, plus a one-line reply (never deleted)
 //     log [--since T]             edits agents made with no tab open (T: ISO time, or 30m, 2h, 7d ago)
 //     versions [save LABEL | show N [--format F] | restore N]   the canvas's history: step back, name a point, restore one
+//     review                      screenshot revisions and pinned feedback (JSON)
+//     review post KEY IMAGE --producer ID --title T [--previous REV] [--caption T] [--mutation ID]
+//     review inbox PRODUCER | image REV OUT | reply NOTE TEXT --producer ID [--replacement REV] [--mutation ID]
 //     threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes
 //                                 comment threads on shapes and regions (--as NAME: speak as a person; default: as the agent)
 //     files                       where this canvas keeps what agents write for it, and what's there
@@ -120,7 +123,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'plan', 'sources', 'plugins', 'reflexes']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'plan', 'sources', 'plugins', 'reflexes', 'review']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -585,6 +588,29 @@ switch (cmd) {
 	case 'files':
 		print(await call(cpath('/files')))
 		break
+	case 'review': {
+		const producer = flag('producer'), title = flag('title'), previous = flag('previous'), caption = flag('caption')
+		const replacement = flag('replacement'), mutation = flag('mutation')
+		const [sub, id, value, extra] = positional()
+		const post = (data) => call(cpath('/review'), {
+			method: 'POST',
+			body: JSON.stringify({ protocol: 'toucan.review/1', mutation: mutation ?? crypto.randomUUID(), ...data }),
+		})
+		if (!sub) print(await call(cpath('/review')))
+		else if (sub === 'inbox' && id && !value) print(await call(cpath(`/review?producer=${encodeURIComponent(id)}`)))
+		else if (sub === 'post' && id && value && !extra && typeof producer === 'string' && typeof title === 'string') {
+			if (statSync(value).size > (5 << 20)) die('screenshot exceeds 5 MiB')
+			print(await post({ op: 'post', artifact: id, image: readFileSync(value).toString('base64'), producer, title, previous: previous ?? null, caption }))
+		} else if (sub === 'reply' && id && value && !extra && typeof producer === 'string') {
+			print(await post({ op: 'reply', note: id, text: value, producer, replacement }))
+		} else if (sub === 'image' && id && value && !extra) {
+			const response = await fetch((server ?? cfg.url) + cpath(`/review/${encodeURIComponent(id)}/image`), { headers: { authorization: `Bearer ${cfg.token}` } })
+			if (!response.ok) die(`could not download revision (${response.status})`)
+			writeFileSync(value, Buffer.from(await response.arrayBuffer()), { flag: 'wx' })
+			print(value)
+		} else die('usage: review | inbox PRODUCER | post KEY IMAGE --producer ID --title T [--previous REV] [--caption T] [--mutation ID] | image REV OUT | reply NOTE TEXT --producer ID [--replacement REV] [--mutation ID]')
+		break
+	}
 	case 'threads': {
 		const all = !!flag('all'), on = flag('on'), region = flag('region'), reply = flag('reply'), as = flag('as'), ask = flag('ask')
 		const author = typeof as === 'string' ? { kind: 'person', name: as } : { kind: 'agent' }

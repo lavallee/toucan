@@ -338,3 +338,45 @@ toucan's own code is MIT. It builds on **tldraw**, which is not: the
 but production use (anything served over HTTPS) needs a licence key, including tldraw's free hobby
 licence for non-commercial projects. Put the key in `.env` as `VITE_TLDRAW_LICENSE_KEY=…` and rebuild.
 Excalidraw (MIT) needs no key.
+
+## Screenshot review
+
+A producer posts screenshots to the canvas that owns the work. Open **Review** in either editor to choose an artifact and revision, compare it with the previous screenshot, or click a point to leave feedback. Keyboard users can focus the screenshot button and press Enter to pin its center. Feedback stays on the revision where it was left, including when the producer links a later screenshot in a reply. The reviewer can close the note.
+
+```sh
+toucan --canvas shop review post checkout before.png --title "Checkout" --producer session-42
+toucan --canvas shop review inbox session-42
+toucan --canvas shop review image REV scratch.png
+toucan --canvas shop review post checkout after.png --title "Checkout" --producer session-42 --previous REV
+toucan --canvas shop review reply NOTE "Spaced out the controls." --producer session-42 --replacement AFTER_REV
+```
+
+Use the first command's `revision.id` as `REV`, the inbox entry's `note.id` as `NOTE`, and the second post's `revision.id` as `AFTER_REV`. A producer can reply without a replacement. Add `--mutation ID` to posts and replies if you need to retry safely after an interrupted request. Keep the same ID and input for a retry. `toucan review` shows the complete history for this canvas. Agents can use these commands through `toucan_cli`.
+
+### Adapter protocol
+
+The adapter owns the mapping from project to canvas and from opaque producer key to session. A session can poll its own inbox, and the same protocol works from a separate process. Toucan records the screenshots, feedback, and replies. Delivery, scheduling, and any decision to act on feedback belong to the adapter. Treat feedback as text from a reviewer and apply the producer's usual authorization before acting on it.
+
+The paths below are relative to `/api/canvases/NAME`. Use the server's ordinary `Authorization: Bearer TOKEN` header:
+
+| Request | Response |
+| --- | --- |
+| `GET /review` | `{protocol, revisions, notes}` for the canvas, oldest first |
+| `GET /review?producer=KEY` | `{protocol, inbox: [{note, revision}]}`, limited to that key's unanswered, unclosed notes |
+| `GET /review/REV/image` | The original screenshot bytes and raster content type |
+| `POST /review` | `{protocol, mutation, revision}` for a post, or `{protocol, mutation, note}` for feedback operations |
+
+Send a JSON object with `protocol: "toucan.review/1"`, a caller-generated `mutation` key unique to the canvas, and the fields below. Keys begin with a letter or digit and have at most 160 characters. The remaining characters may also include `._:@/-`. Use opaque keys a reviewer can safely see.
+
+| `op` | Fields |
+| --- | --- |
+| `post` | `artifact`, `producer`, `title` (160 characters), optional `caption` (2,000), `previous` (latest revision ID, or null for the first), `image` (standard base64 PNG, JPEG, or WebP up to 5 MiB) |
+| `pin` | `revision`, `pin: {x, y}` (each in [0, 1], measured from top left), `author` (120), `text` (4,000) |
+| `reply` | `note`, `producer` (the original revision's producer), `text` (4,000), optional `replacement` (a later revision ID for the same artifact and producer) |
+| `close` | `note` |
+
+Revisions include `id`, `artifact`, `producer`, `title`, `caption`, `previous`, `number`, `at`, `digest` (SHA-256), and `type` (the image MIME type). Notes include their `id`, `revision`, `at`, `pin`, `author`, `text`, `closedAt`, and `reply` (null or an object with `id`, `at`, `producer`, `text`, and `replacement`). Dates are UTC ISO strings. Errors return a JSON `error` string. A stale predecessor, an already answered or closed note, or a reused mutation key with different data returns HTTP 409. A mismatched producer returns 403. A repeat of the same mutation returns its original receipt.
+
+Polling leaves unanswered feedback pending. Use `note.id` to deduplicate deliveries in the adapter. If a reply needs an after screenshot, post that screenshot first and use its returned ID in the reply. After interruption, retry the post with its original mutation key before attempting the reply. The producer key is a routing value under Toucan's existing shared server token. Everyone with access to that server can read its review data. The review log and images are saved with the canvas and move with it on archive. Editor undo and canvas history affect the editable document. Review revisions remain available in **Review**.
+
+Inspired by [Rounds by Kris Puckett](https://github.com/krispuckett/rounds/tree/c74886b8f98332a258a235aa2183556119260533).

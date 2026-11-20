@@ -192,6 +192,7 @@ node bin/toucan.mjs setup      # builds the app, puts `toucan` on your PATH, and
   green with a one-line reply; notes are never deleted.
 - **Proposals.** An agent can answer on the canvas with a proposal: dashed shapes (`import --propose`)
   that you accept (made solid) or reject (removed) from a bar above the canvas.
+- **Screenshot review.** Post a revision from any session, pin feedback to the exact screenshot, and compare it with an update. Producers can poll for their own feedback and reply with a revised screenshot. [Review commands and adapter protocol](https://lavallee.github.io/toucan/extending.html#screenshot-review).
 - **History.** Every canvas keeps its own versions: after each agent run, when your edits go quiet, and whenever
   you name one. Step back and forward through them read-only, and restore any of them for everyone; what was
   there is saved first, so a restore can be undone too. `toucan versions` does the same from the CLI.

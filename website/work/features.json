@@ -1,7 +1,7 @@
 {
  "product": "toucan",
- "version": "0.16.0",
- "updated": "2026-11-18",
+ "version": "0.17.0",
+ "updated": "2026-11-20",
  "note": "The full feature list. scripts/build-features.mjs renders it to website/content/features.md; keep it in step with CHANGELOG.md.",
  "groups": [
   {
@@ -235,6 +235,18 @@
    "cli": "threads new TEXT --on KEY --ask · threads reply N TEXT",
    "since": "0.5.0",
    "docs": "tour.html#comment-and-have-it-answered",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "screenshot-review",
+   "name": "Screenshot review",
+   "group": "together",
+   "since": "0.17.0",
+   "summary": "Compare screenshot revisions and pin feedback to an exact image. The original producer can reply with an updated screenshot.",
+   "app": "Review",
+   "cli": "review post · review inbox · review reply",
+   "docs": "extending.html#screenshot-review",
    "engines": "both",
    "who": "person"
   },

@@ -5,6 +5,12 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-11-20
+
+### Added
+
+- **Screenshot review.** Publish screenshot revisions to a canvas from the CLI or an adapter. Open **Review** in either canvas editor to compare revisions, pin feedback, and see replies linked to updated screenshots. Feedback stays on the exact revision and waits in the producer's inbox until answered or closed. The versioned HTTP protocol supports stable mutation keys and rejects stale revision writes. Inspired by [Kris Puckett's Rounds](https://github.com/krispuckett/rounds).
+
 ## [0.16.0] — 2026-11-18
 
 ### Added

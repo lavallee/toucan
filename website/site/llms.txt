@@ -33,6 +33,7 @@ Tell the person what you're drawing. Commands run anywhere inside the project us
 - Keep boxes short. Longer text goes in a box's `meta.detail`, which opens when it's clicked.
 - A sticky note on the canvas is a message to you: `toucan notes`, act on it, then `toucan notes resolve KEY --reply "what you did"`.
 - Comments are threads: `toucan threads`, and `toucan threads reply N "..."`.
+- Screenshot feedback stays on the published revision. Use `toucan review post`, `toucan review inbox PRODUCER`, and `toucan review reply`. [Commands and adapter protocol](https://lavallee.github.io/toucan/extending.html#screenshot-review).
 - Asked for an opinion, answer as a proposal (`import --propose`): it's drawn dashed, and the person accepts or rejects it.
 - `toucan say "what you're about to do" --at KEY` shows them, on the canvas, what you're working on.
 - A canvas can fix some things by itself (reflexes) and asks you about what it can't: a "Reflex ask" in your brief. Handle it like a request; if it will recur, teach the canvas with `toucan reflexes add NAME --when CODE --routine R --answers N` and `toucan reflexes try NAME`. What you add waits for the person to switch it on.

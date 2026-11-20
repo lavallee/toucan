@@ -25,6 +25,7 @@ import { createRoutines, KINDS as ROUTINE_KINDS } from './routines.mjs'
 import * as worklog from './worklog.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
+import { ReviewError, reviewDir, reviewImage, reviewView, reviewWrite } from './review.mjs'
 import * as refs from './references.mjs'
 import { createProfiles, makeLocalProfile, profileInstructions, ProfileError } from './profiles.mjs'
 import { createSources } from './sources.mjs'
@@ -587,7 +588,7 @@ const server = createServer(async (req, res) => {
 			mkdirSync(dest, { recursive: true })
 			plans.forget(canvas)
 			reflexes.forget(canvas)
-			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas), planPath(CANVASES, canvas), reflexesPath(CANVASES, canvas), filesDir(canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
+			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas), planPath(CANVASES, canvas), reflexesPath(CANVASES, canvas), reviewDir(CANVASES, canvas), filesDir(canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
 			chat.forgetThreads(canvas)
 			const idx = readIndex()
 			if (idx[canvas]) writeFileSync(join(dest, 'index-entry.json'), JSON.stringify(idx[canvas], null, 2) + '\n')
@@ -644,6 +645,31 @@ const server = createServer(async (req, res) => {
 				return json(res, 200, { ok: true, result: await exec(canvas, routines.program(routine, args), 120000, `routine ${subName}`, { agent: agent || 'toucan', doing: `running ${routine.title}` }) })
 			} catch (e) {
 				return json(res, 200, { ok: false, error: String(e.message ?? e) })
+			}
+		}
+		if (sub === 'review') {
+			const action = url.pathname.split('/')[6]
+			const dir = reviewDir(CANVASES, canvas)
+			try {
+				if (!subName && req.method === 'POST') {
+					let input
+					try { input = JSON.parse(await body(req)) }
+					catch (err) { throw new ReviewError(err instanceof SyntaxError ? 400 : 413, 'expected a JSON review mutation up to 8 MiB') }
+					// Recheck after reading the body: the canvas may have been archived meanwhile.
+					if (!canvasNames().includes(canvas)) throw new ReviewError(404, 'no such canvas')
+					return json(res, 200, reviewWrite(dir, input))
+				}
+				if (!canvasNames().includes(canvas)) throw new ReviewError(404, 'no such canvas')
+				if (!subName && req.method === 'GET') return json(res, 200, reviewView(dir, url.searchParams.get('producer')))
+				if (subName && action === 'image' && req.method === 'GET') {
+					const { type, bytes } = reviewImage(dir, subName)
+					res.writeHead(200, { 'content-type': type, 'x-content-type-options': 'nosniff', 'cache-control': 'no-store' })
+					return res.end(bytes)
+				}
+				return json(res, 404, { error: 'unknown review route' })
+			} catch (err) {
+				if (err instanceof ReviewError) return json(res, err.status, { error: err.message })
+				throw err
 			}
 		}
 		if (sub === 'threads') {

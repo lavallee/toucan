@@ -1,5 +1,5 @@
 ---
-description: Everything toucan 0.16.0 does, in one list: where to find each feature, and when it arrived.
+description: Everything toucan 0.17.0 does, in one list: where to find each feature, and when it arrived.
 kicker: Reference
 ---
 # Features
@@ -38,6 +38,7 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 |---|---|---|---:|
 | [Sticky notes for the agent](tour.html#leave-a-sticky-note) (tldraw) | Pin a note where the problem is; the agent acts on each and turns it green with a one-line reply. Notes are never deleted. | **Note tool (N)**; CLI: `notes` · `notes resolve KEY --reply TEXT` | 0.2.0 |
 | [Comment threads](tour.html#comment-and-have-it-answered) | Comment on a shape, several shapes or a region and go back and forth until someone closes it. Each thread has its own agent, so several are worked at once. | **Comment · Threads**; CLI: `threads new TEXT --on KEY --ask` · `threads reply N TEXT` | 0.5.0 |
+| [Screenshot review](extending.html#screenshot-review) | Compare screenshot revisions and pin feedback to an exact image. The original producer can reply with an updated screenshot. | **Review**; CLI: `review post` · `review inbox` · `review reply` | 0.17.0 |
 | [Notes into threads](agents.html#threads-comments-on-shapes-and-regions) (tldraw) | Bring sticky notes into threads, keeping their replies and resolutions. | **Threads panel**; CLI: `threads adopt-notes` | 0.5.0 |
 | [Proposals](tour.html#take-it-or-leave-it) | An agent's suggestion arrives dashed, with Accept and Reject above the canvas. Nothing is final until you say so. | **Proposal bar: Accept all / Reject all**; CLI: `import --propose` · `proposals accept\|reject` | 0.2.0 |
 | [Agent at work](agents.html#what-people-see-presence-and-undo) | While an agent works, every tab shows a status pill with what it's doing, a soft ring round the canvas, and its cursor on the shape it touched. | **On the canvas**; CLI: `say TEXT [--at KEY,KEY]` · `--agent NAME` | 0.9.0 |
@@ -114,4 +115,4 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Remote and behind a proxy](how-it-works.html) | Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to. | **Sign-in page**; CLI: `--public-url` · `--allow-host` · `TOUCAN_URL` · `TOUCAN_TOKEN` | 0.11.0 |
 | [Plugins](extending.html#plugins) | One mechanism for programs on PATH that connect toucan to your own systems (agent profiles, plan sources), with one trust rule; lists what was found and, for anything refused, why. | CLI: `plugins` · `sources` · `profiles` | 0.15.0 |
 
-*63 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
+*64 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*

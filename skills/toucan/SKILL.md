@@ -1,6 +1,6 @@
 ---
 name: toucan
-description: Draw on and read a live toucan canvas (tldraw or Excalidraw in a browser tab) through the toucan CLI while a person edits it by hand. Use when asked to use toucan, to start or open a canvas for this project, to draw, update, lay out, inspect, screenshot, export or import a diagram on a toucan canvas, to turn data or a Mermaid sketch into one, or to add lasting behaviour to a canvas with a canvas script. Do not use for diagrams that are not meant for a toucan canvas.
+description: Draw on and read a live toucan canvas (tldraw or Excalidraw in a browser tab) through the toucan CLI while a person edits it by hand. Use when asked to use toucan, to start or open a canvas for this project, to draw, update, lay out, inspect, screenshot, export or import a diagram on a toucan canvas, to turn data or a Mermaid sketch into one, to publish or review screenshot revisions, or to add lasting behaviour to a canvas with a canvas script. Do not use for diagrams that are not meant for a toucan canvas.
 ---
 
 # toucan
@@ -74,6 +74,11 @@ they have selected before guessing.
 
 **Threads.** People leave comments on shapes and regions as threads: `toucan --canvas NAME threads` lists the open
 ones with what each is attached to, and `threads reply N "…"` answers. Leave closing them to people unless asked.
+
+**Screenshot review.** Post an image with `toucan --canvas NAME review post KEY IMAGE --producer ID --title TITLE`.
+Reuse the artifact key and pass `--previous REV` to publish the next revision. Reviewers pin feedback in **Review**.
+Poll with `review inbox ID`, read the original image with `review image REV OUT`, and use `review reply NOTE TEXT --producer ID`.
+Add `--replacement REV` to link an updated screenshot. Keep the same `--mutation ID` when retrying a write.
 
 **Templates and quality.** Don't place boxes by hand: describe the diagram as data and pipe it to `toucan --canvas NAME draw -`. `toucan templates` lists the kinds and `toucan templates show ID` shows the form. After a layout change, `toucan --canvas NAME routine run check-diagram` scores it and names what's wrong; `clean-up` and `lay-out-again` fix most of it.
 

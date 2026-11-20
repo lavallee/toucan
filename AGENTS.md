@@ -69,6 +69,10 @@ Exec code is the body of an async function with `editor` (tldraw Editor), `tl` (
 and `toucan` (helpers below) in scope. It needs an open browser tab on that canvas, unless the server
 runs in headless mode.
 
+Screenshot review is available through `toucan --canvas NAME review`. Use `review post` to publish an
+image, `review inbox PRODUCER` for feedback on that producer's revisions, and `review reply` to answer a note.
+Run `toucan help` for arguments. The [review protocol](https://lavallee.github.io/toucan/extending.html#screenshot-review) also supports external adapters.
+
 ## Headless mode
 
 A server started by toucan has this on; one a person runs themselves has it only if started with `--headless`. Then `exec`, `summary`, `screenshot` and `import` still work
