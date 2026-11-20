@@ -5,23 +5,23 @@ description: Use Toucan to plan a Thanksgiving dinner, map a system, review a sc
 
 ## Plan Thanksgiving dinner
 
-Five recipes, one oven, and dinner at six. Start with the links and ask the agent to put them on the canvas. The menu board fills with dish photos, ingredient lists, short prep notes, and links back to the recipes. Zoom in on any dish, then ask a second question. When should everything go in the oven?
+Five recipes, one oven, and dinner at six. Start with the recipe links and ask the agent to build the menu. The dish cards pair photos with ingredients, prep notes, and links to the originals. Zoom into a dish, then ask the agent to plan the whole afternoon, from getting the dough started to welcoming guests.
 
 ::: html
 <figure class="article-breakout case-capture">
   <link rel="stylesheet" href="assets/use-cases.css">
   <video controls playsinline preload="none" width="1600" height="1000" poster="assets/use-cases/thanksgiving-menu.jpg" aria-label="Two rounds of Thanksgiving dinner planning with the Toucan chat agent">
-    <source src="assets/use-cases/thanksgiving-dinner.mp4?v=recipe-rounds" type="video/mp4">
-    <a href="assets/use-cases/thanksgiving-dinner.mp4?v=recipe-rounds">Download the Thanksgiving screen recording</a>
+    <source src="assets/use-cases/thanksgiving-dinner.mp4?v=dinner-plan" type="video/mp4">
+    <a href="assets/use-cases/thanksgiving-dinner.mp4?v=dinner-plan">Download the Thanksgiving screen recording</a>
   </video>
   <figcaption>Two real Codex turns in Toucan, edited to shorten the waits. The recording is silent with on-screen captions.</figcaption>
 </figure>
 :::
 
-In the first round, Codex builds the menu from prepared notes on five linked recipes. The hero photos are generated illustrations. In the second round, Codex works backward from six and draws a timeline below the menu. The turkey, dressing, and rolls get separate oven windows at 325°F, 350°F, and 375°F, with time reserved for the temperature changes. Salad and cranberry sauce can be handled off the oven clock. The schedule uses example reservations and assumes the turkey can be held safely outside the oven while the sides bake.
+In the first round, Codex builds the menu from prepared notes on five linked recipes. The hero photos are generated illustrations. In the second round, Codex works backward from six and draws a timeline below the menu. The timeline gives the oven, prep counter, finishing, and hosting their own lanes. Hatched slots show when the oven needs to change temperature. You can see when the rolls should proof, when to set out drinks, and when to carve and plate. The cranberry sauce goes in the day-before plan. The schedule uses example reservations and assumes the turkey can be held safely outside the oven while the sides bake.
 
 ::: html
-<p><a href="assets/use-cases/thanksgiving-board.tldr.json" download="thanksgiving.tldr">Download the tldraw board</a> · <a href="assets/use-cases/thanksgiving-menu.jpg">View the menu</a> · <a href="assets/use-cases/thanksgiving-prep.jpg">Zoom into the dressing</a> · <a href="assets/use-cases/thanksgiving-dinner.jpg?v=recipe-rounds">View the schedule</a> · <a href="assets/use-cases/thanksgiving-overview.jpg">See the whole canvas</a> · <a href="assets/use-cases/thanksgiving-dinner.mp4?v=recipe-rounds" download>Download the video</a> · <a href="assets/use-cases/thanksgiving-social.mp4" download>Download the 4:5 social cut</a></p>
+<p><a href="assets/use-cases/thanksgiving-board.tldr.json?v=dinner-plan" download="thanksgiving.tldr">Download the tldraw board</a> · <a href="assets/use-cases/thanksgiving-menu.jpg">View the menu</a> · <a href="assets/use-cases/thanksgiving-prep.jpg">Zoom into the dressing</a> · <a href="assets/use-cases/thanksgiving-dinner.jpg?v=dinner-plan">View the schedule</a> · <a href="assets/use-cases/thanksgiving-overview.jpg">See the whole canvas</a> · <a href="assets/use-cases/thanksgiving-dinner.mp4?v=dinner-plan" download>Download the video</a> · <a href="assets/use-cases/thanksgiving-social.mp4?v=dinner-plan" download>Download the 4:5 social cut</a></p>
 :::
 
 The board links to [roast turkey](https://www.butterball.com/recipes/classic-whole-roasted-turkey), [sage dressing](https://www.seriouseats.com/classic-sage-and-sausage-stuffing-or-dressing-recipe), [Parker House rolls](https://www.kingarthurbaking.com/recipes/small-batch-parker-house-rolls-recipe), [radicchio salad](https://smittenkitchen.com/2010/04/radicchio-apple-and-pear-salad/), and [cranberry sauce](https://www.oceanspray.com/recipes/homemade-whole-berry-cranberry-sauce).

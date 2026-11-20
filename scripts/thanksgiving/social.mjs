@@ -30,7 +30,7 @@ footer p{font-size:29px;color:#f8e8da}
 footer b{font-size:35px}
 </style><header><h1>Dinner at six</h1><p>Five recipes. One oven. Two rounds with an agent.</p></header>
 <div class=menu>${photos}</div>
-<footer><p>Build the menu, then make the oven plan.</p><b>toucan</b></footer></html>`)
+<footer><p>From the prep counter to the dinner table.</p><b>toucan</b></footer></html>`)
 	await page.locator('img').last().evaluate((image) => image.decode())
 	await page.screenshot({ path: plate })
 	await promisify(execFile)('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-loop', '1', '-i', plate,

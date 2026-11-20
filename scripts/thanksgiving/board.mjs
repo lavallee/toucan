@@ -11,13 +11,13 @@ const colors = ['orange', 'red', 'yellow', 'green', 'violet']
 const text = (key, text, x, y, w, size = 'm', color = 'black', meta) => ({
 	key, text, box: { x, y, w, h: 40 }, style: { geo: 'text', size, color }, meta,
 })
-const box = (key, text, x, y, w, h, color, size = 's', meta) => ({
-	key, text, box: { x, y, w, h }, style: { color, size, fill: 'semi', dash: 'solid' }, meta,
+const box = (key, text, x, y, w, h, color, size = 's', meta, fill = 'semi') => ({
+	key, text, box: { x, y, w, h }, style: { color, size, fill, dash: 'solid' }, meta,
 })
 const graph = (nodes) => ({ groups: [], nodes, edges: [] })
 export const seed = graph([
-	text('menu-title', 'Thanksgiving dinner', 0, 0, 1180, 'xl'),
-	text('menu-subtitle', 'Five recipes. One oven. A table for eight.', 0, 57, 1180, 'm', 'black'),
+	text('menu-title', 'The Thanksgiving table', 0, 0, 1300, 'xl'),
+	text('menu-subtitle', 'Dinner for eight. Five recipes to bring to the table.', 0, 57, 1300, 'm'),
 ])
 
 export function menuCode(cards) {
@@ -26,24 +26,27 @@ export function menuCode(cards) {
 	for (const [i, r] of recipes.entries()) {
 		const card = cards.find(({ id }) => id === r.id)
 		for (const field of ['ingredients', 'prep']) assert.ok(typeof card[field] === 'string' && card[field].length > 15 && card[field].length <= 130, `${r.id}: ${field}`)
-		const x = i * 248
+		const x = i * 280
 		const refs = [{ label: `Open recipe at ${r.source}`, ref: r.url }]
-		nodes.push(text(`recipe-${r.id}`, r.title, x, 264, 238, 'm', 'black', { refs, detail: `${card.ingredients}\n\n${card.prep}` }))
-		nodes.push(text(`${r.id}-source`, r.source + ' ↗', x, 305, 238, 's', colors[i], { refs }))
-		nodes.push(text(`${r.id}-ingredients`, 'Ingredients\n' + card.ingredients, x, 347, 234, 's'))
-		nodes.push(text(`${r.id}-prep`, 'Prep\n' + card.prep, x, 457, 234, 's'))
+		nodes.push(box(`card-${r.id}`, '', x, 108, 260, 485, colors[i], 's', undefined, 'none'))
+		nodes.push(text(`recipe-${r.id}`, r.title, x + 14, 274, 232, 'm', 'black', { refs, detail: `${card.ingredients}\n\n${card.prep}` }))
+		nodes.push(text(`${r.id}-source`, r.source + ' ↗', x + 14, 313, 232, 's', 'black', { refs }))
+		nodes.push(text(`${r.id}-ingredients-label`, 'Ingredients', x + 14, 356, 232, 's', colors[i]))
+		nodes.push(text(`${r.id}-ingredients`, card.ingredients, x + 14, 383, 232, 's'))
+		nodes.push(text(`${r.id}-prep-label`, 'Prep', x + 14, 467, 232, 's', colors[i]))
+		nodes.push(text(`${r.id}-prep`, card.prep, x + 14, 494, 232, 's'))
 		pics.push({ id: r.id, x, url: r.url, src: 'data:image/jpeg;base64,' + readFileSync(join(photos, r.id + '.jpg')).toString('base64') })
 	}
 	return `
+await toucan.applyGraph(${JSON.stringify(graph(nodes))})
 const pics = ${JSON.stringify(pics)}
 for (const pic of pics) {
 	const assetId = 'asset:thanksgiving-' + pic.id
 	const id = toucan.idFor('photo-' + pic.id)
 	if (editor.getShape(id)) continue
 	editor.createAssets([{ id: assetId, typeName: 'asset', type: 'image', meta: {}, props: { name: pic.id + '.jpg', src: pic.src, w: 640, h: 400, mimeType: 'image/jpeg', isAnimated: false } }])
-	editor.createShape({ id, type: 'image', parentId: editor.getCurrentPageId(), x: pic.x, y: 107, props: { assetId, w: 224, h: 140, url: pic.url }, meta: { key: 'photo-' + pic.id } })
+	editor.createShape({ id, type: 'image', parentId: editor.getCurrentPageId(), x: pic.x + 10, y: 118, props: { assetId, w: 240, h: 150, url: pic.url }, meta: { key: 'photo-' + pic.id } })
 }
-await toucan.applyGraph(${JSON.stringify(graph(nodes))})
 return { recipes: pics.length }
 `
 }
@@ -74,29 +77,86 @@ export function scheduleCode(plan) {
 	}
 	assert.ok(clock(oven.at(-1).end) <= 17 * 60 + 55, 'Leave five minutes before dinner')
 	for (const name of ['dayBefore', 'morning', 'serve']) assert.ok(typeof plan[name] === 'string' && plan[name].length >= 22 && plan[name].length <= 140, name)
-	const sal = plan.salad
-	assert.ok(clock(sal.start) >= 17 * 60 + 20 && clock(sal.end) <= 18 * 60 && clock(sal.end) > clock(sal.start))
-	const origin = clock(oven[0].start)
-	const px = (value) => 160 + (clock(value) - origin) / (18 * 60 - origin) * 1020
-	const names = { turkey: 'Turkey', dressing: 'Dressing', rolls: 'Rolls' }
-	const y = 760
-	const nodes = [
-		text('schedule-title', 'Dinner at 6:00', 0, y, 1150, 'xl'),
-		text('schedule-summary', 'One main oven · three temperatures · salad and sauce off the oven clock', 0, y + 58, 1200, 'm'),
-		text('schedule-oven', 'Main oven', 0, y + 183, 150, 'm'),
-		text('schedule-prep', 'Counter', 0, y + 284, 150, 'm'),
-		text('schedule-day-before', 'Day before\n' + plan.dayBefore, 0, y + 390, 375, 's'),
-		text('schedule-morning', 'Earlier that day\n' + plan.morning, 415, y + 390, 385, 's'),
-		text('schedule-serve', 'Rest, hold & serve\n' + plan.serve, 830, y + 390, 355, 's'),
-	]
-	for (const [i, event] of oven.entries()) {
-		const left = px(event.start)
-		nodes.push(text(`schedule-clock-${event.id}`, shown(event.start), left, y + 128, 100, 's'))
-		nodes.push(box(`schedule-${event.id}`, names[event.id], left, y + 176, px(event.end) - left, 65, colors[i], 's', { detail: `${shown(event.start)}–${shown(event.end)} at ${event.temp}°F.` }))
+
+	const dinner = 18 * 60
+	const stages = {
+		dressingPrep: ['Assemble dressing', 'prep', 'orange'],
+		dough: ['Mix & rise', 'prep', 'yellow'],
+		proof: ['Shape & proof', 'prep', 'yellow'],
+		salad: ['Toss salad', 'finish', 'green'],
+		hold: ['Rest & hold turkey', 'finish', 'orange'],
+		table: ['Table & drinks', 'host', 'violet'],
+		welcome: ['Welcome guests', 'host', 'violet'],
+		carve: ['Carve & plate', 'host', 'red'],
 	}
-	const ovenLine = oven.map((event) => `${shown(event.start)} ${names[event.id]} ${event.temp}°F`).join('   →   ')
-	nodes.push(text('schedule-temperatures', ovenLine, 160, y + 248, 1025, 'm'))
-	nodes.push(text('schedule-transitions', `Oven adjustments: ${oven.slice(1).map((event, i) => `${shown(oven[i].end)} → ${event.temp}°F`).join('   ·   ')}`, 160, y + 336, 1030, 's'))
-	nodes.push(text('schedule-salad', `${shown(sal.start)}–${shown(sal.end)}   Toss salad while the oven is busy`, 160, y + 290, 1020, 'm', 'green'))
+	const tasks = Object.entries(stages).map(([id, [label, lane, color]]) => {
+		const task = plan.tasks.find((item) => item.id === id)
+		assert.ok(task, `Missing ${id}`)
+		const start = clock(task.start), end = clock(task.end)
+		assert.ok(start < end && end <= dinner, `Invalid window for ${id}`)
+		return { id, label, lane, color, start, end }
+	})
+	const get = (id) => tasks.find((event) => event.id === id)
+	assert.equal(plan.tasks.length, tasks.length)
+	assert.ok(get('dressingPrep').end <= clock(oven[1].start), 'Assemble the dressing before baking')
+	assert.ok(get('dough').end - get('dough').start >= 75, 'Allow time to mix the dough and finish its first rise')
+	assert.ok(get('proof').start - get('dough').end >= 0 && get('proof').start - get('dough').end <= 15, 'Shape after the first rise')
+	assert.ok(get('proof').end - get('proof').start >= 35 && get('proof').end - get('proof').start <= 55, 'Allow 35–55 minutes to shape and proof the rolls')
+	assert.ok(clock(oven[2].start) - get('proof').end >= 0 && clock(oven[2].start) - get('proof').end <= 10, 'Bake the rolls soon after the final proof')
+	assert.ok(get('salad').start >= 17 * 60 + 20, 'Toss the salad late')
+	assert.equal(get('hold').start, clock(oven[0].end), 'Rest and hold start at turkey removal')
+	assert.ok(get('hold').end >= get('carve').start, 'Hold the turkey until carving')
+	assert.equal(get('carve').end, dinner, 'Plate for dinner at six')
+	for (const lane of ['prep', 'finish', 'host']) {
+		const row = tasks.filter((task) => task.lane === lane).sort((a, b) => a.start - b.start)
+		// Turkey holding is passive and can overlap salad prep.
+		const active = row.filter((task) => task.id !== 'hold')
+		for (let i = 1; i < active.length; i++) assert.ok(active[i - 1].end <= active[i].start, `Overlap in ${lane}`)
+	}
+	const origin = Math.min(clock(oven[0].start), ...tasks.map((task) => task.start))
+	const startHour = Math.floor(origin / 60) * 60
+	const px = (minute) => 165 + (minute - startHour) / (dinner - startHour) * 1175
+	const display = (minute) => shown(`${Math.floor(minute / 60)}:${String(minute % 60).padStart(2, '0')}`)
+	const names = { turkey: 'Turkey', dressing: 'Dressing', rolls: 'Rolls' }
+	const y = 910
+	const rows = { oven: 143, prep: 305, finish: 387, host: 504 }
+	const laneLabels = { oven: 'Main oven', prep: 'Prep counter', finish: 'Finishing', host: 'Hosting' }
+	const laneColors = { oven: 'orange', prep: 'yellow', finish: 'green', host: 'violet' }
+	const nodes = [
+		text('schedule-title', 'Dinner at six', 0, y, 1300, 'xl'),
+		text('schedule-summary', 'One main oven. Prep, cooking and hosting on the same clock.', 0, y + 60, 1300, 'm'),
+	]
+	for (const [lane, row] of Object.entries(rows)) {
+		nodes.push(text(`schedule-lane-${lane}`, laneLabels[lane], 0, y + row + 9, 158, 's', laneColors[lane]))
+	}
+	for (let tick = startHour; tick <= dinner; tick += 60) {
+		const x = px(tick)
+		nodes.push(text(`hour-${tick}`, display(tick), x - 12, y + 101, 65, 's', tick === dinner ? 'red' : 'grey'))
+	}
+	for (const [i, event] of oven.entries()) {
+		const start = clock(event.start), end = clock(event.end), width = px(end) - px(start)
+		nodes.push(box(`schedule-${event.id}`, width >= 100 ? `${names[event.id]}
+${event.temp}°F` : width >= 72 ? names[event.id] : '', px(start), y + rows.oven, width, 84, colors[i], 's', { detail: `${shown(event.start)}–${shown(event.end)} at ${event.temp}°F.` }, 'solid'))
+		if (i > 0) {
+			const change = clock(oven[i - 1].end)
+			nodes.push(box(`schedule-heat-${event.id}`, '', px(change), y + rows.oven, px(start) - px(change), 84, 'grey', 's', { detail: `At ${display(change)}, set the oven to ${event.temp}°F and let it come to temperature.` }, 'pattern'))
+		}
+	}
+	const ovenLine = oven.map((event) => `${shown(event.start)}–${shown(event.end)}  ${names[event.id]} ${event.temp}°F`).join('    /    ')
+	nodes.push(text('schedule-temperatures', ovenLine, 165, y + 232, 1230, 's'))
+	nodes.push(text('schedule-transitions', `Preheat to 325°F before ${shown(oven[0].start)}   ·   ${oven.slice(1).map((event, i) => `${shown(oven[i].end)} → ${event.temp}°F`).join('   ·   ')}`, 165, y + 264, 1230, 's', 'orange'))
+	for (const task of tasks) {
+		const x = px(task.start), width = px(task.end) - x
+		const subrow = task.id === 'salad' ? 41 : 0
+		const yy = y + rows[task.lane] + subrow
+		nodes.push(box(`schedule-task-${task.id}`, '', x, yy, width, 32, task.color, 's', { detail: `${task.label}, ${display(task.start)}–${display(task.end)}` }, 'solid'))
+	}
+	const summary = (lane) => tasks.filter((task) => task.lane === lane).sort((a,b) => a.start - b.start).map((task) => `${display(task.start)}–${display(task.end)} ${task.label}`).join('   ·   ')
+	nodes.push(text('schedule-prep-cues', summary('prep'), 165, y + 344, 1230, 's'))
+	nodes.push(text('schedule-finish-cues', summary('finish'), 165, y + 464, 1175, 's'))
+	nodes.push(text('schedule-host-cues', summary('host'), 165, y + 542, 1230, 's'))
+	nodes.push(text('schedule-day-before', 'Day before\n' + plan.dayBefore, 0, y + 606, 430, 's'))
+	nodes.push(text('schedule-morning', 'Before the timeline\n' + plan.morning, 470, y + 606, 415, 's'))
+	nodes.push(text('schedule-serve', 'At the table\n' + plan.serve, 940, y + 606, 420, 's'))
 	return `await toucan.applyGraph(${JSON.stringify(graph(nodes))}); return ${JSON.stringify(plan)}`
 }

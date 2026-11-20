@@ -49,7 +49,7 @@ Object.assign(env, {
 const tool = 'scripts/thanksgiving/agent-tool.mjs'
 const connection = join(temp, 'connection.json')
 const demoInstructions = `This is a demo Thanksgiving board. Recipe facts are captured locally from the five links. Run all shell commands with the tool's structured workdir set to ${cwd}. Use relative command paths only. Read the recipe notes with node ${tool} recipes. Use exactly these two canvas tools for this meal so the menu and schedule share a layout. For the first request, make an array of five objects with id, ingredients (short plain-language list, 16–130 characters), and prep (one short paraphrased line, 16–130 characters). Write it to stdin with node ${tool} menu - using a quoted heredoc. The tool adds the photographs and source links.
-For the second request, solve the schedule yourself, then run node ${tool} schedule - with a JSON object on stdin. Shape: {oven:[{id:"turkey",temp:325,start:"HH:MM",end:"HH:MM"},{id:"dressing",temp:350,start:"HH:MM",end:"HH:MM"},{id:"rolls",temp:375,start:"HH:MM",end:"HH:MM"}],salad:{start:"HH:MM",end:"HH:MM"},dayBefore:"22–140 chars",morning:"22–140 chars",serve:"22–140 chars"}. 24-hour times between 10:00 and 18:00. Use only one oven. Reserve 180 minutes for turkey, 65 for dressing, 24 for rolls and at least 8 minutes for each temperature change. Finish the rolls by 17:55 and toss salad late. Include cranberry sauce and bread drying the day before, roll dough/proof in earlier prep, and say to verify turkey doneness before resting and to confirm safe hot-holding equipment outside the oven. These are scheduling reservations, not cooking instructions. Don't browse or use unrelated tools, since the sources were already captured. Keep replies short. The recording harness checks the visual layout, so don't make a separate screenshot.`
+For the second request, solve the schedule yourself, then run node ${tool} schedule - with a JSON object on stdin. Shape: {oven:[{id:"turkey",temp:325,start:"HH:MM",end:"HH:MM"},{id:"dressing",temp:350,start:"HH:MM",end:"HH:MM"},{id:"rolls",temp:375,start:"HH:MM",end:"HH:MM"}],tasks:[{id:"dressingPrep|dough|proof|salad|hold|table|welcome|carve",start:"HH:MM",end:"HH:MM"}],dayBefore:"22–140 chars",morning:"22–140 chars",serve:"22–140 chars"}. Include all eight task IDs exactly once. Use 24-hour times from 12:00 to 18:00. Keep dressingPrep, dough and proof from overlapping on the prep lane. Allow at least 75 min for mixing and initial rise, begin shaping within 15 min of its finish, reserve 35–55 min to shape and proof, and bake within 10 min of final proof. Plan the dressing prep earlier so it does not clash with the roll prep. Hold starts as soon as the turkey leaves the oven and lasts until carving. The salad can overlap the passive hold. Table, welcome and carve are on the same lane and must not overlap; carve ends at 18:00. Use only one oven. Reserve 180 minutes for turkey, 65 for dressing, 24 for rolls and at least 8 minutes for each temperature change. Finish the rolls by 17:55 and toss salad late. Include cranberry sauce and bread drying the day before, roll dough/proof in earlier prep, and say to verify turkey doneness before resting and to confirm safe hot-holding equipment outside the oven. These are scheduling reservations, not cooking instructions. Don't browse or use unrelated tools, since the sources were already captured. Keep replies short. The recording harness checks the visual layout, so don't make a separate screenshot.`
 const isolatedChat = join(cwd, 'server/codex.mjs')
 const chatSource = readFileSync(isolatedChat, 'utf8')
 const hook = "const developerInstructions = profile ?"
@@ -115,31 +115,54 @@ try {
 	await page.addStyleTag({ content: '.tlui-style-panel__wrapper { visibility:hidden }' })
 	await page.evaluate(() => {
 		const style = document.createElement('style')
-		style.textContent = '.meal-caption{position:fixed;z-index:9999;bottom:66px;left:30px;max-width:560px;padding:14px 21px;border-radius:8px;background:#321e25;color:#fff2eb;font:23px/1.27 system-ui,sans-serif;pointer-events:none}.meal-caption strong{display:block;font-size:15px;color:#ffbb79;margin-bottom:4px}'
+		style.textContent = '.meal-caption{position:fixed;z-index:9999;bottom:66px;left:30px;max-width:560px;padding:14px 21px;border-radius:8px;background:#321e25;color:#fff2eb;font:23px/1.27 system-ui,sans-serif;pointer-events:none}[data-slot=chat-dock]{transition:width 320ms ease}html.meal-chat-focus [data-slot=chat-dock]{width:730px!important}html.meal-chat-focus [data-slot=chat-dock] textarea,html.meal-chat-focus [data-slot=chat-dock] [data-slot=message-scroller-viewport]{font-size:20px!important;line-height:1.43}.meal-caption[data-placement=top]{top:80px;bottom:auto}.meal-caption strong{display:block;font-size:15px;color:#ffbb79;margin-bottom:4px}'
 		document.head.append(style)
 		const note = Object.assign(document.createElement('div'), { className: 'meal-caption' })
 		note.append(document.createElement('strong'), document.createElement('span'))
 		document.body.append(note)
 	})
-	const title = (tag, copy) => page.evaluate(([tag, copy]) => {
+	const title = (tag, copy, placement = 'bottom') => page.evaluate(([tag, copy, placement]) => {
 		const note = document.querySelector('.meal-caption')
+		note.dataset.placement = placement
 		note.firstElementChild.textContent = tag
 		note.lastElementChild.textContent = copy
-	}, [tag, copy])
-	const focus = (keys, inset = 75) => page.evaluate(({keys,inset}) => {
-		const { editor, toucan } = window
-		const shapes = keys.map((key) => toucan.get(key)).filter(Boolean)
-		const bounds = editor.getShapesPageBounds(shapes.map((shape) => shape.id))
-		if (bounds) editor.zoomToBounds(bounds, { inset, animation: { duration: 480 } })
-	}, {keys,inset})
+	}, [tag, copy, placement])
+	const focus = async (keys, inset = 88, placement = 'bottom') => {
+		await page.waitForTimeout(380)
+		await page.evaluate(({ keys, inset, placement }) => {
+			const { editor, toucan } = window
+			const shapes = keys.map((key) => toucan.get(key)).filter(Boolean)
+			const bounds = editor.getShapesPageBounds(shapes.map((shape) => shape.id))
+			if (!bounds) return
+			const view = editor.getViewportScreenBounds()
+			const padTop = placement === 'top' ? 148 : 64
+			const padBottom = placement === 'top' ? 75 : 148
+			const z = Math.min((view.w - inset) / bounds.w, (view.h - padTop - padBottom) / bounds.h)
+			editor.setCamera({
+				x: view.w / (2 * z) - bounds.center.x,
+				y: (view.h + padTop - padBottom) / (2 * z) - bounds.center.y,
+				z,
+			}, { animation: { duration: 480 } })
+		}, { keys, inset, placement })
+	}
 	const noUpsell = () => page.getByText('Get a license for production', { exact: true }).count().then((count) => assert.equal(count, 0, 'The tldraw SDK still displays the production license prompt'))
 	await page.getByTestId('tl-watermark-licensed').waitFor()
 	await noUpsell()
 
+	const chatCloser = (active) => page.evaluate((value) => {
+		document.documentElement.classList.toggle('meal-chat-focus', value)
+	}, active)
 	const send = async (prompt) => {
-		await input.fill(prompt)
-		await sleep(1400)
+		await chatCloser(true)
+		await sleep(380)
+		await input.focus()
+		const [intro, links] = prompt.split('\n\n')
+		await input.pressSequentially(intro, { delay: 9 })
+		if (links) await page.keyboard.insertText('\n\n' + links)
+		await sleep(580)
 		await input.press('Enter')
+		await sleep(890)
+		await chatCloser(false)
 	}
 	// Keep the real request and the real canvas write, cutting only idle time between them.
 	const waitForAgentEdit = async (key, count) => {
@@ -160,7 +183,7 @@ try {
 	const prompt = 'Here are five Thanksgiving recipes. Add them to the canvas with a photo, ingredients, a prep summary, and a link back to each recipe.\n\n' + recipes.map((r) => r.url).join('\n')
 	await send(prompt)
 	await waitForAgentEdit('cranberry-prep', 1)
-	const menuKeys = ['menu-title', 'photo-turkey', 'cranberry-prep']
+	const menuKeys = ['menu-title', 'card-turkey', 'card-cranberry']
 	await focus(menuKeys)
 	await sleep(2700)
 	await noUpsell()
@@ -169,24 +192,27 @@ try {
 	await title('The menu', 'Five recipe cards the family can browse and edit.')
 	await sleep(3000)
 	await page.screenshot({ path: join(out, 'thanksgiving-menu.jpg'), quality: 91 })
-	await focus(['photo-dressing', 'dressing-prep', 'recipe-dressing'], 180)
+	await focus(['card-dressing', 'card-rolls'], 115)
 	await title('Zoom into a dish', 'Ingredients and prep stay next to the original recipe link.')
 	await sleep(3600)
 	await page.screenshot({ path: join(out, 'thanksgiving-prep.jpg'), quality: 91 })
 	await page.getByRole('button', { name: 'Show chat', exact: true }).click()
 	await focus(menuKeys)
-	await title('Round 2', 'Dinner at 6. Make the oven schedule.')
-	await send('We want to eat at 6:00 p.m. with one oven. Draw the whole schedule from scratch below the recipes. Show what we can prep ahead, what goes in the oven when, and when to turn the temperature up or down.')
+	await title('Round 2', 'Dinner at 6. Plan the whole afternoon.')
+	await send('We want to eat at 6:00 p.m. with one oven. Draw the whole schedule from scratch below the recipes. Include prep, oven temperatures, welcoming guests, and getting food on the table.')
 	await waitForAgentEdit('schedule-title', 2)
-	const scheduleKeys = ['schedule-title', 'schedule-transitions', 'schedule-serve', 'schedule-day-before']
+	const scheduleKeys = ['schedule-title', 'schedule-transitions', 'schedule-host-cues', 'schedule-serve', 'schedule-day-before', 'schedule-morning', 'hour-1080']
 	await focus(scheduleKeys)
 	await sleep(3200)
 	await page.getByRole('button', { name: 'Hide chat', exact: true }).click()
-	await focus(scheduleKeys, 90)
-	await title('The oven plan', 'The agent sequenced 325°F, 350°F, and 375°F, with time to change settings.')
+	await focus(scheduleKeys, 130, 'top')
+	await title('The whole afternoon', 'Prep and hosting have their own lanes. The hatched blocks are oven changes.', 'top')
 	await sleep(4900)
 	await page.screenshot({ path: join(out, 'thanksgiving-dinner.jpg'), quality: 91 })
 	await noUpsell()
+	await focus(['schedule-title', 'schedule-temperatures', 'schedule-transitions', 'schedule-rolls'], 115, 'top')
+	await title('One oven, three settings', 'Hatched slots let the oven reach its next temperature.', 'top')
+	await sleep(3000)
 	await focus([...menuKeys, ...scheduleKeys], 95)
 	await title('One board for dinner', 'Zoom out to see the recipes and oven plan together.')
 	await sleep(3900)
@@ -199,7 +225,7 @@ try {
 	assert.equal(board.records.filter((r) => r.type === 'image' && r.typeName === 'shape').length, 5)
 	assert.equal(board.records.filter((r) => r.meta?.key === 'schedule-title').length, 1)
 	assert.ok(existsSync(join(temp, 'menu.json')) && existsSync(join(temp, 'schedule.json')), 'Both agent tool calls produced receipts')
-	writeFileSync(join(out, 'thanksgiving-board.tldr.json'), JSON.stringify(board))
+	writeFileSync(join(out, 'thanksgiving-board.tldr.json'), JSON.stringify(board, null, 2) + '\n')
 	end()
 	await context.close()
 	context = null
