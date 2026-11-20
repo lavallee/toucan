@@ -2,7 +2,7 @@
 
 toucan isn't on the npm registry (the name is taken). People install the tarball attached to the GitHub release, through
 `install.sh` beside it. A release is a tag, that GitHub release and its two files, the docs site, the plugin entries in the Lyra Forge
-marketplace, and the listing on lyra-forge.com.
+marketplace, the listing on lyra-forge.com, and the entry in the public release log.
 
 ## Versioning
 
@@ -24,4 +24,6 @@ Semantic versioning. The version in `package.json` must match both plugin manife
    both catalogs of the marketplace repo and run its tests.
 7. Pinned dependencies: the server's `@tldraw/sync-core` must equal the `tldraw` the app is built with, since a release
    ships both, so upgrade them together.
-8. Do not call the release public until the tag, release, site and marketplace entry all resolve.
+8. Add the published release to [the public release log](https://lavallee.github.io/) using its
+   [release-day routine](https://github.com/lavallee/lavallee.github.io#release-day-routine).
+9. Verify that the tag, release, project site, marketplace entry and live release-log entry all resolve.
