@@ -65,6 +65,10 @@ line per step, not a commentary.
 **"This".** When the person says "this" or "these", run `toucan --canvas NAME selection` to see what
 they have selected before guessing.
 
+**Notice.** Your commands' answers come with a `<canvas_activity>` block on stderr when people (or other agents)
+changed, selected or commented on something since your last command. Fold it in: keep their edits, don't redo what
+they removed, and adjust your plan when it bears on it.
+
 **Proposals.** For broad feedback, propose rather than impose: `toucan --canvas NAME import plan.mmd
 --propose` adds shapes dashed; the person accepts or rejects them. Don't accept your own proposals unless asked.
 

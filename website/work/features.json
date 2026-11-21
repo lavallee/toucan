@@ -1,6 +1,6 @@
 {
  "product": "toucan",
- "version": "0.17.0",
+ "version": "0.18.0",
  "updated": "2026-11-20",
  "note": "The full feature list. scripts/build-features.mjs renders it to website/content/features.md; keep it in step with CHANGELOG.md.",
  "groups": [
@@ -160,6 +160,17 @@
    "summary": "Send a message while the agent works and it adjusts the turn instead of waiting for it to end.",
    "app": "Chat",
    "since": "0.4.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "notice",
+   "group": "chat",
+   "name": "Agents notice people",
+   "summary": "Edit, select and comment while an agent works: it hears what you did between its steps and builds on it. A message sent mid-turn carries what's selected then, and terminal and MCP agents hear it with their next command.",
+   "docs": "agents.html#what-people-do-while-you-work",
+   "app": "Chat · Threads",
+   "since": "0.18.0",
    "engines": "both",
    "who": "person"
   },

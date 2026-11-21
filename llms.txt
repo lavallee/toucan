@@ -24,6 +24,7 @@ Then, in a project: `toucan init --open`, and `toucan guide` for the rest. Agent
 ## What it does that a drawing tool doesn't
 
 - Agents edit the same canvas people do, through keyed, idempotent helpers and graph imports (Mermaid, JSON Canvas, Excalidraw).
+- It runs both ways at once: while an agent works, it hears what people edit, select and comment on, between its steps or with its next command, and builds on it rather than over it.
 - A canvas has reflexes: rules that fix what happens to it (text outgrowing a box, a frame cutting off its contents) without calling a model, and ask the agent about what they can't, which it can answer by teaching the canvas a new one (`toucan reflexes`).
 - A canvas can show a plan: board, gantt, timeline, dependency-graph and table views of a project kept in a JSON file or another system (through a `toucan-source-NAME` plugin), redrawn when it changes upstream, with a person's drags and edits written back. Agents compose views as small specs (`toucan plan catalog`).
 

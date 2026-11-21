@@ -32,6 +32,14 @@ thinking between calls doesn't flicker. The agent's cursor sits on the first sha
 or changed. `toucan say TEXT --at KEYS` goes through the server to every tab without touching the
 document: the line replaces the call's description, and the cursor moves to those shapes.
 
+It works the other way too: agents hear what people do while they work. The server keeps a feed per canvas.
+When edits pause, it compares the document with how it last saw it. Each run's report of the shapes it touched (the tab
+records them) claims those changes for its agent, and any change no run claims is a person's. Tabs report their person's
+selection over `/ws/canvas`, and comments go in as they're made. Each reader keeps its place in the feed. A terminal
+agent's place is its `--agent` name, and the next command's answer carries what's new in an `x-toucan-activity` header,
+which the CLI prints to stderr. A chat or comment-thread conversation hears it between its commands, as a steer of the
+turn in progress. Nothing of it is kept on disk.
+
 The cost is that `exec` needs a tab open on the canvas, unless the server runs in headless mode (below).
 Reads that don't, such as `graph`, use the server's copy, which can trail a tab's edit by a moment.
 

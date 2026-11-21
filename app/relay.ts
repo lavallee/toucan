@@ -4,7 +4,7 @@
 // screenshot, zoomTo, get, remove).
 
 import { wsUrl, canvasName, token, headless } from './net'
-import { getThreads, setThreads } from './threads-store'
+import { getThreads, setThreads, myName } from './threads-store'
 import { setFormatId } from './formats'
 import { setPlan } from './plan-store'
 import { setReflexes } from './reflexes-store'
@@ -39,6 +39,7 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 		const sock = ws
 		sock.onopen = () => {
 			busy = '' // a new socket: the server takes this tab as idle until told otherwise
+			selected = '\u0000' // and knows nothing of what it has selected
 			setStatus('live')
 		}
 		sock.onclose = () => {
@@ -102,11 +103,27 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 		said = Date.now()
 		ws.send(JSON.stringify({ type: 'busy', keys }))
 	}, 200)
+	// What this tab's person has selected, as it changes: agents at work hear it (server/activity.mjs), and "this" in a
+	// message sent mid-turn means what is selected then. The name is the one they comment under, if they gave one.
+	let selected = '\u0000'
+	const watchSelection = setInterval(() => {
+		if (headless || ws?.readyState !== 1) return
+		let keys: string[] = []
+		try {
+			keys = (scope.toucan.selection?.().here ?? []).map((r: any) => r.key)
+		} catch {}
+		const user = myName() || (scope.editor?.user?.getName?.() ?? '')
+		const now = `${user}\n${keys.join('\n')}`
+		if (now === selected) return
+		selected = now
+		ws.send(JSON.stringify({ type: 'presence', user, selected: keys }))
+	}, 500)
 	const onFocus = () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: 'focus' }))
 	window.addEventListener('focus', onFocus)
 	return () => {
 		closed = true
 		clearInterval(watchBusy)
+		clearInterval(watchSelection)
 		ws?.close()
 		window.removeEventListener('focus', onFocus)
 		for (const [, cleanup] of cleanups) try { cleanup?.() } catch {}

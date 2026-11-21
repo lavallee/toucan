@@ -12,6 +12,8 @@ import readline from 'node:readline'
 // Codex's current default model unless set here, so they don't go stale as models change. Measured on real
 // requests, its low effort put correct edits on the canvas about 3x sooner; a lighter model was only a little
 // faster than that and drew worse.
+// Items that are the agent running something; once one completes, it reads the result before going on.
+const TOOL_ITEMS = ['commandExecution', 'mcpToolCall', 'dynamicToolCall']
 const VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
 const MODES = {
 	fast: { model: process.env.TOUCAN_CHAT_FAST_MODEL, effort: process.env.TOUCAN_CHAT_FAST_EFFORT ?? 'low' },
@@ -30,19 +32,24 @@ When the user gives broad feedback or asks what you'd change, answer on the canv
 To draw a new diagram, don't place boxes by hand: describe it as data and let the layout engine place it. Run \`templates\` to see the kinds, \`templates show ID\` for an example to copy the form of, then pipe your own JSON to \`draw -\`. For a process use flowchart or swimlane; for what something moves between, state-machine; for a tree org-chart or decision-tree; for a system architecture or services; also sequence, er-diagram, pipeline, roadmap, timeline, kanban, quadrant, journey-map, mind-map. Keep each box to a few words and put the rest in \`detail\`. After a layout change, \`routine run check-diagram\` tells you what's wrong and where in a moment; prefer it to a screenshot, and \`routine run clean-up\` or \`lay-out-again\` to nudging boxes by hand.
 Name a point with \`versions save LABEL\` before a sweeping change. Only \`versions restore\` when asked.
 People also leave comment threads on shapes and regions; the brief lists the open ones. When a message is about one ("#3"), do the work and answer there with \`threads reply 3 "…"\`, as well as briefly here. \`threads show 3\` has its history. Leave closing it to them unless they ask.
-A message may arrive while you are working: it adjusts what you're doing, so take it into account and carry on.${engine === 'tldraw' ? '' : `
+A message may arrive while you are working: it adjusts what you're doing, so take it into account and carry on.
+People keep working on the canvas while you do. A <canvas_activity> block, between your commands or with a message, says what they changed, selected or commented on since you last heard. Fold it into what you're doing: build on their edits rather than undo them, don't put back what they removed, and use your judgement about whether it changes your plan. Mention it in your reply if it did; ask only when you can't tell what they want.${engine === 'tldraw' ? '' : `
 This canvas runs ${engine}: in exec code \`editor\` is the ${engine} API and \`tl\` its module. Prefer \`import\` for structure.`}${notes ? `
 This deployment adds its own agent notes in ${notes}: read them once at the start of this conversation, and follow them.` : ''}`
 
 // An agent working on one comment thread. Its last message in a turn becomes its reply there.
 const threadInstructions = (canvas, id, engine = 'tldraw', data = '') => `You are an agent working on comment thread #${id}, which someone attached to part of the ${engine} canvas "${canvas}". Others may be working on the canvas and in other threads at the same time, so keep to what this thread is about.
 Change the canvas with \`node bin/toucan.mjs --canvas ${canvas} <cmd>\`, giving each change a \`--label "#${id}: what this is"\`. AGENTS.md is already in your context: don't read it again. \`toucan.node\` changes only what you pass; \`import - --format mermaid\` lays out new connected boxes and only adds, so also remove what a request replaces. Trust the <canvas_brief> rather than re-reading the canvas, and get the visible edit done first.
-Your final message is posted as your reply in the thread, so write it for the people reading there: a line or two on what you did or found, and a clear question if you need a decision. If the request is for research or an opinion rather than an edit, answer in that reply. A message may arrive while you work: take it into account and carry on.
+Your final message is posted as your reply in the thread, so write it for the people reading there: a line or two on what you did or found, and a clear question if you need a decision. If the request is for research or an opinion rather than an edit, answer in that reply. A message may arrive while you work: take it into account and carry on. So may a <canvas_activity> block, saying what people changed on the canvas meanwhile: keep their edits, and adjust if it bears on this thread.
 Put any file you write, research or a helper script, only in \`${data}/${canvas}.files/\`, name it in your reply, and open it for people with \`show files/NAME\`.
 Leave closing the thread to people, unless they ask you to close it (\`threads close ${id}\`).`
 
 export class CodexChat {
-	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null, profileOf = async () => null, profileInstructions = () => '', routineIndex = () => '', onThread = () => {}, onTurn = () => {} }) {
+	constructor({ root, port, engineOf = () => 'tldraw', data = join(root, 'canvases'), brief = async () => null, direct = async () => null, profileOf = async () => null, profileInstructions = () => '', routineIndex = () => '', onThread = () => {}, onTurn = () => {}, activity = () => null, selection = () => null }) {
+		// (conversation key, intro) => { text, ack } of what people did on the canvas since this conversation last heard, or null
+		this.activity = activity
+		this.selection = selection // (canvas) => a line on what's selected now, from the person's tab, or null
+		this.noticing = new Map() // conversation key -> the steer telling it what people did, while one is on its way
 		this.onThread = onThread
 		// (canvas, conversation key, active): a turn started or ended, so the canvas can show Codex at work.
 		this.onTurn = onTurn // (canvas, id, event): what's happening in a comment thread's own conversation
@@ -197,6 +204,8 @@ export class CodexChat {
 			}
 			case 'item/started':
 			case 'item/completed':
+				// A command just finished: the agent looks at its result next, so that's when to hear what people did meanwhile.
+				if (msg.method === 'item/completed' && TOOL_ITEMS.includes(p.item?.type)) this.notice(canvas)
 				return this.emit(canvas, { type: 'item', phase: msg.method.split('/')[1], item: slim(p.item) })
 			case 'turn/started':
 				this.turns.set(canvas, p.turn?.id)
@@ -319,23 +328,39 @@ export class CodexChat {
 		// The agent changed while this conversation was being found: find the new one instead.
 		if ((this.generation.get(canvas.split('#')[0]) ?? 0) !== generation) return this.send(canvas, text, mode)
 		const message = { type: 'text', text, text_elements: [] }
-		// Mid-turn, a message adjusts the work in progress rather than waiting for it to finish.
+		const said = (t) => ({ type: 'text', text: t, text_elements: [] })
+		const heard = (intro) => {
+			try {
+				return this.activity(canvas, intro)
+			} catch {
+				return null
+			}
+		}
+		// Mid-turn, a message adjusts the work in progress rather than waiting for it to finish. It brings what people did
+		// meanwhile and what's selected now, so "this" means what they're looking at, not what they had selected at the start.
 		const running = this.turns.get(canvas)
 		if (running) {
+			await this.noticing.get(canvas)
+			const told = heard()
+			const selected = this.selection(canvas.split('#')[0])
 			try {
-				return await this.call('turn/steer', { threadId, expectedTurnId: running, input: [message] })
+				await this.call('turn/steer', { threadId, expectedTurnId: running, input: [...(told ? [said(told.text)] : []), ...(selected ? [said(selected)] : []), message] })
+				told?.ack()
+				return
 			} catch {
 				// That turn just ended: this message starts the next one.
 			}
 		}
 		const brief = await this.brief(canvas.split('#')[0]).catch(() => null)
+		// The brief is the canvas as it is; what people did since this conversation's last turn says how it got there.
+		const since = heard('Since your last turn here, people changed the canvas (oldest first; the brief has it as it is now).')
 		const chosen = MODES[mode] ?? MODES.fast
 		const profile = this.bound.get(canvas)?.profile
 		// A profile's model is the agent's own; the speed the person picked sets the effort.
 		const model = profile?.model ?? chosen.model ?? this.defaultModel, effort = chosen.effort
 		const started = await this.call('turn/start', {
 			threadId,
-			input: [...(brief ? [{ type: 'text', text: brief, text_elements: [] }] : []), message],
+			input: [...(brief ? [said(brief)] : []), ...(since ? [said(since.text)] : []), message],
 			...(model && { model }),
 			...(effort && { effort }),
 			cwd: this.root,
@@ -343,7 +368,29 @@ export class CodexChat {
 			// The CLI talks to this server over loopback, so the sandbox needs network.
 			sandboxPolicy: { type: 'workspaceWrite', writableRoots: [this.root, folder], networkAccess: true, excludeTmpdirEnvVar: false, excludeSlashTmp: false },
 		})
+		since?.ack()
 		if (started?.turn?.id && started.turn.status === 'inProgress') this.turns.set(canvas, started.turn.id)
+	}
+
+	/** Tells a turn in progress what people did on the canvas while it worked, as a steer. */
+	notice(canvas) {
+		if (this.noticing.has(canvas) || !this.turns.has(canvas)) return
+		let told
+		try {
+			told = this.activity(canvas)
+		} catch (e) {
+			return console.error(`activity ${canvas}: ${e.message}`)
+		}
+		if (!told) return
+		const threadId = this.threads.get(canvas), turnId = this.turns.get(canvas)
+		const going = this.call('turn/steer', { threadId, expectedTurnId: turnId, input: [{ type: 'text', text: told.text, text_elements: [] }] })
+			.then(() => {
+				told.ack()
+				this.emit(canvas, { type: 'noticed', text: told.text })
+			})
+			.catch(() => {}) // the turn ended first: the next one hears it instead
+			.finally(() => this.noticing.delete(canvas))
+		this.noticing.set(canvas, going)
 	}
 
 	async interrupt(canvas) {

@@ -136,7 +136,9 @@ if (cmd && !BUILTIN.includes(cmd) && !LOCAL.includes(cmd)) {
 } else if (BUILTIN.includes(cmd)) {
 	try {
 		if (!server) await control.ensure()
-		client = connect({ canvas, server, agent })
+		// What people did on the canvas since this agent's last command comes with this one's answer, on stderr so it
+		// stays out of output meant for a pipe (server/activity.mjs).
+		client = connect({ canvas, server, agent, onActivity: process.env.TOUCAN_ACTIVITY === 'off' ? undefined : (text) => process.stderr.write(`${text}\n`) })
 	} catch (e) {
 		die(e.message)
 	}

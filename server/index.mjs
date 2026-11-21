@@ -19,6 +19,7 @@ import { parseEnv } from 'node:util'
 import { WebSocketServer } from 'ws'
 import { TLSocketRoom } from '@tldraw/sync-core'
 import { CodexChat } from './codex.mjs'
+import { createActivity, tldrawRows, excalidrawRows, describe as describeActivity, format as formatActivity } from './activity.mjs'
 import { createHeadless } from './headless.mjs'
 import * as trail from './trail.mjs'
 import * as versions from './versions.mjs'
@@ -168,10 +169,12 @@ function getRoom(canvas) {
 			snapshotSoon(canvas)
 			plans.touched(canvas)
 			reflexes.touched(canvas)
+			activity.touched(canvas)
 		},
 		onSessionRemoved: (room, { numSessionsRemaining }) => {
 			if (numSessionsRemaining > 0) return
 			clearTimeout(entry.timer)
+			activity.close(canvas)
 			persist()
 			snapshotNow(canvas)
 			room.close()
@@ -179,6 +182,7 @@ function getRoom(canvas) {
 		},
 	})
 	rooms.set(canvas, entry)
+	activity.open(canvas)
 	snapshotNow(canvas) // anything from before this server ran, and a first version for an older canvas
 	return entry.room
 }
@@ -188,12 +192,47 @@ function getRoom(canvas) {
 // (ties: the lower `versionNonce`, Excalidraw's own rule), persists, and forwards what it kept to the
 // other tabs, which merge it with reconcileElements. Deletions are elements with isDeleted.
 const scenes = new Map() // canvas -> { elements: Map, sockets: Set, timer, changed }
+
+// ---- activity: what people do while an agent works, so it notices (server/activity.mjs) -------------------------------
+const activity = createActivity({
+	rowsOf: (n) => (scenes.has(n) ? excalidrawRows([...scenes.get(n).elements.values()]) : rooms.has(n) ? tldrawRows((rooms.get(n).room.getCurrentSnapshot().documents ?? []).map((d) => d.state)) : null),
+	busy: (n) => [...pending.values()].some((p) => p.canvas === n),
+})
+/** Who did what wasn't said: the person at the canvas, if there's only one and they gave a name. */
+function personAt(canvas) {
+	const names = new Set(activity.selections(canvas).map((s) => s.user).filter(Boolean))
+	return names.size === 1 ? [...names][0] : undefined
+}
+/**
+ * What's new on a canvas for one reader, as the block it reads, and how to mark it told; null when there's nothing.
+ * `mine(actor)`: the reader's own edits; `skip(event)`: what it hears some other way.
+ */
+function activityFor(key, canvas, { mine, skip, intro } = {}) {
+	const { events, upto, reader } = activity.pending(key, canvas, { mine, skip })
+	const ack = () => activity.ack(key, upto, events)
+	const text = events.length ? formatActivity(describeActivity(events, { person: personAt(canvas), seen: reader?.seen }), { canvas, intro }) : null
+	if (!text) ack() // nothing worth saying, but the place moves on past it
+	return text ? { text, ack } : null
+}
+/** What a chat conversation (the panel's, or a comment thread's: "name#3") hasn't heard yet. Its own edits are Codex's. */
+function chatActivity(key, intro) {
+	const [canvas, thread] = key.split('#')
+	const own = new Set(['Codex', speaker(canvas, 'Codex')])
+	return activityFor(`chat:${key}`, canvas, { intro, mine: (a) => a?.kind === 'agent' && own.has(a.name), skip: (e) => thread !== undefined && e.thread === Number(thread) })
+}
+/** The selection to resolve "this" by, as a line for the agent: the most recent report from a person's tab. */
+function selectionLine(canvas) {
+	const [s] = activity.selections(canvas)
+	if (!s) return null
+	return s.keys.length ? `Selected now${s.user ? ` by ${s.user}` : ''} ("this", "these"): ${s.keys.join(', ')}` : `Nothing is selected in ${s.user ? `${s.user}'s` : 'their'} tab now.`
+}
 function getScene(canvas) {
 	if (scenes.has(canvas)) return scenes.get(canvas)
 	const saved = existsSync(scenePath(canvas)) ? JSON.parse(readFileSync(scenePath(canvas), 'utf8')) : { elements: [] }
 	const scene = { elements: new Map(saved.elements.map((e) => [e.id, e])), sockets: new Set(), timer: null, changed: 0 }
 	scene.persist = () => writeFileSync(scenePath(canvas), JSON.stringify({ type: 'excalidraw', version: 2, source: 'toucan', elements: [...scene.elements.values()], appState: {}, files: {} }))
 	scenes.set(canvas, scene)
+	activity.open(canvas)
 	snapshotNow(canvas)
 	return scene
 }
@@ -218,11 +257,13 @@ function onScene(ws, canvas) {
 		snapshotSoon(canvas)
 		plans.touched(canvas)
 		reflexes.touched(canvas)
+		activity.touched(canvas)
 	})
 	ws.on('close', () => {
 		scene.sockets.delete(ws)
 		if (scene.sockets.size) return
 		clearTimeout(scene.timer)
+		activity.close(canvas)
 		scene.persist()
 		snapshotNow(canvas)
 		scenes.delete(canvas)
@@ -385,9 +426,12 @@ function restoreVersion(n, version) {
 	const label = `Restored v${version.n}${version.label ? ` (${version.label})` : ''}`
 	// On a canvas that shows a plan, the old version's views are old drawings, not edits: nothing of them is written upstream.
 	plans.reset(n)
+	activity.settle(n) // what people did before the restore is theirs; what the restore changes is the restore's
 	if (engineOf(n) === 'excalidraw') restoreScene(n, version.data.elements)
 	else if (rooms.has(n)) rooms.get(n).room.loadSnapshot(version.data.room)
 	else writeFileSync(docPath(n), JSON.stringify({ room: version.data.room }))
+	activity.settle(n, { actor: { kind: 'canvas', name: 'restore' } })
+	activity.note(n, { actor: null, text: `The canvas was restored to ${label.replace(/^Restored /, '')}: run \`summary\` before going on.` })
 	const saved = snapshotNow(n, { label, source: 'restore' })
 	if (!saved) return { ...version, data: undefined, unchanged: true } // it already looked like that
 	// A version from when the canvas showed a plan, restored on a canvas that no longer does: its plan views are just shapes now.
@@ -532,6 +576,16 @@ const server = createServer(async (req, res) => {
 			return json(res, 405, { error: 'method' })
 		}
 		if (route !== 'canvases' || !NAME.test(canvas ?? '')) return json(res, 404, { error: 'not found' })
+		// A terminal agent hears what people did since its last command along with this one's answer (bin/toucan.mjs).
+		// The chat panel's agent hears between its tool calls instead (server/codex.mjs), so not here as well.
+		const reading = typeof req.headers['x-toucan-agent'] === 'string' ? req.headers['x-toucan-agent'].slice(0, 40) : null
+		if (reading && reading !== 'Codex' && speaker(canvas, reading) === reading && (rooms.has(canvas) || scenes.has(canvas))) {
+			const told = activityFor(`cli:${canvas}:${reading}`, canvas, { mine: (a) => a?.kind === 'agent' && a.name === reading })
+			if (told) {
+				res.setHeader('x-toucan-activity', encodeURIComponent(told.text.slice(0, 6000)))
+				told.ack()
+			}
+		}
 
 		if (sub === 'info' && req.method === 'GET') return json(res, 200, canvasNames().includes(canvas) ? describe(canvas, readIndex()) : { name: canvas, engine: 'tldraw', new: true })
 		if (sub === 'graph' && req.method === 'GET') {
@@ -699,6 +753,7 @@ const server = createServer(async (req, res) => {
 				}
 				if (subName === undefined && req.method === 'POST') {
 					const thread = threads.create(CANVASES, canvas, { anchor: input.anchor, author: input.author, text: input.text })
+					commented(canvas, thread, 'started')
 					routeThread(canvas, thread, input.ask, input.mode)
 					announceThreads(canvas)
 					return json(res, 201, thread)
@@ -709,6 +764,7 @@ const server = createServer(async (req, res) => {
 				let thread
 				if (action === 'messages') {
 					thread = threads.reply(CANVASES, canvas, n, { author: input.author, text: input.text })
+					commented(canvas, thread, 'replied in')
 					routeThread(canvas, thread, input.ask, input.mode)
 				} else if (action === 'close') thread = threads.close(CANVASES, canvas, n, { by: input.author, reply: input.text })
 				else if (action === 'reopen') thread = threads.reopen(CANVASES, canvas, n)
@@ -963,7 +1019,7 @@ function speaker(canvas, agent) {
 	if (name !== 'Codex' && !(name === 'agent' && chatting)) return name
 	return bound.get(canvas)?.name ?? 'Codex'
 }
-const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, profileOf, profileInstructions, routineIndex: (engine) => routines.list().filter((r) => r.engines.includes(engine)).map((r) => `- ${r.name}, ${r.kind}: ${r.when || r.description}`).join('\n'), onThread: onThreadEvent, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: turnAgent(canvas, key, active), key, active }) })
+const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, profileOf, profileInstructions, routineIndex: (engine) => routines.list().filter((r) => r.engines.includes(engine)).map((r) => `- ${r.name}, ${r.kind}: ${r.when || r.description}`).join('\n'), onThread: onThreadEvent, activity: chatActivity, selection: selectionLine, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: turnAgent(canvas, key, active), key, active }) })
 
 // ---- reflexes: what a canvas does by itself (server/reflexes.mjs, lib/reflexes.mjs) ----------------------------------------
 // The tree is judged in a person's tab (or the headless page, when it's up) with a read-only program, and what acts runs as an
@@ -1053,6 +1109,13 @@ const openThreadLines = (canvas) =>
 		return `#${t.id} ${threads.anchorLine(t, graphForThread(canvas, t))}: ${last.author.name} said "${last.text.replace(/\s+/g, ' ').slice(0, 120)}"`
 	})
 
+/** A person said something in a thread: news for the agents at work elsewhere on the canvas. */
+function commented(canvas, thread, how) {
+	const said = thread.messages.at(-1)
+	if (said?.author?.kind === 'agent') return
+	const text = String(said?.text ?? '').replace(/\s+/g, ' ').trim()
+	activity.note(canvas, { actor: { kind: 'person', name: said?.author?.name }, thread: thread.id, text: `${how} comment thread #${thread.id} (${threads.anchorLine(thread, graphForThread(canvas, thread))}): "${text.length > 160 ? `${text.slice(0, 159)}…` : text}"` })
+}
 /** Sends a thread somewhere for an answer. Its own agent by default; the main chat steers whatever's happening there. */
 function routeThread(canvas, thread, ask, mode, handover = false) {
 	if (ask === 'chat') {
@@ -1120,9 +1183,11 @@ server.on('upgrade', (req, socket, head) => {
 	})
 })
 
+let tabSeq = 0
 function onCanvas(ws, canvas, nonce) {
 	if (!NAME.test(canvas ?? '')) return ws.close()
 	headless.claim(canvas, ws, nonce)
+	ws.tabId = ++tabSeq
 	const list = tabs.get(canvas) ?? []
 	list.push(ws)
 	tabs.set(canvas, list)
@@ -1144,6 +1209,8 @@ function onCanvas(ws, canvas, nonce) {
 			ws.busyKeys = Array.isArray(msg.keys) ? msg.keys.filter((k) => typeof k === 'string').slice(0, 2000) : []
 			ws.busyAt = Date.now()
 		}
+		// What this tab's person has selected, and their name if they gave one: what "this" means, as it changes.
+		else if (msg.type === 'presence' && !ws.headless) activity.selected(canvas, ws.tabId, typeof msg.user === 'string' ? msg.user.slice(0, 40) : '', Array.isArray(msg.selected) ? msg.selected.filter((k) => typeof k === 'string') : [])
 		else if (msg.type === 'focus') {
 			const l = tabs.get(canvas).filter((w) => w !== ws)
 			l.push(ws)
@@ -1168,6 +1235,8 @@ function onCanvas(ws, canvas, nonce) {
 			if (ws.headless && !p.internal) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
 			// A box an agent's run put in a plan's board column is an annotation, not a new item (server/plan.mjs).
 			if (!p.internal && msg.changes?.added?.length) plans.agentAdded(canvas, msg.changes.added.map((c) => c.key))
+			// What this run touched is its own, not a person's, when the edits come through sync (server/activity.mjs).
+			activity.ran(canvas, p.internal || p.agent === 'Reflex' ? { kind: 'canvas', name: p.internal ? 'plan' : 'Reflex' } : { kind: 'agent', name: p.agent }, msg.changes)
 			if (msg.changes && (msg.changes.added?.length || msg.changes.updated?.length || msg.changes.removed?.length)) {
 				unlanded.set(canvas, { sentAt: p.sentAt, changes: msg.changes })
 				if (p.before) saveBefore(canvas, p.before)
@@ -1181,6 +1250,7 @@ function onCanvas(ws, canvas, nonce) {
 	})
 	ws.on('close', () => {
 		tabs.set(canvas, (tabs.get(canvas) ?? []).filter((w) => w !== ws))
+		activity.left(canvas, ws.tabId)
 		// A run this tab had taken can't finish now: say so at once rather than at the timeout. The usual cause is the editor
 		// reloading because tldraw refused a shape, or the person closing the tab. One it hadn't taken yet goes to the next tab.
 		for (const [id, p] of pending) {
