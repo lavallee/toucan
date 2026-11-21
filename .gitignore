@@ -10,3 +10,5 @@ __pycache__/
 website/site/*.html
 !website/site/explorer.html
 evals/out/
+
+/website/work/thanksgiving-capture.mp4

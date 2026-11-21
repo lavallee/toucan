@@ -16,6 +16,7 @@ import { recipes, seed } from './thanksgiving/board.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const out = join(root, 'website/site/assets/use-cases')
+const recording = process.argv[2] ?? join(root, 'website/work/thanksgiving-capture.mp4')
 const temp = mkdtempSync(join(tmpdir(), 'toucan-meal-'))
 const data = join(temp, 'data')
 const cwd = join(temp, 'app')
@@ -238,7 +239,7 @@ try {
 	}
 	const list = join(temp, 'segments.txt')
 	writeFileSync(list, segments.map((f) => "file '" + f + "'").join('\n'))
-	await run('ffmpeg', ['-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',list,'-c','copy','-movflags','+faststart',join(out,'thanksgiving-dinner.mp4')])
+	await run('ffmpeg', ['-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',list,'-c','copy','-movflags','+faststart',recording])
 	if (process.env.MEAL_DEBUG) {
 		copyFileSync(join(temp, 'schedule.json'), '/tmp/toucan-meal-schedule.json')
 		copyFileSync(join(temp, 'menu.json'), '/tmp/toucan-meal-menu.json')

@@ -30,7 +30,23 @@ show synthetic projects recorded through the real canvas, plan, and review inter
 `scripts/capture-thanksgiving.mjs` records a two-turn Thanksgiving workflow in Toucan’s Codex chat.
 The recipe summaries and schedule come from the agent, and the capture verifies both writes.
 It also emits the illustrated board and stills. The timings are example equipment reservations.
-Run `scripts/thanksgiving/social.mjs` afterward to frame the recording for a 4:5 feed.
+
+The feature edit starts with the finished recipe cards, then cuts from each prompt directly to the
+agent’s canvas change. Use a tight crop for proof and large type for the beat to remember. Keep the
+baked caption out of the new crop, credit tldraw, and label the real session as edited for time.
+Check the first frame, both before-and-after cuts, and the oven and hosting close-ups at phone size
+with sound off. The original score has no narration.
+
+The cut list is pinned to the original 1600×1000 take. To re-export all three formats, use Node,
+FFmpeg, and Chromium from the repository checkout.
+
+```sh
+git show 1578b4d143dbb72f82b56df2ee5dc9353ba7ad6d:website/site/assets/use-cases/thanksgiving-dinner.mp4 > website/work/thanksgiving-capture.mp4
+node scripts/thanksgiving/social.mjs website/work/thanksgiving-capture.mp4
+```
+
+Set `CHROMIUM` if using a system Chromium. Fresh recordings write to the same ignored capture path.
+They require new selects in `scripts/thanksgiving/social.mjs` because prompt and agent timing varies.
 
 ## Sources
 
