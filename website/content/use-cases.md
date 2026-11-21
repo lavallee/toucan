@@ -5,23 +5,23 @@ description: Use Toucan to plan a Thanksgiving dinner, map a system, review a sc
 
 ## Plan Thanksgiving dinner
 
-The rolls bake at 375°F. The turkey roasts at 325°F. With one oven and guests coming for dinner at six, can Codex make the timing work?
+Dinner for eight at six, five recipes, and one oven. Give Codex the recipe links in Toucan, then ask it to plan around the menu it just made. With both on the same canvas, you can see when the oven is free and what can happen alongside it.
 
 ::: html
 <figure class="article-breakout case-capture">
   <link rel="stylesheet" href="assets/use-cases.css">
-  <video controls playsinline preload="none" width="1600" height="900" poster="assets/use-cases/thanksgiving-feature.jpg?v=one-oven" aria-label="Two rounds of Thanksgiving dinner planning with the Toucan chat agent">
-    <source src="assets/use-cases/thanksgiving-dinner.mp4?v=one-oven" type="video/mp4">
-    <a href="assets/use-cases/thanksgiving-dinner.mp4?v=one-oven">Download the Thanksgiving feature video</a>
+  <video controls playsinline preload="none" width="1600" height="1100" poster="assets/use-cases/thanksgiving-feature.jpg?v=shared-canvas" aria-label="Two rounds of Thanksgiving dinner planning with the Toucan chat agent">
+    <source src="assets/use-cases/thanksgiving-dinner.mp4?v=shared-canvas" type="video/mp4">
+    <a href="assets/use-cases/thanksgiving-dinner.mp4?v=shared-canvas">Download the Thanksgiving feature video</a>
   </video>
-  <figcaption>Two real Codex turns in Toucan, edited to 17 seconds. Watch five recipe links become an editable menu, then see Codex draw the plan for dinner.</figcaption>
+  <figcaption>Two real Codex turns in Toucan, edited for time. The first builds the menu. The second draws the oven, prep, and hosting schedule below it.</figcaption>
 </figure>
 :::
 
 In the first round, Codex builds the menu from prepared notes on five linked recipes. The hero photos are generated illustrations. In the second round, Codex works backward from six and draws a timeline below the menu. The timeline gives the oven, prep counter, finishing, and hosting their own lanes. Hatched slots show when the oven needs to change temperature. You can see when the rolls should proof, when to set out drinks, and when to carve and plate. The cranberry sauce goes in the day-before plan. The schedule uses example reservations and assumes the turkey can be held safely outside the oven while the sides bake.
 
 ::: html
-<p><a href="assets/use-cases/thanksgiving-board.tldr.json?v=dinner-plan" download="thanksgiving.tldr">Download the tldraw board</a> · <a href="assets/use-cases/thanksgiving-menu.jpg">View the menu</a> · <a href="assets/use-cases/thanksgiving-prep.jpg">Zoom into the dressing</a> · <a href="assets/use-cases/thanksgiving-dinner.jpg?v=dinner-plan">View the schedule</a> · <a href="assets/use-cases/thanksgiving-overview.jpg">See the whole canvas</a></p>
+<p><a href="assets/use-cases/thanksgiving-board.tldr.json?v=shared-canvas" download="thanksgiving.tldr">Download the tldraw board</a> · <a href="assets/use-cases/thanksgiving-menu.jpg?v=shared-canvas">View the menu</a> · <a href="assets/use-cases/thanksgiving-prep.jpg?v=shared-canvas">Zoom into the dressing</a> · <a href="assets/use-cases/thanksgiving-dinner.jpg?v=shared-canvas">View the schedule</a> · <a href="assets/use-cases/thanksgiving-overview.jpg?v=shared-canvas">See the whole canvas</a></p>
 :::
 
 The board links to [roast turkey](https://www.butterball.com/recipes/classic-whole-roasted-turkey), [sage dressing](https://www.seriouseats.com/classic-sage-and-sausage-stuffing-or-dressing-recipe), [Parker House rolls](https://www.kingarthurbaking.com/recipes/small-batch-parker-house-rolls-recipe), [radicchio salad](https://smittenkitchen.com/2010/04/radicchio-apple-and-pear-salad/), and [cranberry sauce](https://www.oceanspray.com/recipes/homemade-whole-berry-cranberry-sauce).

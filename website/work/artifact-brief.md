@@ -31,28 +31,36 @@ show synthetic projects recorded through the real canvas, plan, and review inter
 The recipe summaries and schedule come from the agent, and the capture verifies both writes.
 It also emits the illustrated board and stills. The timings are example equipment reservations.
 
-The site film opens on the rolls and turkey at different temperatures. The conflict makes the
-one-oven constraint visible. We compared this opening against one that led with the finished
-menu, and kept the finished menu as the poster. The two writes use the original Toucan recording.
-Check the opening, the changes to the canvas, and the oven and hosting close-ups at phone size.
+Show the audience a real problem, the action they take, and the visible change it produces.
+Keep the application window as their spatial anchor. Punch in only where the request is too
+small to read, then return to the same canvas for the agent’s write. Ease into native details
+when they explain how the plan works. Cut idle time and name the person or agent only when
+their roles need to be clear. The final view answers why a canvas helps. The recipes stay in
+place and the timing, oven changes, and parallel prep become visible below them.
 
-The edit uses selects from the original 1600×1000 take. To render and review locally, use Node,
-FFmpeg, and Chromium from the repository checkout.
+The [Superhuman demo guide](https://blog.superhuman.com/how-to-create-remarkable-product-gifs/)
+uses locked framing, tightly cut action, and selective zoom. [tldraw’s Make Real](https://tldraw.dev/blog/make-real-the-story-so-far)
+shows the request and result in the canvas where the user continues to work.
+[Ink & Switch’s Embark](https://www.inkandswitch.com/embark/) keeps one planning scenario across a series
+of increasingly capable views. Apply those moves to the following recipe links and oven schedule.
+
+After building Toucan, run this capture from the repository checkout with Node, FFmpeg, and
+Chromium. Set `CODEX_BIN` to a signed-in Codex executable, `MEAL_LICENSE_ENV` to local tldraw
+deployment configuration, and `CHROMIUM` if using a system Chromium.
 
 ```sh
-git show 1578b4d143dbb72f82b56df2ee5dc9353ba7ad6d:website/site/assets/use-cases/thanksgiving-dinner.mp4 > website/work/thanksgiving-capture.mp4
-node scripts/thanksgiving/feature.mjs website/work/thanksgiving-capture.mp4 website/work/thanksgiving-preview
+node scripts/capture-thanksgiving.mjs website/work/thanksgiving-preview/session.mp4 website/work/thanksgiving-preview
+node scripts/thanksgiving/feature.mjs website/work/thanksgiving-preview/session.mp4 scripts/thanksgiving/feature-selects.json website/work/thanksgiving-preview
 ```
 
-Set `CHROMIUM` if using system Chromium. Pass `result` as the third argument to compare the
-alternate opening. After reviewing the rendered sequence, copy its MP4 and poster to
-`site/assets/use-cases/`. Reopen the built page on desktop and phone and verify the single
-embedded film. Publish through Artoo.
+The selects are pinned to the reviewed take. For a new take, use the saved cue times as a
+starting point and verify the actual frame timestamps, then update the selects. Review the
+render at phone and desktop size before copying the MP4, poster, board, and stills into
+`site/assets/use-cases/`. The site publishes one film through Artoo.
 
-The previously produced social edits can be recreated with
-`node scripts/thanksgiving/social.mjs website/work/thanksgiving-capture.mp4`. They go to the
-ignored `website/work/thanksgiving-social/` folder for local handoff. Fresh captures require
-new selects because the agent and typing timing varies.
+The earlier social exports use the original take in commit `1578b4d`. Run
+`scripts/thanksgiving/social.mjs` with that take to recreate local exports in
+`website/work/thanksgiving-social/`.
 
 ## Sources
 

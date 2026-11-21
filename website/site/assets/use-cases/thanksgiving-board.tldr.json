@@ -41,14 +41,14 @@
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "Mix & rise, 3:20–4:40",
+        "detail": "Mix & rise, 3:20–4:35",
         "key": "schedule-task-dough"
       },
       "id": "shape:schedule-task-dough",
       "type": "geo",
       "parentId": "page:page",
       "props": {
-        "w": 313.33333333333314,
+        "w": 293.75,
         "h": 32,
         "geo": "rectangle",
         "dash": "solid",
@@ -73,7 +73,7 @@
           ]
         }
       },
-      "index": "b01Rgn",
+      "index": "b019K2",
       "typeName": "shape"
     },
     {
@@ -111,7 +111,7 @@
           ]
         }
       },
-      "index": "aa1ZX",
+      "index": "aa2cn",
       "typeName": "shape"
     },
     {
@@ -155,7 +155,7 @@
           ]
         }
       },
-      "index": "aQIxE",
+      "index": "aQMVb",
       "typeName": "shape"
     },
     {
@@ -193,45 +193,7 @@
           ]
         }
       },
-      "index": "aDQuA",
-      "typeName": "shape"
-    },
-    {
-      "x": 858,
-      "y": 1011,
-      "rotation": 0,
-      "isLocked": false,
-      "opacity": 1,
-      "meta": {
-        "key": "hour-960"
-      },
-      "id": "shape:schedule-tick-960",
-      "type": "text",
-      "parentId": "page:page",
-      "props": {
-        "color": "grey",
-        "size": "s",
-        "w": 65,
-        "font": "draw",
-        "textAlign": "start",
-        "autoSize": false,
-        "scale": 1,
-        "richText": {
-          "type": "doc",
-          "content": [
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "4:00"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "index": "aqnF6",
+      "index": "aDz6W",
       "typeName": "shape"
     },
     {
@@ -275,7 +237,7 @@
           ]
         }
       },
-      "index": "a53Tr",
+      "index": "a5AQ2",
       "typeName": "shape"
     },
     {
@@ -306,52 +268,14 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Preheat to 325°F before 1:10   ·   4:10 → 350°F   ·   5:23 → 375°F"
+                  "text": "Preheat to 325°F before 1:04   ·   4:04 → 350°F   ·   5:17 → 375°F"
                 }
               ]
             }
           ]
         }
       },
-      "index": "azWfj",
-      "typeName": "shape"
-    },
-    {
-      "x": 388,
-      "y": 1011,
-      "rotation": 0,
-      "isLocked": false,
-      "opacity": 1,
-      "meta": {
-        "key": "hour-840"
-      },
-      "id": "shape:schedule-tick-840",
-      "type": "text",
-      "parentId": "page:page",
-      "props": {
-        "color": "grey",
-        "size": "s",
-        "w": 65,
-        "font": "draw",
-        "textAlign": "start",
-        "autoSize": false,
-        "scale": 1,
-        "richText": {
-          "type": "doc",
-          "content": [
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "2:00"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "index": "aolUN",
+      "index": "aznHz",
       "typeName": "shape"
     },
     {
@@ -377,7 +301,7 @@
         "flipY": false,
         "altText": ""
       },
-      "index": "aevVn",
+      "index": "ae07b",
       "typeName": "shape"
     },
     {
@@ -403,17 +327,17 @@
         "flipY": false,
         "altText": ""
       },
-      "index": "acytn",
+      "index": "acEe2",
       "typeName": "shape"
     },
     {
-      "x": 537.0833333333333,
+      "x": 517.5,
       "y": 1215,
       "rotation": 0,
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "Assemble dressing, 2:35–3:15",
+        "detail": "Assemble dressing, 2:30–3:10",
         "key": "schedule-task-dressingPrep"
       },
       "id": "shape:schedule-task-dressingPrep",
@@ -445,7 +369,45 @@
           ]
         }
       },
-      "index": "b00U3g",
+      "index": "b00jXr",
+      "typeName": "shape"
+    },
+    {
+      "x": 858,
+      "y": 1011,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "key": "hour-960"
+      },
+      "id": "shape:hour-960",
+      "type": "text",
+      "parentId": "page:page",
+      "props": {
+        "color": "grey",
+        "size": "s",
+        "w": 65,
+        "font": "draw",
+        "textAlign": "start",
+        "autoSize": false,
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "4:00"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "index": "aqTNQ",
       "typeName": "shape"
     },
     {
@@ -476,31 +438,31 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "2:35–3:15 Assemble dressing   ·   3:20–4:40 Mix & rise   ·   4:45–5:27 Shape & proof"
+                  "text": "2:30–3:10 Assemble dressing   ·   3:20–4:35 Mix & rise   ·   4:40–5:25 Shape & proof"
                 }
               ]
             }
           ]
         }
       },
-      "index": "b083D6",
+      "index": "b0826j",
       "typeName": "shape"
     },
     {
-      "x": 1124.5833333333335,
+      "x": 1065.8333333333335,
       "y": 1414,
       "rotation": 0,
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "Table & drinks, 5:05–5:20",
+        "detail": "Table & drinks, 4:50–5:10",
         "key": "schedule-task-table"
       },
       "id": "shape:schedule-task-table",
       "type": "geo",
       "parentId": "page:page",
       "props": {
-        "w": 58.75,
+        "w": 78.33333333333326,
         "h": 32,
         "geo": "rectangle",
         "dash": "solid",
@@ -525,7 +487,7 @@
           ]
         }
       },
-      "index": "b05MlU",
+      "index": "b054TI",
       "typeName": "shape"
     },
     {
@@ -563,7 +525,7 @@
           ]
         }
       },
-      "index": "a15NA",
+      "index": "a1i4I",
       "typeName": "shape"
     },
     {
@@ -601,7 +563,7 @@
           ]
         }
       },
-      "index": "a6imf",
+      "index": "a6Qh6",
       "typeName": "shape"
     },
     {
@@ -645,7 +607,7 @@
           ]
         }
       },
-      "index": "aC7JA",
+      "index": "aCqhQ",
       "typeName": "shape"
     },
     {
@@ -683,7 +645,45 @@
           ]
         }
       },
-      "index": "aMPGA",
+      "index": "aMONr",
+      "typeName": "shape"
+    },
+    {
+      "x": 388,
+      "y": 1011,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "key": "hour-840"
+      },
+      "id": "shape:hour-840",
+      "type": "text",
+      "parentId": "page:page",
+      "props": {
+        "color": "grey",
+        "size": "s",
+        "w": 65,
+        "font": "draw",
+        "textAlign": "start",
+        "autoSize": false,
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "2:00"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "index": "aocxb",
       "typeName": "shape"
     },
     {
@@ -721,7 +721,7 @@
           ]
         }
       },
-      "index": "aRoze",
+      "index": "aRJun",
       "typeName": "shape"
     },
     {
@@ -747,45 +747,7 @@
         "flipY": false,
         "altText": ""
       },
-      "index": "ag9k2",
-      "typeName": "shape"
-    },
-    {
-      "x": 623,
-      "y": 1011,
-      "rotation": 0,
-      "isLocked": false,
-      "opacity": 1,
-      "meta": {
-        "key": "hour-900"
-      },
-      "id": "shape:schedule-tick-900",
-      "type": "text",
-      "parentId": "page:page",
-      "props": {
-        "color": "grey",
-        "size": "s",
-        "w": 65,
-        "font": "draw",
-        "textAlign": "start",
-        "autoSize": false,
-        "scale": 1,
-        "richText": {
-          "type": "doc",
-          "content": [
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "3:00"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "index": "ap9Ua",
+      "index": "agHuX",
       "typeName": "shape"
     },
     {
@@ -829,7 +791,7 @@
           ]
         }
       },
-      "index": "aXnsQ",
+      "index": "aXllv",
       "typeName": "shape"
     },
     {
@@ -869,24 +831,62 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Confirm safe hot-holding equipment outside the oven. Set out roll ingredients for the afternoon mix, rise, and proof."
+                  "text": "Confirm safe hot-holding equipment outside the oven. Set out roll ingredients for the afternoon dough and proof."
                 }
               ]
             }
           ]
         }
       },
-      "index": "b0CkA2",
+      "index": "b0CM4X",
       "typeName": "shape"
     },
     {
-      "x": 940.5,
+      "x": 1328,
+      "y": 1011,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "key": "hour-1080"
+      },
+      "id": "shape:hour-1080",
+      "type": "text",
+      "parentId": "page:page",
+      "props": {
+        "color": "red",
+        "size": "s",
+        "w": 65,
+        "font": "draw",
+        "textAlign": "start",
+        "autoSize": false,
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "6:00"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "index": "asfBn",
+      "typeName": "shape"
+    },
+    {
+      "x": 917,
       "y": 1053,
       "rotation": 0,
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "4:18–5:23 at 350°F.",
+        "detail": "4:12–5:17 at 350°F.",
         "key": "schedule-dressing"
       },
       "id": "shape:schedule-dressing",
@@ -933,7 +933,7 @@
           ]
         }
       },
-      "index": "aurK2",
+      "index": "au7If",
       "typeName": "shape"
     },
     {
@@ -964,14 +964,52 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "5:05–5:20 Table & drinks   ·   5:25–5:45 Welcome guests   ·   5:50–6:00 Carve & plate"
+                  "text": "4:50–5:10 Table & drinks   ·   5:15–5:35 Welcome guests   ·   5:50–6:00 Carve & plate"
                 }
               ]
             }
           ]
         }
       },
-      "index": "b0AzpP",
+      "index": "b0AYo6",
+      "typeName": "shape"
+    },
+    {
+      "x": 623,
+      "y": 1011,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "key": "hour-900"
+      },
+      "id": "shape:hour-900",
+      "type": "text",
+      "parentId": "page:page",
+      "props": {
+        "color": "grey",
+        "size": "s",
+        "w": 65,
+        "font": "draw",
+        "textAlign": "start",
+        "autoSize": false,
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "3:00"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "index": "ap9mE",
       "typeName": "shape"
     },
     {
@@ -1009,62 +1047,24 @@
           ]
         }
       },
-      "index": "aiI6z",
+      "index": "aidf2",
       "typeName": "shape"
     },
     {
-      "x": 1328,
-      "y": 1011,
-      "rotation": 0,
-      "isLocked": false,
-      "opacity": 1,
-      "meta": {
-        "key": "hour-1080"
-      },
-      "id": "shape:schedule-tick-1080",
-      "type": "text",
-      "parentId": "page:page",
-      "props": {
-        "color": "red",
-        "size": "s",
-        "w": 65,
-        "font": "draw",
-        "textAlign": "start",
-        "autoSize": false,
-        "scale": 1,
-        "richText": {
-          "type": "doc",
-          "content": [
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "6:00"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "index": "asD6X",
-      "typeName": "shape"
-    },
-    {
-      "x": 909.1666666666666,
+      "x": 885.6666666666666,
       "y": 1297,
       "rotation": 0,
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "Rest & hold turkey, 4:10–5:50",
+        "detail": "Rest & hold turkey, 4:04–5:50",
         "key": "schedule-task-hold"
       },
       "id": "shape:schedule-task-hold",
       "type": "geo",
       "parentId": "page:page",
       "props": {
-        "w": 391.66666666666663,
+        "w": 415.16666666666663,
         "h": 32,
         "geo": "rectangle",
         "dash": "solid",
@@ -1089,7 +1089,7 @@
           ]
         }
       },
-      "index": "b04ntQ",
+      "index": "b04XPj",
       "typeName": "shape"
     },
     {
@@ -1107,13 +1107,13 @@
       }
     },
     {
-      "x": 204.16666666666666,
+      "x": 180.66666666666666,
       "y": 1053,
       "rotation": 0,
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "1:10–4:10 at 325°F.",
+        "detail": "1:04–4:04 at 325°F.",
         "key": "schedule-turkey"
       },
       "id": "shape:schedule-turkey",
@@ -1160,17 +1160,17 @@
           ]
         }
       },
-      "index": "atjiv",
+      "index": "atqz3",
       "typeName": "shape"
     },
     {
-      "x": 909.1666666666666,
+      "x": 885.6666666666666,
       "y": 1053,
       "rotation": 0,
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "At 4:10, set the oven to 350°F and let it come to temperature.",
+        "detail": "At 4:04, set the oven to 350°F and let it come to temperature.",
         "key": "schedule-heat-dressing"
       },
       "id": "shape:schedule-heat-dressing",
@@ -1202,7 +1202,7 @@
           ]
         }
       },
-      "index": "avBWX",
+      "index": "aveXU",
       "typeName": "shape"
     },
     {
@@ -1246,7 +1246,7 @@
           ]
         }
       },
-      "index": "aJbgb",
+      "index": "aJut6",
       "typeName": "shape"
     },
     {
@@ -1284,7 +1284,7 @@
           ]
         }
       },
-      "index": "amiZ2",
+      "index": "amQG2",
       "typeName": "shape"
     },
     {
@@ -1322,7 +1322,45 @@
           ]
         }
       },
-      "index": "a2HQb",
+      "index": "a2YeQ",
+      "typeName": "shape"
+    },
+    {
+      "x": 1093,
+      "y": 1011,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "key": "hour-1020"
+      },
+      "id": "shape:hour-1020",
+      "type": "text",
+      "parentId": "page:page",
+      "props": {
+        "color": "grey",
+        "size": "s",
+        "w": 65,
+        "font": "draw",
+        "textAlign": "start",
+        "autoSize": false,
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "5:00"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "index": "arNnX",
       "typeName": "shape"
     },
     {
@@ -1369,7 +1407,7 @@
           ]
         }
       },
-      "index": "b0B0ZA",
+      "index": "b0BSUg",
       "typeName": "shape"
     },
     {
@@ -1395,7 +1433,7 @@
         "flipY": false,
         "altText": ""
       },
-      "index": "afz5UV",
+      "index": "affMz",
       "typeName": "shape"
     },
     {
@@ -1450,7 +1488,7 @@
           ]
         }
       },
-      "index": "aA2tU",
+      "index": "aAmrb",
       "typeName": "shape"
     },
     {
@@ -1466,7 +1504,7 @@
             "ref": "https://www.kingarthurbaking.com/recipes/small-batch-parker-house-rolls-recipe"
           }
         ],
-        "detail": "All-purpose flour, milk, butter, yeast, sugar, salt\n\nMix the dough and let it rise, then shape the rolls, proof them, and bake.",
+        "detail": "All-purpose flour, milk, butter, yeast, sugar and salt\n\nMix the dough, let it rise, then shape and proof the rolls before baking.",
         "key": "recipe-rolls"
       },
       "id": "shape:recipe-rolls",
@@ -1495,45 +1533,7 @@
           ]
         }
       },
-      "index": "aI0wn",
-      "typeName": "shape"
-    },
-    {
-      "x": 1093,
-      "y": 1011,
-      "rotation": 0,
-      "isLocked": false,
-      "opacity": 1,
-      "meta": {
-        "key": "hour-1020"
-      },
-      "id": "shape:schedule-tick-1020",
-      "type": "text",
-      "parentId": "page:page",
-      "props": {
-        "color": "grey",
-        "size": "s",
-        "w": 65,
-        "font": "draw",
-        "textAlign": "start",
-        "autoSize": false,
-        "scale": 1,
-        "richText": {
-          "type": "doc",
-          "content": [
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "5:00"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "index": "arMyf",
+      "index": "aIW2r",
       "typeName": "shape"
     },
     {
@@ -1549,7 +1549,7 @@
             "ref": "https://www.seriouseats.com/classic-sage-and-sausage-stuffing-or-dressing-recipe"
           }
         ],
-        "detail": "White bread, sausage, onion, celery, sage, broth, eggs\n\nDry the bread ahead, cook the sausage and aromatics, then assemble and bake, uncovering to crisp the top.",
+        "detail": "White bread, sausage, onion, celery, sage, broth and eggs\n\nDry the bread a day ahead, then cook the sausage and aromatics, assemble, and bake uncovered to finish.",
         "key": "recipe-dressing"
       },
       "id": "shape:recipe-dressing",
@@ -1578,7 +1578,7 @@
           ]
         }
       },
-      "index": "aB9XQ",
+      "index": "aBwXr",
       "typeName": "shape"
     },
     {
@@ -1616,7 +1616,7 @@
           ]
         }
       },
-      "index": "akEef",
+      "index": "ak6E2",
       "typeName": "shape"
     },
     {
@@ -1657,7 +1657,7 @@
           ]
         }
       },
-      "index": "aHKNE",
+      "index": "aH8Ar",
       "typeName": "shape"
     },
     {
@@ -1697,14 +1697,14 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Verify turkey doneness before resting. Toss salad late, then bring the carved turkey, dressing, rolls, salad, and sauce to the table at 6."
+                  "text": "Verify turkey doneness before resting. Toss the salad late, bring out the rolls, and serve at 6 p.m."
                 }
               ]
             }
           ]
         }
       },
-      "index": "b0DekA",
+      "index": "b0DUzGV",
       "typeName": "shape"
     },
     {
@@ -1742,7 +1742,7 @@
           ]
         }
       },
-      "index": "aURAI",
+      "index": "aU7L6",
       "typeName": "shape"
     },
     {
@@ -1773,14 +1773,14 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "All-purpose flour, milk, butter, yeast, sugar, salt"
+                  "text": "All-purpose flour, milk, butter, yeast, sugar and salt"
                 }
               ]
             }
           ]
         }
       },
-      "index": "aL1zP",
+      "index": "aL4lX",
       "typeName": "shape"
     },
     {
@@ -1821,7 +1821,7 @@
           ]
         }
       },
-      "index": "a3qPI",
+      "index": "a3VuA",
       "typeName": "shape"
     },
     {
@@ -1852,14 +1852,14 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Roast the unstuffed turkey at 325°F, check doneness with a thermometer, and rest before carving."
+                  "text": "Season and roast the unstuffed turkey, check doneness with a thermometer, then rest before carving."
                 }
               ]
             }
           ]
         }
       },
-      "index": "a9ouA",
+      "index": "a9YCr",
       "typeName": "shape"
     },
     {
@@ -1897,7 +1897,7 @@
           ]
         }
       },
-      "index": "ajzDB",
+      "index": "ajrlr",
       "typeName": "shape"
     },
     {
@@ -1913,7 +1913,7 @@
             "ref": "https://www.oceanspray.com/recipes/homemade-whole-berry-cranberry-sauce"
           }
         ],
-        "detail": "Whole cranberries, sugar, water\n\nSimmer the berries with sugar and water, then cool and refrigerate overnight.",
+        "detail": "Whole cranberries, sugar and water\n\nSimmer the cranberries with sugar and water a day ahead, then cool and refrigerate.",
         "key": "recipe-cranberry"
       },
       "id": "shape:recipe-cranberry",
@@ -1942,7 +1942,7 @@
           ]
         }
       },
-      "index": "aWmdj",
+      "index": "aWq4v",
       "typeName": "shape"
     },
     {
@@ -1958,7 +1958,7 @@
             "ref": "https://www.butterball.com/recipes/classic-whole-roasted-turkey"
           }
         ],
-        "detail": "Whole turkey, butter, thyme, shallots, onions, salt, pepper\n\nRoast the unstuffed turkey at 325°F, check doneness with a thermometer, and rest before carving.",
+        "detail": "Whole turkey, butter, thyme, shallots, onions, salt and pepper\n\nSeason and roast the unstuffed turkey, check doneness with a thermometer, then rest before carving.",
         "key": "recipe-turkey"
       },
       "id": "shape:recipe-turkey",
@@ -1987,7 +1987,7 @@
           ]
         }
       },
-      "index": "a4cwn",
+      "index": "a4mgQ",
       "typeName": "shape"
     },
     {
@@ -2032,14 +2032,14 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Whole cranberries, sugar, water"
+                  "text": "Whole cranberries, sugar and water"
                 }
               ]
             }
           ]
         }
       },
-      "index": "aZw66",
+      "index": "aZZSf",
       "typeName": "shape"
     },
     {
@@ -2070,31 +2070,31 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Dry the bread ahead, cook the sausage and aromatics, then assemble and bake, uncovering to crisp the top."
+                  "text": "Dry the bread a day ahead, then cook the sausage and aromatics, assemble, and bake uncovered to finish."
                 }
               ]
             }
           ]
         }
       },
-      "index": "aGxyU",
+      "index": "aGxPb",
       "typeName": "shape"
     },
     {
-      "x": 1195.0833333333335,
+      "x": 1171.5833333333335,
       "y": 1053,
       "rotation": 0,
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "At 5:23, set the oven to 375°F and let it come to temperature.",
+        "detail": "At 5:17, set the oven to 375°F and let it come to temperature.",
         "key": "schedule-heat-rolls"
       },
       "id": "shape:schedule-heat-rolls",
       "type": "geo",
       "parentId": "page:page",
       "props": {
-        "w": 31.333333333333258,
+        "w": 50.916666666666515,
         "h": 84,
         "geo": "rectangle",
         "dash": "solid",
@@ -2119,7 +2119,7 @@
           ]
         }
       },
-      "index": "axJ5M",
+      "index": "axoE6",
       "typeName": "shape"
     },
     {
@@ -2161,7 +2161,7 @@
           ]
         }
       },
-      "index": "b03gcU",
+      "index": "b037FA",
       "typeName": "shape"
     },
     {
@@ -2202,7 +2202,7 @@
           ]
         }
       },
-      "index": "aVb6v",
+      "index": "aVlKv",
       "typeName": "shape"
     },
     {
@@ -2220,13 +2220,13 @@
       }
     },
     {
-      "x": 1202.9166666666667,
+      "x": 1163.75,
       "y": 1414,
       "rotation": 0,
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "Welcome guests, 5:25–5:45",
+        "detail": "Welcome guests, 5:15–5:35",
         "key": "schedule-task-welcome"
       },
       "id": "shape:schedule-task-welcome",
@@ -2258,7 +2258,7 @@
           ]
         }
       },
-      "index": "b06Sgz",
+      "index": "b06kCf",
       "typeName": "shape"
     },
     {
@@ -2296,7 +2296,7 @@
           ]
         }
       },
-      "index": "al7wb",
+      "index": "al8DA",
       "typeName": "shape"
     },
     {
@@ -2338,7 +2338,7 @@
           ]
         }
       },
-      "index": "b07SV6",
+      "index": "b07MXM",
       "typeName": "shape"
     },
     {
@@ -2369,31 +2369,31 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Simmer the berries with sugar and water, then cool and refrigerate overnight."
+                  "text": "Simmer the cranberries with sugar and water a day ahead, then cool and refrigerate."
                 }
               ]
             }
           ]
         }
       },
-      "index": "abPSn",
+      "index": "abY0v",
       "typeName": "shape"
     },
     {
-      "x": 1226.4166666666667,
+      "x": 1222.5,
       "y": 1053,
       "rotation": 0,
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "5:31–5:55 at 375°F.",
+        "detail": "5:30–5:54 at 375°F.",
         "key": "schedule-rolls"
       },
       "id": "shape:schedule-rolls",
       "type": "geo",
       "parentId": "page:page",
       "props": {
-        "w": 93.99999999999977,
+        "w": 94,
         "h": 84,
         "geo": "rectangle",
         "dash": "solid",
@@ -2424,7 +2424,7 @@
           ]
         }
       },
-      "index": "awUXR",
+      "index": "awdYr",
       "typeName": "shape"
     },
     {
@@ -2455,31 +2455,31 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "White bread, sausage, onion, celery, sage, broth, eggs"
+                  "text": "White bread, sausage, onion, celery, sage, broth and eggs"
                 }
               ]
             }
           ]
         }
       },
-      "index": "aE3iz",
+      "index": "aELNr",
       "typeName": "shape"
     },
     {
-      "x": 1046.25,
+      "x": 1026.6666666666665,
       "y": 1215,
       "rotation": 0,
       "isLocked": false,
       "opacity": 1,
       "meta": {
-        "detail": "Shape & proof, 4:45–5:27",
+        "detail": "Shape & proof, 4:40–5:25",
         "key": "schedule-task-proof"
       },
       "id": "shape:schedule-task-proof",
       "type": "geo",
       "parentId": "page:page",
       "props": {
-        "w": 164.5,
+        "w": 176.25000000000023,
         "h": 32,
         "geo": "rectangle",
         "dash": "solid",
@@ -2504,7 +2504,7 @@
           ]
         }
       },
-      "index": "b025RU",
+      "index": "b02dtf",
       "typeName": "shape"
     },
     {
@@ -2542,7 +2542,7 @@
           ]
         }
       },
-      "index": "aTk5E",
+      "index": "aTLWE",
       "typeName": "shape"
     },
     {
@@ -2580,7 +2580,7 @@
           ]
         }
       },
-      "index": "aKe22",
+      "index": "aKElU",
       "typeName": "shape"
     },
     {
@@ -2618,7 +2618,7 @@
           ]
         }
       },
-      "index": "a8veM",
+      "index": "a80yb",
       "typeName": "shape"
     },
     {
@@ -2684,7 +2684,7 @@
           ]
         }
       },
-      "index": "ahPj2",
+      "index": "ahpDb",
       "typeName": "shape"
     },
     {
@@ -2700,7 +2700,7 @@
             "ref": "https://smittenkitchen.com/2010/04/radicchio-apple-and-pear-salad/"
           }
         ],
-        "detail": "Radicchio, apples, pears, walnuts, blue cheese, lemon\n\nPrep the components ahead, then slice the fruit and toss the salad just before serving.",
+        "detail": "Radicchio, apples, pears, walnuts, blue cheese and lemon\n\nPrep the components ahead, then slice the fruit and toss the salad just before serving.",
         "key": "recipe-salad"
       },
       "id": "shape:recipe-salad",
@@ -2729,45 +2729,7 @@
           ]
         }
       },
-      "index": "aPUBzV",
-      "typeName": "shape"
-    },
-    {
-      "x": 153,
-      "y": 1011,
-      "rotation": 0,
-      "isLocked": false,
-      "opacity": 1,
-      "meta": {
-        "key": "hour-780"
-      },
-      "id": "shape:schedule-tick-780",
-      "type": "text",
-      "parentId": "page:page",
-      "props": {
-        "color": "grey",
-        "size": "s",
-        "w": 65,
-        "font": "draw",
-        "textAlign": "start",
-        "autoSize": false,
-        "scale": 1,
-        "richText": {
-          "type": "doc",
-          "content": [
-            {
-              "type": "paragraph",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "1:00"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "index": "anXOr",
+      "index": "aPhtn",
       "typeName": "shape"
     },
     {
@@ -2798,14 +2760,14 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Whole turkey, butter, thyme, shallots, onions, salt, pepper"
+                  "text": "Whole turkey, butter, thyme, shallots, onions, salt and pepper"
                 }
               ]
             }
           ]
         }
       },
-      "index": "a7CyE",
+      "index": "a7vkM",
       "typeName": "shape"
     },
     {
@@ -2836,14 +2798,14 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "1:10–4:10  Turkey 325°F    /    4:18–5:23  Dressing 350°F    /    5:31–5:55  Rolls 375°F"
+                  "text": "1:04–4:04  Turkey 325°F    /    4:12–5:17  Dressing 350°F    /    5:30–5:54  Rolls 375°F"
                 }
               ]
             }
           ]
         }
       },
-      "index": "ayMmA",
+      "index": "ayyHv",
       "typeName": "shape"
     },
     {
@@ -2884,7 +2846,7 @@
           ]
         }
       },
-      "index": "aOjB6",
+      "index": "aOD0Q",
       "typeName": "shape"
     },
     {
@@ -2915,14 +2877,14 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "4:10–5:50 Rest & hold turkey   ·   5:40–5:50 Toss salad"
+                  "text": "4:04–5:50 Rest & hold turkey   ·   5:40–5:50 Toss salad"
                 }
               ]
             }
           ]
         }
       },
-      "index": "b09iyj",
+      "index": "b098b2",
       "typeName": "shape"
     },
     {
@@ -2953,14 +2915,14 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Radicchio, apples, pears, walnuts, blue cheese, lemon"
+                  "text": "Radicchio, apples, pears, walnuts, blue cheese and lemon"
                 }
               ]
             }
           ]
         }
       },
-      "index": "aS6xz",
+      "index": "aSW0M",
       "typeName": "shape"
     },
     {
@@ -2998,7 +2960,7 @@
           ]
         }
       },
-      "index": "aYadz",
+      "index": "aYNbj",
       "typeName": "shape"
     },
     {
@@ -3036,7 +2998,7 @@
           ]
         }
       },
-      "index": "aFHCf",
+      "index": "aFbyb",
       "typeName": "shape"
     },
     {
@@ -3067,14 +3029,14 @@
               "content": [
                 {
                   "type": "text",
-                  "text": "Mix the dough and let it rise, then shape the rolls, proof them, and bake."
+                  "text": "Mix the dough, let it rise, then shape and proof the rolls before baking."
                 }
               ]
             }
           ]
         }
       },
-      "index": "aNsnE",
+      "index": "aNiK6",
       "typeName": "shape"
     },
     {
@@ -3100,7 +3062,45 @@
         "flipY": false,
         "altText": ""
       },
-      "index": "ad0Dj",
+      "index": "ad3Ff",
+      "typeName": "shape"
+    },
+    {
+      "x": 153,
+      "y": 1011,
+      "rotation": 0,
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {
+        "key": "hour-780"
+      },
+      "id": "shape:hour-780",
+      "type": "text",
+      "parentId": "page:page",
+      "props": {
+        "color": "grey",
+        "size": "s",
+        "w": 65,
+        "font": "draw",
+        "textAlign": "start",
+        "autoSize": false,
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "1:00"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "index": "ancWf",
       "typeName": "shape"
     }
   ]

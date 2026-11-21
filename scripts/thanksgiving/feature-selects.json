@@ -1,0 +1,91 @@
+{
+  "poster": {
+    "at": 47.5,
+    "label": "TOUCAN",
+    "caption": "Five recipes. One oven. Dinner at six."
+  },
+  "shots": [
+    {
+      "at": 47.5,
+      "duration": 1.6,
+      "rate": 1,
+      "label": "TOUCAN",
+      "caption": "Five recipes. One oven. Dinner at six."
+    },
+    {
+      "at": 2.87,
+      "duration": 1.85,
+      "rate": 0.42,
+      "label": "YOU",
+      "caption": "Put these five recipes on the canvas.",
+      "focus": [
+        858,
+        705,
+        736,
+        294
+      ]
+    },
+    {
+      "at": 38.02,
+      "duration": 2.25,
+      "label": "CODEX",
+      "caption": "The links become recipe cards on the board."
+    },
+    {
+      "at": 48.7,
+      "duration": 2.55,
+      "label": "THE MENU",
+      "caption": "Zoom in for ingredients, prep, and source links."
+    },
+    {
+      "at": 53.2,
+      "duration": 2.15,
+      "rate": 0.9,
+      "label": "YOU",
+      "caption": "Plan the afternoon around the same menu.",
+      "focus": [
+        858,
+        816,
+        736,
+        176
+      ]
+    },
+    {
+      "at": 68.8,
+      "duration": 3.2,
+      "label": "CODEX",
+      "caption": "The schedule appears below the recipes."
+    },
+    {
+      "at": 77.36,
+      "duration": 2.4,
+      "label": "THE OVEN",
+      "caption": "Turkey, dressing, rolls. One oven, three settings.",
+      "highlight": [
+        88,
+        299,
+        1422,
+        197
+      ]
+    },
+    {
+      "at": 79.76,
+      "duration": 2.3,
+      "label": "THE PLAN",
+      "caption": "Mix the roll dough while the turkey roasts.",
+      "highlight": [
+        88,
+        499,
+        1422,
+        292
+      ],
+      "rate": 0.42
+    },
+    {
+      "at": 84.88,
+      "duration": 3.4,
+      "label": "ONE BOARD",
+      "caption": "The menu and the plan stay on one canvas."
+    }
+  ]
+}

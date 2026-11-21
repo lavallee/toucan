@@ -1,4 +1,5 @@
 // Real two-turn Codex recording. Run after building Toucan.
+// Pass VIDEO_PATH and a private OUTPUT_DIR to save a clean take and cue times.
 // CODEX_BIN and CODEX_HOME can point to a signed-in Codex. Provide TLDRAW_LICENSE_KEY
 // in the environment, or set MEAL_LICENSE_ENV to a local dotenv file. No key is published.
 import assert from 'node:assert/strict'
@@ -7,7 +8,7 @@ import { once } from 'node:events'
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { parseEnv, promisify } from 'node:util'
@@ -15,7 +16,9 @@ import { chromium } from 'playwright-core'
 import { recipes, seed } from './thanksgiving/board.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const out = join(root, 'website/site/assets/use-cases')
+const cleanTake = Boolean(process.argv[3])
+const out = cleanTake ? resolve(process.argv[3]) : join(root, 'website/site/assets/use-cases')
+mkdirSync(out, { recursive: true })
 const recording = process.argv[2] ?? join(root, 'website/work/thanksgiving-capture.mp4')
 const temp = mkdtempSync(join(tmpdir(), 'toucan-meal-'))
 const data = join(temp, 'data')
@@ -108,21 +111,24 @@ try {
 	const tick = Date.now()
 	const when = () => (Date.now() - tick) / 1000
 	const cuts = []
+	const cues = {}
+	const cue = (name) => { cues[name] = when() }
 	let begin = 0
 	const end = () => cuts.push([begin, when()])
 	const input = page.getByRole('textbox', { name: 'Message', exact: true })
 	await page.goto(`${origin}/?canvas=thanksgiving#token=${token}`)
 	await page.waitForFunction(() => window.toucan?.get('menu-title'), null, { timeout: 30000 })
 	await page.addStyleTag({ content: '.tlui-style-panel__wrapper { visibility:hidden }' })
-	await page.evaluate(() => {
+	await page.evaluate((cleanTake) => {
 		const style = document.createElement('style')
 		style.textContent = '.meal-caption{position:fixed;z-index:9999;bottom:66px;left:30px;max-width:560px;padding:14px 21px;border-radius:8px;background:#321e25;color:#fff2eb;font:23px/1.27 system-ui,sans-serif;pointer-events:none}[data-slot=chat-dock]{transition:width 320ms ease}html.meal-chat-focus [data-slot=chat-dock]{width:730px!important}html.meal-chat-focus [data-slot=chat-dock] textarea,html.meal-chat-focus [data-slot=chat-dock] [data-slot=message-scroller-viewport]{font-size:20px!important;line-height:1.43}.meal-caption[data-placement=top]{top:80px;bottom:auto}.meal-caption strong{display:block;font-size:15px;color:#ffbb79;margin-bottom:4px}'
 		document.head.append(style)
+		if (cleanTake) return
 		const note = Object.assign(document.createElement('div'), { className: 'meal-caption' })
 		note.append(document.createElement('strong'), document.createElement('span'))
 		document.body.append(note)
-	})
-	const title = (tag, copy, placement = 'bottom') => page.evaluate(([tag, copy, placement]) => {
+	}, cleanTake)
+	const title = (tag, copy, placement = 'bottom') => cleanTake ? undefined : page.evaluate(([tag, copy, placement]) => {
 		const note = document.querySelector('.meal-caption')
 		note.dataset.placement = placement
 		note.firstElementChild.textContent = tag
@@ -153,7 +159,8 @@ try {
 	const chatCloser = (active) => page.evaluate((value) => {
 		document.documentElement.classList.toggle('meal-chat-focus', value)
 	}, active)
-	const send = async (prompt) => {
+	const send = async (prompt, round) => {
+		cue('compose' + round)
 		await chatCloser(true)
 		await sleep(380)
 		await input.focus()
@@ -161,6 +168,7 @@ try {
 		await input.pressSequentially(intro, { delay: 9 })
 		if (links) await page.keyboard.insertText('\n\n' + links)
 		await sleep(580)
+		cue('send' + round)
 		await input.press('Enter')
 		await sleep(890)
 		await chatCloser(false)
@@ -172,6 +180,7 @@ try {
 		const idleBegins = when()
 		await page.waitForFunction((key) => !!window.toucan?.get(key), key, { timeout: 150000 })
 		const edited = when()
+		cue('write' + count)
 		if (edited - idleBegins > 5) {
 			cuts.push([begin, idleBegins])
 			begin = edited - 2
@@ -181,8 +190,8 @@ try {
 	}
 	begin = when()
 	await title('Round 1', 'Five recipe links in. An editable dinner board out.')
-	const prompt = 'Here are five Thanksgiving recipes. Add them to the canvas with a photo, ingredients, a prep summary, and a link back to each recipe.\n\n' + recipes.map((r) => r.url).join('\n')
-	await send(prompt)
+	const prompt = (cleanTake ? 'Put these five recipes on the canvas.\n\n' : 'Here are five Thanksgiving recipes. Add them to the canvas with a photo, ingredients, a prep summary, and a link back to each recipe.\n\n') + recipes.map((r) => r.url).join('\n')
+	await send(prompt, 1)
 	await waitForAgentEdit('cranberry-prep', 1)
 	const menuKeys = ['menu-title', 'card-turkey', 'card-cranberry']
 	await focus(menuKeys)
@@ -190,9 +199,11 @@ try {
 	await noUpsell()
 	await page.getByRole('button', { name: 'Hide chat', exact: true }).click()
 	await focus(menuKeys, 105)
+	cue('menu')
 	await title('The menu', 'Five recipe cards the family can browse and edit.')
 	await sleep(3000)
 	await page.screenshot({ path: join(out, 'thanksgiving-menu.jpg'), quality: 91 })
+	cue('detail')
 	await focus(['card-dressing', 'card-rolls'], 115)
 	await title('Zoom into a dish', 'Ingredients and prep stay next to the original recipe link.')
 	await sleep(3600)
@@ -200,12 +211,13 @@ try {
 	await page.getByRole('button', { name: 'Show chat', exact: true }).click()
 	await focus(menuKeys)
 	await title('Round 2', 'Dinner at 6. Plan the whole afternoon.')
-	await send('We want to eat at 6:00 p.m. with one oven. Draw the whole schedule from scratch below the recipes. Include prep, oven temperatures, welcoming guests, and getting food on the table.')
+	await send(cleanTake ? 'Dinner at six, one oven. Add a timeline below the menu for cooking, prep, and guests.' : 'We want to eat at 6:00 p.m. with one oven. Draw the whole schedule from scratch below the recipes. Include prep, oven temperatures, welcoming guests, and getting food on the table.', 2)
 	await waitForAgentEdit('schedule-title', 2)
 	const scheduleKeys = ['schedule-title', 'schedule-transitions', 'schedule-host-cues', 'schedule-serve', 'schedule-day-before', 'schedule-morning', 'hour-1080']
 	await focus(scheduleKeys)
 	await sleep(3200)
 	await page.getByRole('button', { name: 'Hide chat', exact: true }).click()
+	cue('schedule')
 	await focus(scheduleKeys, 130, 'top')
 	await title('The whole afternoon', 'Prep and hosting have their own lanes. The hatched blocks are oven changes.', 'top')
 	await sleep(4900)
@@ -214,6 +226,7 @@ try {
 	await focus(['schedule-title', 'schedule-temperatures', 'schedule-transitions', 'schedule-rolls'], 115, 'top')
 	await title('One oven, three settings', 'Hatched slots let the oven reach its next temperature.', 'top')
 	await sleep(3000)
+	cue('overview')
 	await focus([...menuKeys, ...scheduleKeys], 95)
 	await title('One board for dinner', 'Zoom out to see the recipes and oven plan together.')
 	await sleep(3900)
@@ -231,15 +244,20 @@ try {
 	await context.close()
 	context = null
 	const raw = await video.path()
-	const segments = []
-	for (const [i, [from, to]] of cuts.entries()) {
-		const segment = join(temp, 'segment-' + i + '.mp4')
-		await run('ffmpeg', ['-hide_banner','-loglevel','error','-y','-ss',String(from),'-i',raw,'-t',String(to-from),'-an','-c:v','libx264','-threads','3','-crf','19','-pix_fmt','yuv420p',segment])
-		segments.push(segment)
+	if (cleanTake) {
+		await run('ffmpeg', ['-v', 'error', '-y', '-i', raw, '-an', '-c:v', 'libx264', '-threads', '4', '-crf', '17', '-pix_fmt', 'yuv420p', recording])
+		writeFileSync(join(out, 'cues.json'), JSON.stringify(cues, null, 2) + '\n')
+	} else {
+		const segments = []
+		for (const [i, [from, to]] of cuts.entries()) {
+			const segment = join(temp, 'segment-' + i + '.mp4')
+			await run('ffmpeg', ['-hide_banner','-loglevel','error','-y','-ss',String(from),'-i',raw,'-t',String(to-from),'-an','-c:v','libx264','-threads','3','-crf','19','-pix_fmt','yuv420p',segment])
+			segments.push(segment)
+		}
+		const list = join(temp, 'segments.txt')
+		writeFileSync(list, segments.map((f) => "file '" + f + "'").join('\n'))
+		await run('ffmpeg', ['-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',list,'-c','copy','-movflags','+faststart',recording])
 	}
-	const list = join(temp, 'segments.txt')
-	writeFileSync(list, segments.map((f) => "file '" + f + "'").join('\n'))
-	await run('ffmpeg', ['-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',list,'-c','copy','-movflags','+faststart',recording])
 	if (process.env.MEAL_DEBUG) {
 		copyFileSync(join(temp, 'schedule.json'), '/tmp/toucan-meal-schedule.json')
 		copyFileSync(join(temp, 'menu.json'), '/tmp/toucan-meal-menu.json')
