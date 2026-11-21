@@ -1,6 +1,6 @@
 // Recut the real 1600×1000 two-turn capture. Usage: node scripts/thanksgiving/social.mjs SOURCE.mp4
 import { execFile } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,7 +8,8 @@ import { promisify } from 'node:util'
 import { chromium } from 'playwright-core'
 
 const run = promisify(execFile)
-const out = fileURLToPath(new URL('../../website/site/assets/use-cases/', import.meta.url))
+const publicAssets = fileURLToPath(new URL('../../website/site/assets/use-cases/', import.meta.url))
+const socialExports = fileURLToPath(new URL('../../website/work/thanksgiving-social/', import.meta.url))
 const [input, selectedFormat] = process.argv.slice(2)
 if (!input) throw new Error('Pass the original recording. See website/work/artifact-brief.md.')
 const source = resolve(input)
@@ -34,7 +35,7 @@ const formats = [
 ]
 const frames = (shot) => Math.round(shot.seconds * fps)
 const runtime = shots.reduce((sum, shot) => sum + frames(shot), 0) / fps
-const imageUrl = (id) => `data:image/jpeg;base64,${readFileSync(join(out, 'thanksgiving', id + '.jpg')).toString('base64')}`
+const imageUrl = (id) => `data:image/jpeg;base64,${readFileSync(join(publicAssets, 'thanksgiving', id + '.jpg')).toString('base64')}`
 const photos = Object.fromEntries(['turkey', 'rolls', 'dressing'].map((id) => [id, imageUrl(id)]))
 const even = (n) => Math.round(n / 2) * 2
 
@@ -228,11 +229,12 @@ async function render(browser, format) {
 		}
 		const list = join(temp, `${suffix}.txt`)
 		writeFileSync(list, segments.map((path) => `file '${path}'`).join('\n'))
-		const target = join(out, `thanksgiving-${suffix}.mp4`)
+		const output = format.landscape ? publicAssets : socialExports
+		mkdirSync(output, { recursive: true })
+		const target = join(output, `thanksgiving-${suffix}.mp4`)
 		await run('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, '-i', scorePath, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-af', 'volume=5dB', '-movflags', '+faststart', target])
-		const poster = { dinner: 'thanksgiving-feature.jpg', social: 'thanksgiving-feature-phone.jpg' }[suffix]
-		if (poster) {
-			await run('ffmpeg', ['-v', 'error', '-y', '-i', target, '-frames:v', '1', '-q:v', '2', join(out, poster)])
+		if (format.landscape) {
+			await run('ffmpeg', ['-v', 'error', '-y', '-i', target, '-frames:v', '1', '-q:v', '2', join(publicAssets, 'thanksgiving-feature.jpg')])
 		}
 	} finally {
 		await page.close()

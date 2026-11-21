@@ -123,13 +123,6 @@ body:has(.toucan-home) .article-title {
 .case-capture { margin-block: 1.25rem 2.25rem; }
 .case-capture :is(img, video) { display: block; width: 100%; height: auto; border: 1px solid var(--border); }
 .case-capture a { display: block; }
-.case-capture .case-film-phone { display: none; }
-
-@media (max-width: 37.5rem) {
-  .case-capture .case-film-wide { display: none; }
-  .case-capture .case-film-phone { display: block; }
-}
-
 @media (max-width: 59rem) {
   .home-hero { grid-template-columns: minmax(0, 1fr); gap: 1.75rem; }
   .home-intro > p:first-child { max-width: 45ch; }

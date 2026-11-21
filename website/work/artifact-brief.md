@@ -45,7 +45,11 @@ git show 1578b4d143dbb72f82b56df2ee5dc9353ba7ad6d:website/site/assets/use-cases/
 node scripts/thanksgiving/social.mjs website/work/thanksgiving-capture.mp4
 ```
 
-Set `CHROMIUM` if using a system Chromium. Fresh recordings write to the same ignored capture path.
+Set `CHROMIUM` if using a system Chromium. The project site uses the single landscape film at every viewport. The 4:5 and 9:16 social
+exports go to the ignored `website/work/thanksgiving-social/` directory for channel-specific
+handoff. Only the project-site film and its poster go in `site/`.
+
+Fresh recordings write to the same ignored capture path.
 They require new selects in `scripts/thanksgiving/social.mjs` because prompt and agent timing varies.
 
 ## Sources
