@@ -6,6 +6,7 @@ import {
 	CircleDotIcon,
 	CircleIcon,
 	CircleStopIcon,
+	EyeIcon,
 	FilePenIcon,
 	LoaderCircleIcon,
 	MessageCircleDashedIcon,
@@ -370,7 +371,7 @@ function StepLine({ part, streaming }: { part: ChatPart; streaming: boolean }) {
 			return (
 				<TraceLine>
 					<TraceIcon>
-						<CircleStopIcon />
+						{part.data.kind === 'seen' ? <EyeIcon /> : <CircleStopIcon />}
 					</TraceIcon>
 					<TraceTitle>{part.data.message}</TraceTitle>
 				</TraceLine>

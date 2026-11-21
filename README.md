@@ -384,6 +384,9 @@ Reflexes (a canvas answering what happens to it by itself, and asking the agent 
 [How to Control an Agent with a Growing Behavior Tree](https://sihanxu.me/harnesstree/) and the reactive layer of
 [The Harness](https://github.com/EvolvingLMMs-Lab/the-harness) by LMMs-Lab. The ideas are theirs; toucan's code is its own.
 
+Agents noticing what people do while they work, so a canvas runs both ways at once, came from [Daniel Bachhuber](https://github.com/danielbachhuber) asking for
+toucan to be full duplex.
+
 ## Licences
 
 toucan's own code is [MIT](LICENSE). It builds on **tldraw**, which is *not* MIT: the

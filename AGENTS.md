@@ -171,6 +171,24 @@ selected proposals, or all of them. Leave that choice to them: run `toucan propo
   Cmd-Z doesn't undo your run. On Excalidraw each `updateScene` call is its own undo step
   (`applyGraph` makes one), so batch your element changes into a single `updateScene`.
 
+## What people do while you work
+
+People keep editing while you work, and toucan tells you what they did, so you don't need to poll:
+
+- **From the terminal or MCP.** Each command's answer comes with what people and other agents did on the canvas since
+  your last command under the same `--agent` name: a `<canvas_activity>` block on stderr (with MCP, after the tool's
+  result). It lists shapes added, changed (text, moved, resized, restyled, into or out of a frame) or removed, and by whom,
+  what people selected, and comments they left. Your own edits aren't in it, and neither is what reflexes and a plan's sync
+  do. Your first command on a canvas starts the count, and the server has to hold the canvas open (a tab on it). Agents that
+  share a name share what they hear, so give yourself one with `--agent`. `TOUCAN_ACTIVITY=off` turns it off.
+- **In the chat panel and comment threads.** The agent hears it between its commands, as a message added to the turn in
+  progress, and the panel shows "Saw 2 changes on the canvas". A message sent mid-turn carries what is selected at that
+  moment, so "this" means what the person is looking at now. A new turn starts with what changed since the last one,
+  beside the brief.
+- **What to do with it.** Fold it in and use your judgement. Keep their edits, don't put back what they removed, and
+  don't re-import over a box they just rewrote. If it changes your plan, say so in your reply. If you can't tell what they
+  want, ask. It needs no acknowledgement.
+
 ## Graphs: the engine-neutral path
 
 A canvas reads and writes as a *toucan graph* (TG, `lib/tg.mjs`): `groups` (frames), `nodes` (boxes) and

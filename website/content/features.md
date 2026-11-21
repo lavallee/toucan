@@ -1,5 +1,5 @@
 ---
-description: Everything toucan 0.17.0 does, in one list: where to find each feature, and when it arrived.
+description: Everything toucan 0.18.0 does, in one list: where to find each feature, and when it arrived.
 kicker: Reference
 ---
 # Features
@@ -26,6 +26,7 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Chat panel](tour.html#ask-and-it-draws) | Ask in plain words and the agent draws, edits and checks its work on the canvas, using Codex on your own ChatGPT sign-in. | **Chat** | 0.1.0 |
 | Fast and Thorough | Pick a quick default model or a slower, more careful one for the chat, per browser. | **Chat: Fast / Thorough** | 0.4.0 |
 | Steer a turn in progress | Send a message while the agent works and it adjusts the turn instead of waiting for it to end. | **Chat** | 0.4.0 |
+| [Agents notice people](agents.html#what-people-do-while-you-work) | Edit, select and comment while an agent works: it hears what you did between its steps and builds on it. A message sent mid-turn carries what's selected then, and terminal and MCP agents hear it with their next command. | **Chat · Threads** | 0.18.0 |
 | Slash commands and Mermaid shortcut | Type / to run a routine instantly, or paste a Mermaid flowchart and it lands without a model call. | **Chat: /** | 0.4.0 |
 | New chat | Start a fresh conversation with the agent on the same canvas. | **Chat: New chat** |  |
 | Dock or float the chat | Dock the chat left, right or along the bottom, or float it over the canvas, and resize it. | **Chat header** | 0.3.0 |
@@ -115,4 +116,4 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Remote and behind a proxy](how-it-works.html) | Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to. | **Sign-in page**; CLI: `--public-url` · `--allow-host` · `TOUCAN_URL` · `TOUCAN_TOKEN` | 0.11.0 |
 | [Plugins](extending.html#plugins) | One mechanism for programs on PATH that connect toucan to your own systems (agent profiles, plan sources), with one trust rule; lists what was found and, for anything refused, why. | CLI: `plugins` · `sources` · `profiles` | 0.15.0 |
 
-*64 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
+*65 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*

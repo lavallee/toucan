@@ -5,6 +5,19 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-11-20
+
+### Added
+
+- **Agents notice people.** While an agent works, people go on editing, selecting and commenting, and now the agent hears
+  about it. The server keeps a feed per canvas of the shapes people added, changed or removed, what they selected and the
+  comments they left. Each run's own report of what it touched separates an agent's edits from a person's. A terminal or
+  MCP agent gets what's new since its last command with the next command's answer, as a `<canvas_activity>` block on
+  stderr. The chat panel's agent and comment-thread agents hear it between their commands, added to the turn in progress,
+  and the panel says so. A message sent mid-turn now carries what is selected at that moment, and a new turn starts with
+  what changed since the last one. Agents hear each other's edits too, but not their own. `TOUCAN_ACTIVITY=off` turns it
+  off for a terminal agent. Thanks to [Daniel Bachhuber](https://github.com/danielbachhuber), who asked for toucan to work full duplex.
+
 ### Fixed
 
 - Load each deployment’s tldraw licence at server startup. The live editor, history and hidden preview use the same key, and release builds contain no deployment key.

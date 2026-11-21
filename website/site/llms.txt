@@ -29,6 +29,7 @@ Tell the person what you're drawing. Commands run anywhere inside the project us
 ## Working with a person
 
 - They may be editing while you work: look before you change, keep edits small and keyed, and never wipe their work.
+- What they change, select or comment on while you work comes back to you: a `<canvas_activity>` block with your next command's answer (on stderr), or between steps in the chat panel. Name yourself with `--agent NAME`, and build on their edits rather than over them.
 - Don't place boxes by hand. Describe the diagram and let `draw` lay it out, or import a Mermaid flowchart with `toucan import flow.mmd`.
 - Keep boxes short. Longer text goes in a box's `meta.detail`, which opens when it's clicked.
 - A sticky note on the canvas is a message to you: `toucan notes`, act on it, then `toucan notes resolve KEY --reply "what you did"`.
