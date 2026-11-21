@@ -9,7 +9,7 @@
 //     open [NAME]                 open a canvas (or the index) in your browser, signed in
 //     agents [install [ID...] [--mcp] [--force] | remove [ID...]]   connect the agents on this machine (skill; MCP where it's needed)
 //     mcp                         run as an MCP server on stdio, for agents that can't run the CLI
-//     guide                       the full guide for agents
+//     guide [TOPIC]               the full agent guide or one topic
 //     status                      is the server running, and where
 //     start [--port P] [--host H] [--data DIR] [--plugin-path DIRS] [--no-headless] [--take-over] | stop | restart   the background server (commands start it when needed)
 //     doctor                      check this install, and say what to do about anything wrong
@@ -667,11 +667,21 @@ switch (cmd) {
 		else die('usage: routine list [--kind K] [--engine E] | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] [--kind K] [--when TEXT] [--takes TEXT] | suggest [--since 30d] [--min N] | stats [--since 30d] | rm NAME')
 		break
 	}
-	case 'guide':
-		// Written for the chat agent, which runs from the checkout. Everyone else has `toucan`.
-		// Its note on how the chat panel runs the CLI only makes sense there.
-		print(readFileSync(join(ROOT, 'AGENTS.md'), 'utf8').replace(/^In the chat panel you run it as .*\n\n?/m, '').replaceAll('node bin/toucan.mjs', 'toucan'))
+	case 'guide': {
+		const topics = {
+			index: 'AGENTS.md',
+			cli: 'docs/agents/cli.md',
+			editing: 'docs/agents/editing.md',
+			collaboration: 'docs/agents/collaboration.md',
+			plans: 'docs/agents/plans.md',
+			extensions: 'docs/agents/extensions.md',
+		}
+		const [topic] = rest
+		if (rest.length > 1 || (topic !== undefined && !Object.hasOwn(topics, topic))) die(`usage: guide [${Object.keys(topics).join('|')}]`)
+		const files = topic === undefined ? Object.values(topics) : [topics[topic]]
+		print(files.map((file) => readFileSync(join(ROOT, file), 'utf8').trimEnd()).join('\n\n'))
 		break
+	}
 	case 'mcp':
 		(await import('../lib/mcp.mjs')).serve()
 		break

@@ -1,0 +1,111 @@
+# Editing diagrams
+
+## Graphs: the engine-neutral path
+
+A canvas reads and writes as a *toucan graph* (TG, `lib/tg.mjs`): `groups` (frames), `nodes` (boxes) and
+`edges` (arrows), each with a stable `key`, optional `box` (page coordinates), `style` (tldraw's
+vocabulary: color, fill, dash, geo; an arrow's also route, anchors, bend, elbowMid) and `meta`. Every engine's `toucan` has `graph()` and
+`await applyGraph(tg, {move, prune})`, and the CLI's `graph`/`import` speak TG, JSON Canvas (Obsidian),
+Mermaid flowcharts, DOT (export only) and `.excalidraw`.
+
+- **Import is a keyed upsert.** Existing shapes get only the fields the file carries and keep their
+  position unless `--move`; a missing field means "leave it" (a bare Mermaid reference `a --> b` doesn't
+  relabel `a`; a node outside any subgraph keeps its frame). New shapes without a position are laid out
+  with ELK beside the existing content, or below what they connect to. Arrows match by endpoints (`edge:<from>-><to>`). Nothing is
+  deleted without `--prune`.
+- **Mermaid is a good edit language** for structure: write a small flowchart of what to add or relabel
+  and `import` it. Use `exec` with the engine's own API for styling or anything TG can't say.
+- `graph` reads the server's copy, which can trail an edit a tab made a moment ago.
+- **Arrows go round boxes.** An arrow an import or a `draw` adds that would run through a box is routed round it, as the engine
+  draws it (`lib/route.mjs`): an elbow out of other sides, or with its middle run (`elbowMid`, 0..1 across the gap) moved, or
+  a gentle curve; a label another arrow crosses slides along its own arrow (tldraw). An elbow only goes round the outside of its
+  own two ends, so in a `draw` flow a loop back against the flow leaves and arrives on the right (running down) or the bottom
+  (running across), with its ends put at the edge of what it passes. Arrows already on the canvas are left alone; `routine run
+  tidy-arrows` or `clean-up` reroutes those.
+
+## Engines
+
+- **tldraw** (default): `editor` is the tldraw Editor, `tl` the tldraw module; full helpers below.
+- **Excalidraw**: `editor` is the ExcalidrawImperativeAPI (`getSceneElements()`, `updateScene({elements,
+  captureUpdate})`, …), `tl` the `@excalidraw/excalidraw` module. `toucan` has the core: `summary`,
+  `graph`, `applyGraph`, `screenshot`, `zoomTo`, `get`, `remove`, `text`, `keyOf`, and the same `measure()`, `tidy` and
+  `scene` as tldraw (so every shipped routine runs there too). A shape's key is its
+  `customData.key` (falling back to its id). Change elements with `tl.newElementWith(el, {...})`, which
+  bumps the version so the edit syncs to other tabs; prefer `applyGraph` for structure. Import doesn't move an existing element into a different frame there (it does on tldraw); reparent it with `frameId` yourself.
+- Converting a canvas between engines is `new NAME --engine E --from CANVAS` (through TG: keys, text,
+  grouping, arrows, meta and positions survive; engine-specific styling is approximated).
+
+## Helpers (`toucan.*`) — prefer these; they are idempotent by key
+Exec evaluates the body of an async function with `editor`, `tl`, and `toucan` in scope. Return a JSON value to report the result.
+
+
+- `node(key, {x,y,w,h,text,geo,color,fill,dash,size,parent,meta,move,proposed})` — create/update a box. An existing
+  box changes only in what you pass, and keeps its position unless `move: true`. A new box with no position goes
+  somewhere free. `parent` is a frame key; x/y are then frame-relative.
+- A frame, like a box, changes only in what you pass.
+- `frame(key, {x,y,w,h,name,color})`, `edge(fromKey, toKey, {text,color,dash,kind,bend,proposed})` — bound arrow.
+- `propose(...keys)`, `proposals()`, `accept(...keys)`, `reject(...keys)` — see Proposals.
+- `get(key)`, `idFor(key)`, `text(shape)`, `find(q)`, `summary({within})`, `remove(...keys)`, `zoomTo(keys?)`, `pulse(keys)`
+- `await layout(keys | null, {within: frameKey, direction: 'RIGHT'|'DOWN', spacing, layerSpacing})` — ELK.
+
+Colours: black grey light-violet violet blue light-blue yellow orange green light-green light-red red white.
+Only these (and tldraw's geo shapes: rectangle, ellipse, diamond, oval, cloud, hexagon…) work: `node` and `edge` refuse anything else by name,
+`draw` refuses it before drawing, and `applyGraph`/`import` use the default instead and list what they changed in `styleFallbacks`.
+Fill: none semi solid pattern. Dash: draw solid dashed dotted. Size: s m l xl.
+
+Plain tldraw also works: `editor.updateShapes([...])`, `editor.createShape({...})` — but always pass
+`parentId` (a frame id or `editor.getCurrentPageId()`), or tldraw drops new shapes into whatever frame
+is under them. Text uses rich text: `props.richText = tl.toRichText('…')`.
+
+## Templates and layout: don't place boxes by hand
+
+Most diagrams are a known shape, and a canvas *has* diagrams rather than *being* one. `toucan templates` lists two sorts, each a realistic
+sample you can edit:
+
+- **Blocks**, one diagram each, in groups: processes (flowchart, swimlane, sequence, state machine, build pipeline, funnel, cycle, SIPOC),
+  structures (org chart, decision tree, mind map, OKR tree), systems (layered architecture, service map, network, entity relationships), time
+  (roadmap, timeline), work (kanban, customer journey, responsibility chart, retro, empathy map, story map) and decisions (2x2, comparison table,
+  fishbone, pros and cons, SWOT, stakeholder map, Eisenhower, five whys, decision log).
+- **Starters**, a whole canvas on one subject made of several blocks under their own headings: system design, incident review, product strategy,
+  project kickoff, research plan, team retro.
+
+`toucan new NAME --template ID` makes a canvas from either, with the right format. `toucan --canvas NAME add ID` puts one beside what's already on a
+canvas, on either engine, and never over it: if its keys clash it takes a prefix, which the command reports. People do the same from **Add** above
+the canvas. Then change its boxes with `toucan.node`, or `import` more.
+
+To draw on a canvas you're already on, describe the diagram as data and let the engine place it: `toucan templates show flowchart` shows the form,
+and `toucan --canvas NAME draw plan.json` lays it out beside what's there. Each `kind` (flow, tree, mindmap, lanes, grid, board, quadrant, timeline, gantt,
+sequence, fishbone, funnel, stack, cycle) has its own fields, and a box's `detail` is what opens on click. A new drawing never overwrites what's there: if its keys clash it takes a prefix, which the command reports. To change an earlier drawing, draw it again with `--update`, and `--move` to reposition its boxes too.
+
+`toucan.measure()` measures the diagram as drawn and returns a `score` out of 100 and `findings`, each naming the shapes involved: overlaps, text that
+outgrew its box, arrows through boxes, crossings, labels on boxes or on each other, arrows through other arrows' labels, boxes cut off by a frame. `routine run check-diagram` reports the same and points at
+the shapes. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing
+overlapping or cut off; arrows that don't run through boxes; boxes of a kind that match and line up; one direction of flow; short titles, with the rest in
+`meta.detail`; and text you can read when the whole diagram fits on screen (on a big canvas, over 25 boxes or three or more frames, that
+last one is only a measure: it's read by zooming in).
+
+`toucan.measure()` and `toucan.tidy.*` read the canvas through `toucan.scene` (app/scene.js), the same on both engines: `scene.items()` gives every
+shape in page coordinates with its `kind` (box, frame, text, note, arrow), `scene.arrows()` what each arrow joins and how it runs, and `place`,
+`restyle`, `setArrow`, `checkpoint` and `rollback` change them. Use it for a routine that should run on either engine. On Excalidraw its changes
+land together in one `updateScene` when the exec ends (one undo step), moving a box moves its label, and the arrows bound to it are drawn again.
+
+## Formats and details: short boxes, with the rest a click away
+
+A box should be short: a name or a title. What's behind it goes in `meta.detail` (`toucan.node(key, {meta: {detail: '…'}})`), which
+opens in a card when someone selects the box. `meta.see` is a list of `{key, label}` cross-references, shown as jumps in that card, which
+keeps long arrows off the canvas. A thread on a box tells its agent the box's detail.
+
+A canvas can have a **format**, set with `toucan meta --canvas-format story|ideas|process|hierarchy|timeline|board|system|none` or `new --canvas-format`. It moves nothing. It says how to
+move through the canvas with ← and → in that card, and tells agents how to behave there, through the brief:
+
+- **story**: one path; ← → follow the arrows. Answers go as dashed branches beside the stop.
+- **ideas**: frames are ideas and a gap means something; ← → move along a frame. Don't fill gaps.
+- **process**, **hierarchy**: steps and decisions, or a tree; ← → follow arrows.
+- **timeline**, **board**: a position means something; ← → move along a frame or row.
+- **system**: named parts and real connections; ← → follow arrows, and the card lists the choices where they branch. Zoomed out on tldraw, people see frames and
+  how many connections run between them, and a frame opens on click. That's only what they see: `summary`, `graph`, `screenshot` and exports still have every shape.
+
+Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. `animate` (and **Animate** above the canvas) builds
+the diagram up in that same order as a GIF: from where it starts, each box with the arrows that join it to what's already there, a fork's
+branches together, lanes and frames first; nothing on the canvas changes. The **Air out** routine (`routine run air-out`)
+converts a dense diagram: long text moves to `meta.detail`, names get larger, and things spread a little. Run it only when asked. Region threads keep their position, so they may need re-anchoring afterwards.

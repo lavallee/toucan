@@ -1,5 +1,5 @@
 ---
-description: Everything toucan 0.18.0 does, in one list: where to find each feature, and when it arrived.
+description: Everything toucan 0.19.0 does, in one list: where to find each feature, and when it arrived.
 kicker: Reference
 ---
 # Features
@@ -92,6 +92,7 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Describe it as data](tour.html#describe-it-as-data) | An agent describes a diagram and a layout engine places it, which is why drawing takes seconds. | CLI: `draw FILE [--update]` | 0.7.0 |
 | [Connect your agents](quickstart.html) | Teaches Claude Code, Codex, Gemini CLI, pi, Cursor, opencode and Claude Desktop to use toucan, by skill or MCP. | CLI: `agents [install\|remove]` | 0.8.0 |
 | [MCP server](quickstart.html) | For agents that can't run the CLI, including Codex in its default sandbox. | CLI: `mcp` | 0.8.0 |
+| [Agent guide by topic](https://github.com/lavallee/toucan/blob/main/AGENTS.md) | A short AGENTS.md for everyday canvas work, with the rest in topic guides an agent reads when it needs them: CLI, editing, collaboration, plans and extensions. | CLI: `guide [TOPIC]` | 0.19.0 |
 | [A canvas per project](quickstart.html) | toucan init finds or makes the canvas for the repository you're in; commands there use it without --canvas. | CLI: `init [NAME] --open` | 0.8.0 |
 | [Headless mode](agents.html#headless-mode) | With no tab open, agents still read and edit: the server runs the canvas in its own headless page. | CLI: `start --headless` | 0.2.0 |
 | [Node client and extensions](extending.html) | A Node client for scripts, and toucan X runs toucan-X so extensions live in their own repos. | CLI: `toucan-X` | 0.1.0 |
@@ -116,4 +117,4 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Remote and behind a proxy](how-it-works.html) | Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to. | **Sign-in page**; CLI: `--public-url` · `--allow-host` · `TOUCAN_URL` · `TOUCAN_TOKEN` | 0.11.0 |
 | [Plugins](extending.html#plugins) | One mechanism for programs on PATH that connect toucan to your own systems (agent profiles, plan sources), with one trust rule; lists what was found and, for anything refused, why. | CLI: `plugins` · `sources` · `profiles` | 0.15.0 |
 
-*65 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
+*66 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*

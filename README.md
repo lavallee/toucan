@@ -112,7 +112,7 @@ For anything else that speaks [MCP](https://modelcontextprotocol.io), add this s
 { "mcpServers": { "toucan": { "command": "toucan", "args": ["mcp"] } } }
 ```
 
-An agent with no connection at all can still follow [AGENTS.md](AGENTS.md) (`toucan guide` prints it). In a container or on another machine, set `TOUCAN_URL` and `TOUCAN_TOKEN` to use a server elsewhere; the token is in `~/.config/toucan/server.json` on the server's machine.
+An agent can read the guide offline. Start with [AGENTS.md](AGENTS.md), use `toucan guide TOPIC` for a topic, or run `toucan guide` for the full reference. In a container or on another machine, set `TOUCAN_URL` and `TOUCAN_TOKEN` to use a server elsewhere; the token is in `~/.config/toucan/server.json` on the server's machine.
 
 Claude Code and Codex can also use the plugin from the Lyra Forge marketplace, which stays up to date with the marketplace rather than with your install:
 
@@ -220,7 +220,7 @@ Getting going:
   open [NAME]                 open a canvas (or the index) in your browser, signed in
   agents [install [ID...] [--mcp] [--force] | remove [ID...]]   connect the agents on this machine
   mcp                         run as an MCP server on stdio
-  guide                       the full guide for agents
+  guide [TOPIC]               the full agent guide or one topic
   status | doctor             is the server running; check the whole install
   start [--port P] [--host H] [--data DIR] [--no-headless] [--take-over] | stop | restart   the background server
   update                      install the latest release
@@ -291,7 +291,7 @@ away" until you mark them seen (per browser).
 
 ## Extending
 
-- **Canvas scripts** grow a single canvas, and **routines** are chores for every canvas; see [AGENTS.md](AGENTS.md).
+- **Canvas scripts** grow a single canvas, and **routines** are chores for every canvas. See the [extensions guide](docs/agents/extensions.md).
 - **Extension commands.** `toucan X …` runs `toucan-X …` from your PATH, with `TOUCAN_CANVAS` set, so
   domain-specific tooling (a diagram generated from your own data, say) lives in its own repo. From
   Node, use the same client the CLI does:

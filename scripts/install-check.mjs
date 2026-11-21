@@ -66,6 +66,16 @@ try {
 	assert.ok(!existsSync(join(modules, 'tldraw')) && !existsSync(join(modules, 'shadcn')) && !existsSync(join(modules, 'vite')), 'build-time dependencies stay behind too')
 	ok(`install is lean: ${readdirSync(modules).length} top-level modules`)
 
+	const guide = await toucan(['guide'], { cwd: project })
+	const guideIndex = await toucan(['guide', 'index'], { cwd: project })
+	assert.equal(guideIndex, readFileSync(join(pkg, 'AGENTS.md'), 'utf8').trim())
+	for (const [, topic] of guideIndex.matchAll(/docs\/agents\/([a-z]+)\.md/g)) {
+		const reference = await toucan(['guide', topic], { cwd: project })
+		assert.ok(guide.includes(reference), `the installed guide includes ${topic}`)
+	}
+	assert.match(await toucan(['guide', 'plans'], { cwd: project }), /^# Plan-backed canvases/)
+	ok('the full guide and its topic files ship with the CLI')
+
 	const status = JSON.parse(await toucan(['status']))
 	assert.equal(status.running, true)
 	assert.ok(status.data.startsWith(home), `canvases in the home directory, not the install: ${status.data}`)
@@ -106,6 +116,7 @@ try {
 		return r.content[0]
 	}
 	assert.match((await text('toucan_canvases', {})).text, /my-app/)
+	assert.equal((await text('toucan_guide', { topic: 'index' })).text, guideIndex)
 	assert.equal(JSON.parse((await text('toucan_project_canvas', {})).text).canvas, 'my-app', "the harness's directory finds the project's canvas")
 	assert.match((await text('toucan_templates', {})).text, /flowchart/)
 	ok('mcp over stdio: discover, initialize, tools')

@@ -42,10 +42,11 @@ Never `npm install toucan`: that name on the npm registry is an unrelated packag
 headless browser, and your edits go on the canvas's trail (`toucan log`); if neither is possible, ask the person
 to open the canvas with `toucan open`.
 
-## The full guide
+## Agent guide
 
-Read it before your first edit: `toucan guide`. It covers the commands, the `toucan.*` helpers, the graph
-format, both engines and canvas scripts. A deployment may add notes in its data directory's `AGENTS.md`.
+Start with the repository's `AGENTS.md` or `toucan guide index`. Use `toucan guide TOPIC` to read just what you need:
+`cli`, `editing`, `collaboration`, `plans`, or `extensions`. `toucan guide` prints the full reference.
+A deployment may add notes in its data directory's `AGENTS.md`.
 
 ## The loop
 

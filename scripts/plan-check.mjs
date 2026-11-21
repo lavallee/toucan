@@ -862,9 +862,9 @@ else console.log('<html>')
 	}
 
 	// The docs name what the catalog has.
-	const guide = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8')
-	for (const kind of Object.keys(P.KINDS)) assert.ok(new RegExp(`\\b${kind}\\b`).test(guide.slice(guide.indexOf('## Plans'))), `AGENTS.md describes the ${kind} view`)
-	ok('AGENTS.md describes every kind of view')
+	const guide = readFileSync(join(ROOT, 'docs/agents/plans.md'), 'utf8')
+	for (const kind of Object.keys(P.KINDS)) assert.ok(new RegExp(`\\b${kind}\\b`).test(guide), `the plan guide describes the ${kind} view`)
+	ok('the plan guide describes every kind of view')
 } finally {
 	rmSync(tmp, { recursive: true, force: true })
 }

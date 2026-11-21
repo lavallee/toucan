@@ -1,6 +1,6 @@
 {
  "product": "toucan",
- "version": "0.18.0",
+ "version": "0.19.0",
  "updated": "2026-11-20",
  "note": "The full feature list. scripts/build-features.mjs renders it to website/content/features.md; keep it in step with CHANGELOG.md.",
  "groups": [
@@ -626,6 +626,17 @@
    "cli": "mcp",
    "since": "0.8.0",
    "docs": "quickstart.html",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "guide",
+   "group": "agents",
+   "name": "Agent guide by topic",
+   "summary": "A short AGENTS.md for everyday canvas work, with the rest in topic guides an agent reads when it needs them: CLI, editing, collaboration, plans and extensions.",
+   "cli": "guide [TOPIC]",
+   "since": "0.19.0",
+   "docs": "https://github.com/lavallee/toucan/blob/main/AGENTS.md",
    "engines": "both",
    "who": "agent"
   },

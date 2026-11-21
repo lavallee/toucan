@@ -1,8 +1,9 @@
 # Agent guide
 
-This page mirrors [`AGENTS.md`](https://github.com/lavallee/toucan/blob/main/AGENTS.md), the guide
-agents read in the repo. The ground rule: a person is looking at the canvas and editing it by hand at the
-same time. Inspect before you change, keep edits small, and never wipe their work.
+[`AGENTS.md`](https://github.com/lavallee/toucan/blob/main/AGENTS.md) gives agents the everyday rules
+and links to the topic guides. This page brings the reference material together for web readers.
+Someone may be editing the same canvas by hand. Inspect it first and make small, reversible edits.
+At the terminal, use `toucan guide index` for the map or `toucan guide TOPIC` for a single topic.
 
 ## The CLI
 
@@ -265,7 +266,7 @@ move through the canvas with ← and → in that card, and tells agents how to b
 
 Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. `animate` (and **Animate** above the canvas) builds
 the diagram up in that same order as a GIF: from where it starts, each box with the arrows that join it to what's already there, a fork's
-branches together, lanes and frames first; nothing on the canvas changes. The **Air out** routine (`routine run air-out`, tldraw)
+branches together, lanes and frames first; nothing on the canvas changes. The **Air out** routine (`routine run air-out`)
 converts a dense diagram: long text moves to `meta.detail`, names get larger, and things spread a little. Run it only when asked. Region threads keep their position, so they may need re-anchoring afterwards.
 
 ## Files: what you write for a canvas
