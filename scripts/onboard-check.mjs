@@ -185,6 +185,10 @@ try {
 	await failure(['--x/evil'], { cwd: planted })
 	assert.ok(!existsSync(join(base, 'pwned')), 'no command can name a path to run')
 	assert.match((await ask('tools/call', { name: 'toucan_guide', arguments: {} })).result.content[0].text, /toucan --canvas NAME summary/, 'the guide speaks `toucan`')
+	const guide = async (topic) => (await ask('tools/call', { name: 'toucan_guide', arguments: { topic } })).result
+	assert.match((await guide('index')).content[0].text, /^# toucan/)
+	assert.match((await guide('plans')).content[0].text, /^# Plan-backed canvases/)
+	assert.equal((await guide('--server')).isError, true)
 	ok('mcp: handshake and stateless eras, version errors, what toucan_cli may run')
 
 	// ---- a server someone runs themselves is theirs

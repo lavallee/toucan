@@ -5,6 +5,16 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-11-20
+
+### Changed
+
+- **The agent guide is split by topic.** `AGENTS.md` is now a short guide to everyday canvas work, with a map of five topic
+  guides under `docs/agents/`: `cli`, `editing`, `collaboration`, `plans` and `extensions`. `toucan guide TOPIC` prints one,
+  `toucan guide index` the short guide, and `toucan guide` all of them, as before. Over MCP, `toucan_guide` takes the topic.
+  The chat and comment-thread agents start from the short guide and read a topic when they need it. The topic guides
+  ship with the install.
+
 ## [0.18.0] — 2026-11-20
 
 ### Added
