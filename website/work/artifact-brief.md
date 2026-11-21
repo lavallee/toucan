@@ -31,26 +31,28 @@ show synthetic projects recorded through the real canvas, plan, and review inter
 The recipe summaries and schedule come from the agent, and the capture verifies both writes.
 It also emits the illustrated board and stills. The timings are example equipment reservations.
 
-The feature edit starts with the finished recipe cards, then cuts from each prompt directly to the
-agent’s canvas change. Use a tight crop for proof and large type for the beat to remember. Keep the
-baked caption out of the new crop, credit tldraw, and label the real session as edited for time.
-Check the first frame, both before-and-after cuts, and the oven and hosting close-ups at phone size
-with sound off. The original score has no narration.
+The site film opens on the rolls and turkey at different temperatures. The conflict makes the
+one-oven constraint visible. We compared this opening against one that led with the finished
+menu, and kept the finished menu as the poster. The two writes use the original Toucan recording.
+Check the opening, the changes to the canvas, and the oven and hosting close-ups at phone size.
 
-The cut list is pinned to the original 1600×1000 take. To re-export all three formats, use Node,
+The edit uses selects from the original 1600×1000 take. To render and review locally, use Node,
 FFmpeg, and Chromium from the repository checkout.
 
 ```sh
 git show 1578b4d143dbb72f82b56df2ee5dc9353ba7ad6d:website/site/assets/use-cases/thanksgiving-dinner.mp4 > website/work/thanksgiving-capture.mp4
-node scripts/thanksgiving/social.mjs website/work/thanksgiving-capture.mp4
+node scripts/thanksgiving/feature.mjs website/work/thanksgiving-capture.mp4 website/work/thanksgiving-preview
 ```
 
-Set `CHROMIUM` if using a system Chromium. The project site uses the single landscape film at every viewport. The 4:5 and 9:16 social
-exports go to the ignored `website/work/thanksgiving-social/` directory for channel-specific
-handoff. Only the project-site film and its poster go in `site/`.
+Set `CHROMIUM` if using system Chromium. Pass `result` as the third argument to compare the
+alternate opening. After reviewing the rendered sequence, copy its MP4 and poster to
+`site/assets/use-cases/`. Reopen the built page on desktop and phone and verify the single
+embedded film. Publish through Artoo.
 
-Fresh recordings write to the same ignored capture path.
-They require new selects in `scripts/thanksgiving/social.mjs` because prompt and agent timing varies.
+The previously produced social edits can be recreated with
+`node scripts/thanksgiving/social.mjs website/work/thanksgiving-capture.mp4`. They go to the
+ignored `website/work/thanksgiving-social/` folder for local handoff. Fresh captures require
+new selects because the agent and typing timing varies.
 
 ## Sources
 

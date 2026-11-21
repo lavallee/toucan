@@ -18,18 +18,17 @@ const fps = 30
 
 // Source times belong to the archived take. The two edits keep the before/after canvas states.
 const shots = [
-	{ id: 'hook', seconds: 1.9, at: 24.6, crop: [48, 270, 1504, 230], where: [[892, 732, 90], [840, 1120, 100], [1050, 638, 106]], mark: 'THANKSGIVING IN TOUCAN', title: 'Five recipes.<br><em>One oven.</em>' },
-	{ id: 'links', seconds: 1.7, at: 17.5, crop: [1298, 98, 280, 428], where: [[484, 474, 483], [480, 820, 460], [418, 128, 1051]], mark: 'ROUND 1  /  YOU', title: 'Start with<br><em>five links.</em>' },
-	{ id: 'menu', seconds: 2.15, at: 18.57, speed: .75, crop: [18, 86, 1180, 680], where: [[900, 580, 90], [840, 835, 100], [915, 185, 617]], mark: 'ROUND 1  /  CODEX', title: 'Codex builds<br><em>the menu.</em>' },
-	{ id: 'detail', seconds: 2.4, at: 28.71, crop: [802, 98, 428, 767], where: [[422, 350, 551], [406, 774, 534], [407, 82, 1010]], mark: 'ZOOM INTO A RECIPE', title: 'Ingredients.<br>Prep.<br><em>Original link.</em>' },
-	{ id: 'dinner', seconds: 2.1, at: 31.45, speed: 1.31, crop: [878, 821, 710, 174], where: [[900, 733, 90], [840, 1000, 100], [840, 574, 690]], mark: 'ROUND 2  /  YOU', title: 'Dinner at<br><em>6:00.</em>' },
-	{ id: 'timeline', seconds: 2.55, at: 41.88, speed: 1.11, crop: [18, 86, 1164, 753], where: [[900, 602, 90], [840, 862, 100], [906, 144, 619]], mark: 'ROUND 2  /  CODEX', title: 'Codex draws<br><em>the timeline.</em>' },
-	{ id: 'oven', seconds: 2.85, at: 50, crop: [46, 294, 1460, 197], where: [[900, 734, 90], [840, 1068, 100], [878, 502, 652]], mark: 'THE OVEN', title: 'One oven.<br><em>Three settings.</em>' },
-	{ id: 'logistics', seconds: 2.85, at: 50, crop: [48, 497, 1442, 297], where: [[900, 820, 90], [840, 1110, 100], [890, 526, 642]], mark: 'THE REST OF THE AFTERNOON', title: 'Prep. Finish.<br><em>Host.</em>' },
-	{ id: 'close', seconds: 2.45, at: 59.1, crop: [468, 98, 672, 742], where: [[538, 447, 451], [580, 922, 236], [572, 104, 875]], mark: 'TOUCAN', title: 'Dinner<br><em>at six.</em>' },
+	{ id: 'hook', seconds: 1.9, at: 24.6, crop: [48, 270, 1504, 230], where: [[892, 732, 90], [840, 1120, 100]], mark: 'THANKSGIVING IN TOUCAN', title: 'Five recipes.<br><em>One oven.</em>' },
+	{ id: 'links', seconds: 1.7, at: 17.5, crop: [1298, 98, 280, 428], where: [[484, 474, 483], [480, 820, 460]], mark: 'ROUND 1  /  YOU', title: 'Start with<br><em>five links.</em>' },
+	{ id: 'menu', seconds: 2.15, at: 18.57, speed: .75, crop: [18, 86, 1180, 680], where: [[900, 580, 90], [840, 835, 100]], mark: 'ROUND 1  /  CODEX', title: 'Codex builds<br><em>the menu.</em>' },
+	{ id: 'detail', seconds: 2.4, at: 28.71, crop: [802, 98, 428, 767], where: [[422, 350, 551], [406, 774, 534]], mark: 'ZOOM INTO A RECIPE', title: 'Ingredients.<br>Prep.<br><em>Original link.</em>' },
+	{ id: 'dinner', seconds: 2.1, at: 31.45, speed: 1.31, crop: [878, 821, 710, 174], where: [[900, 733, 90], [840, 1000, 100]], mark: 'ROUND 2  /  YOU', title: 'Dinner at<br><em>6:00.</em>' },
+	{ id: 'timeline', seconds: 2.55, at: 41.88, speed: 1.11, crop: [18, 86, 1164, 753], where: [[900, 602, 90], [840, 862, 100]], mark: 'ROUND 2  /  CODEX', title: 'Codex draws<br><em>the timeline.</em>' },
+	{ id: 'oven', seconds: 2.85, at: 50, crop: [46, 294, 1460, 197], where: [[900, 734, 90], [840, 1068, 100]], mark: 'THE OVEN', title: 'One oven.<br><em>Three settings.</em>' },
+	{ id: 'logistics', seconds: 2.85, at: 50, crop: [48, 497, 1442, 297], where: [[900, 820, 90], [840, 1110, 100]], mark: 'THE REST OF THE AFTERNOON', title: 'Prep. Finish.<br><em>Host.</em>' },
+	{ id: 'close', seconds: 2.45, at: 59.1, crop: [468, 98, 672, 742], where: [[538, 447, 451], [580, 922, 236]], mark: 'TOUCAN', title: 'Dinner<br><em>at six.</em>' },
 ]
 const formats = [
-	{ suffix: 'dinner', width: 1600, height: 900, landscape: true },
 	{ suffix: 'social', width: 1080, height: 1350 },
 	{ suffix: 'vertical', width: 1080, height: 1920, tall: true },
 ]
@@ -40,7 +39,7 @@ const photos = Object.fromEntries(['turkey', 'rolls', 'dressing'].map((id) => [i
 const even = (n) => Math.round(n / 2) * 2
 
 function placement(shot, format) {
-	const [width, top, left] = shot.where[format.landscape ? 2 : format.tall ? 1 : 0]
+	const [width, top, left] = shot.where[format.tall ? 1 : 0]
 	const height = even(width * shot.crop[3] / shot.crop[2])
 	if (left + width > format.width || top + height > format.height) {
 		throw new Error(`The ${shot.id} crop exceeds the ${format.suffix} frame`)
@@ -138,30 +137,6 @@ em{font-weight:400;color:var(--accent)}
  .links .picture,.detail .picture{bottom:320px}
  .links .shade,.detail .shade{inset:26% 0 13%;background:linear-gradient(180deg,var(--paper) 2%,transparent 32%,transparent 72%,var(--paper))}
 }
-@media (min-aspect-ratio:1/1){
- .copy{left:105px;right:900px;top:228px}
- .mark{font-size:21px}
- h1{font-size:106px}
- .hook .copy{top:195px}
- .hook .picture{width:1110px;object-position:56% 42%}
- .hook .sub{max-width:740px}
- .links .copy,.detail .copy{left:105px;right:800px;top:209px}
- .links .picture,.detail .picture{left:auto;right:0;width:830px;height:100%;opacity:.78}
- .links .shade,.detail .shade{inset:0;background:linear-gradient(90deg,var(--paper) 45%,transparent 83%),linear-gradient(0deg,var(--paper),transparent 23%)}
- .links .sub{max-width:455px}
- .detail h1{font-size:115px}
- .menu h1,.timeline h1{font-size:93px}
- .menu .copy,.timeline .copy{right:1000px;top:228px}
- .dinner .copy{top:190px}
- .dinner h1{font-size:156px}
- .oven .copy,.logistics .copy{right:985px;top:216px}
- .oven h1,.logistics h1{font-size:96px}
- .logistics .lanes{top:277px;font-size:31px}
- .brand,.credit,.close .credit{bottom:43px}
- .brand{left:106px}
- .close .copy{top:214px;right:890px}
- .close h1{font-size:151px}
-}
 </style><body class="${shot.id} ${['hook','dinner','close'].includes(shot.id) ? 'dark' : ''}">
 ${photo ? `<img class=picture alt="" src="${photos[photo]}"><div class=shade></div>` : ''}
 <div class=frame></div>
@@ -229,13 +204,9 @@ async function render(browser, format) {
 		}
 		const list = join(temp, `${suffix}.txt`)
 		writeFileSync(list, segments.map((path) => `file '${path}'`).join('\n'))
-		const output = format.landscape ? publicAssets : socialExports
-		mkdirSync(output, { recursive: true })
-		const target = join(output, `thanksgiving-${suffix}.mp4`)
+		mkdirSync(socialExports, { recursive: true })
+		const target = join(socialExports, `thanksgiving-${suffix}.mp4`)
 		await run('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, '-i', scorePath, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-af', 'volume=5dB', '-movflags', '+faststart', target])
-		if (format.landscape) {
-			await run('ffmpeg', ['-v', 'error', '-y', '-i', target, '-frames:v', '1', '-q:v', '2', join(publicAssets, 'thanksgiving-feature.jpg')])
-		}
 	} finally {
 		await page.close()
 	}
