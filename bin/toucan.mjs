@@ -38,6 +38,8 @@
 //     exec -e CODE | FILE | - [--label TEXT]   run JS in the live editor; `return` a JSON value (--label names it in the history)
 //     screenshot [OUT.png]        PNG of the page (or --keys a,b; --max px, default 1800)
 //     animate [OUT.gif]           GIF of the page building up, box by box along the arrows (--step ms, --hold ms, --max px)
+//     export OUT [--format F]     write the canvas as a file, by OUT's ending: .svg .png .gif .mmd .canvas .dot .excalidraw .json .txt
+//     describe                    what the diagram says, in plain words: frames, boxes, states and arrows (no tab needed)
 //     script list | put NAME FILE | rm NAME     canvas scripts (persistent behaviour)
 //     proposals [accept|reject [KEY...]]   dashed = proposed: list, or accept (solid) / reject (remove)
 //     selection                   what people have selected (to resolve "this"), in the tab you run in and others
@@ -123,7 +125,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'plan', 'sources', 'plugins', 'reflexes', 'review']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'export', 'describe', 'plan', 'sources', 'plugins', 'reflexes', 'review']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -316,6 +318,42 @@ switch (cmd) {
 		if (!r) die('canvas is empty')
 		writeFileSync(out, Buffer.from(r.gif, 'base64'))
 		print(`${out}  (${r.frames} frames, ${r.width}x${r.height})`)
+		break
+	}
+	case 'describe':
+		// What the diagram says, in words: to check it against what was asked without a picture. Read from the server's copy.
+		process.stdout.write(await call(cpath('/graph?format=text'), {}, { text: true }))
+		break
+	case 'export': {
+		// One way out for every kind of file. A picture (svg, png, gif) is drawn in a tab; the rest is the graph, from the server.
+		const out = positional()[0]
+		const KINDS = { svg: 'svg', png: 'png', gif: 'gif', mmd: 'mermaid', mermaid: 'mermaid', canvas: 'jsoncanvas', dot: 'dot', excalidraw: 'excalidraw', json: 'tg', txt: 'text' }
+		const named = flag('format')
+		const kind = typeof named === 'string' ? ({ ...KINDS, jsoncanvas: 'jsoncanvas', tg: 'tg', text: 'text' })[named] : KINDS[String(out ?? '').split('.').pop().toLowerCase()]
+		if (!out || !kind) die(`usage: export OUT [--format F] [--keys a,b]   OUT ends in one of ${Object.keys(KINDS).map((k) => '.' + k).join(' ')}, or name the format: svg, png, gif, mermaid, jsoncanvas, dot, excalidraw, tg, text`)
+		const keys = flag('keys') ? String(flag('keys')).split(',') : null
+		if (kind === 'svg') {
+			// The picture carries its title and what it says in words, as its <title> and <desc>.
+			const [info, desc] = await Promise.all([call(cpath('/info')), call(cpath('/graph?format=text'), {}, { text: true })])
+			const r = await exec(`return toucan.svg(${JSON.stringify({ keys, title: info.title ?? canvas, desc })})`, 120000, undefined, 'exporting an SVG')
+			if (!r) die('canvas is empty')
+			writeFileSync(out, r.svg)
+			print(`${out}  (${r.width}x${r.height})`)
+		} else if (kind === 'png') {
+			const b64 = await exec(`return toucan.screenshot(${JSON.stringify({ keys, max: Number(flag('max', 1800)) })})`, undefined, undefined, 'exporting a PNG')
+			if (!b64) die('canvas is empty')
+			writeFileSync(out, Buffer.from(b64, 'base64'))
+			print(out)
+		} else if (kind === 'gif') {
+			const r = await exec(`return toucan.animate(${JSON.stringify({ max: Number(flag('max', 1200)), step: Number(flag('step', 700)), hold: Number(flag('hold', 2500)) })})`, 180000, undefined, 'making an animated GIF')
+			if (!r) die('canvas is empty')
+			writeFileSync(out, Buffer.from(r.gif, 'base64'))
+			print(`${out}  (${r.frames} frames, ${r.width}x${r.height})`)
+		} else {
+			const got = await call(cpath(`/graph?format=${kind}`), {}, { text: kind !== 'tg' })
+			writeFileSync(out, typeof got === 'string' ? got : JSON.stringify(got, null, 2) + '\n')
+			print(out)
+		}
 		break
 	}
 	case 'script': {

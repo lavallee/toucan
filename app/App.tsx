@@ -125,7 +125,9 @@ export function App({ licenseKey }: { licenseKey?: string }) {
 		// The server's headless page shows up among the collaborators; say what it is.
 		if (headless) editor.user.updateUserPreferences({ name: 'agent (headless)' })
 		else if (myName()) editor.user.updateUserPreferences({ name: myName() })
-		const stopRelay = connectRelay({ editor, tl, toucan }, setStatus)
+		// The seed is fetched before the relay connects, so the first command can't get in ahead of it.
+		const seeded = applySeed(toucan)
+		const stopRelay = connectRelay({ editor, tl, toucan, ready: seeded }, setStatus)
 		const stopThumbnail = keepThumbnail(
 			async () => {
 				const ids = [...editor.getCurrentPageShapeIds()]
@@ -144,7 +146,6 @@ export function App({ licenseKey }: { licenseKey?: string }) {
 			if (chosen && chosen !== getAppearance().theme) setTheme(chosen)
 		})
 		editor.zoomToFit({ animation: { duration: 0 } })
-		applySeed(toucan)
 		return () => {
 			stopRelay()
 			stopThumbnail()

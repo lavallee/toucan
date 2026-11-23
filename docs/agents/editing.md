@@ -85,6 +85,12 @@ or below the picture (`"lane": "top"` or `"bottom"` to choose), and no arrow run
 a state: leave out what the person didn't give you. In a Mermaid import, a class named like a state (`a:::planned`, or `class a,b building`) sets it.
 (The form follows [open-diagram](https://github.com/lukendeasy/open-diagram) by Luke Deasy.)
 
+`toucan describe` says what a diagram says, in plain words: each frame and what it holds, the state of each part, and every arrow with its
+label. Read it against the request before you answer: every part the person named should be there, and nothing they didn't. `toucan export OUT`
+writes the canvas as a file, by the ending of `OUT`: `.svg` (sharp at any size, with its title and that description inside it, for a document
+or a pull request), `.png`, `.gif` (the animated build), or the graph as `.mmd`, `.canvas`, `.dot`, `.excalidraw`, `.json` or `.txt`. People
+get the same from **Export** above the canvas.
+
 `toucan.measure()` measures the diagram as drawn and returns a `score` out of 100 and `findings`, each naming the shapes involved: overlaps, text that
 outgrew its box, arrows through boxes, crossings, labels on boxes or on each other, arrows through other arrows' labels, arrows through a map's panels, boxes cut off by a frame. `routine run check-diagram` reports the same, points at
 the shapes, and gives a `fixes` line for each kind of finding: what to run or change to clear it. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing
@@ -113,7 +119,7 @@ move through the canvas with ← and → in that card, and tells agents how to b
 - **system**: named parts and real connections; ← → follow arrows, and the card lists the choices where they branch. Zoomed out on tldraw, people see frames and
   how many connections run between them, and a frame opens on click. That's only what they see: `summary`, `graph`, `screenshot` and exports still have every shape.
 
-Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. `animate` (and **Animate** above the canvas) builds
+Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. `animate` (and **Export** above the canvas) builds
 the diagram up in that same order as a GIF: from where it starts, each box with the arrows that join it to what's already there, a fork's
 branches together, lanes and frames first; nothing on the canvas changes. The **Air out** routine (`routine run air-out`)
 converts a dense diagram: long text moves to `meta.detail`, names get larger, and things spread a little. Run it only when asked. Region threads keep their position, so they may need re-anchoring afterwards.
