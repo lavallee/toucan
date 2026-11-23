@@ -222,7 +222,7 @@ Most diagrams are a known shape, and a canvas *has* diagrams rather than *being*
 sample you can edit:
 
 - **Blocks**, one diagram each, in groups: processes (flowchart, swimlane, sequence, state machine, build pipeline, funnel, cycle, SIPOC),
-  structures (org chart, decision tree, mind map, OKR tree), systems (layered architecture, service map, network, entity relationships), time
+  structures (org chart, decision tree, mind map, OKR tree), systems (layered architecture, service map, systems map, network, entity relationships), time
   (roadmap, timeline), work (kanban, customer journey, responsibility chart, retro, empathy map, story map) and decisions (2x2, comparison table,
   fishbone, pros and cons, SWOT, stakeholder map, Eisenhower, five whys, decision log).
 - **Starters**, a whole canvas on one subject made of several blocks under their own headings: system design, incident review, product strategy,
@@ -234,11 +234,19 @@ the canvas. Then change its boxes with `toucan.node`, or `import` more.
 
 To draw on a canvas you're already on, describe the diagram as data and let the engine place it: `toucan templates show flowchart` shows the form,
 and `toucan --canvas NAME draw plan.json` lays it out beside what's there. Each `kind` (flow, tree, mindmap, lanes, grid, board, quadrant, timeline, gantt,
-sequence, fishbone, funnel, stack, cycle) has its own fields, and a box's `detail` is what opens on click. A new drawing never overwrites what's there: if its keys clash it takes a prefix, which the command reports. To change an earlier drawing, draw it again with `--update`, and `--move` to reposition its boxes too.
+sequence, fishbone, funnel, stack, cycle, map) has its own fields, and a box's `detail` is what opens on click. A new drawing never overwrites what's there: if its keys clash it takes a prefix, which the command reports. To change an earlier drawing, draw it again with `--update`, and `--move` to reposition its boxes too.
+
+For many named parts in a few systems, draw a **map** (`toucan templates show systems-map`): `columns` of panels, each with `tiles` packed in a grid,
+and `links` between panels. A tile or a panel can have a `status` (live, building, trial, planned, retiring), shown by colour, line and word and kept
+in `meta.status`; the key at the top lists only the states the picture uses. A panel takes a `step` number, a `sub` line and a `footer` such as
+"Owner: Data team". A link with `"kind": "planned"` is dotted. A link past a column, or back against the reading direction, travels in a lane above
+or below the picture (`"lane": "top"` or `"bottom"` to choose), and no arrow runs through a panel it doesn't end in. Never invent an owner, a step or
+a state: leave out what the person didn't give you. In a Mermaid import, a class named like a state (`a:::planned`, or `class a,b building`) sets it.
+(The form follows [open-diagram](https://github.com/lukendeasy/open-diagram) by Luke Deasy.)
 
 `toucan.measure()` measures the diagram as drawn and returns a `score` out of 100 and `findings`, each naming the shapes involved: overlaps, text that
-outgrew its box, arrows through boxes, crossings, labels on boxes or on each other, arrows through other arrows' labels, boxes cut off by a frame. `routine run check-diagram` reports the same and points at
-the shapes. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing
+outgrew its box, arrows through boxes, crossings, labels on boxes or on each other, arrows through other arrows' labels, arrows through a map's panels, boxes cut off by a frame. `routine run check-diagram` reports the same, points at
+the shapes, and gives a `fixes` line for each kind of finding: what to run or change to clear it. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing
 overlapping or cut off; arrows that don't run through boxes; boxes of a kind that match and line up; one direction of flow; short titles, with the rest in
 `meta.detail`; and text you can read when the whole diagram fits on screen (on a big canvas, over 25 boxes or three or more frames, that
 last one is only a measure: it's read by zooming in).

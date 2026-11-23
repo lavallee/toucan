@@ -184,7 +184,7 @@ node bin/toucan.mjs setup      # builds the app, puts `toucan` on your PATH, and
 - **Threads.** Comment on a shape or drag out a region. Each comment is a thread you go back and forth in and close
   out: give it to its own agent (several can work at once, and you can steer each one), send it into the main chat, or
   leave it for people. They work on both engines and with no tab open, and `toucan threads` does the same from the CLI.
-- **Templates.** 33 diagrams (blocks) to start from or add to any canvas: flowchart, swimlane, sequence, architecture, roadmap, kanban, SWOT, retro, story map and more, laid out by rule and scored against what's actually drawn. Six starters make a whole canvas on one subject (system design, incident review, product strategy and others) out of several blocks. **Check this diagram** scores any canvas and points at what's wrong, and **Clean up** and **Lay it out again** fix most of it.
+- **Templates.** 34 diagrams (blocks) to start from or add to any canvas: flowchart, swimlane, sequence, architecture, roadmap, kanban, SWOT, retro, story map and more, laid out by rule and scored against what's actually drawn. Six starters make a whole canvas on one subject (system design, incident review, product strategy and others) out of several blocks. **Check this diagram** scores any canvas and points at what's wrong, and **Clean up** and **Lay it out again** fix most of it.
 - **Formats and details.** Boxes stay short, and selecting one opens its detail in a card. A story map, ideas map or system diagram
   lets you walk the canvas with ← and →, following arrows or frames, and tells agents how to work on it. **Air out** converts a dense diagram.
 - **Notes for the agent.** On tldraw, a sticky note is addressed to the agent: pin one where the problem
@@ -386,6 +386,11 @@ Reflexes (a canvas answering what happens to it by itself, and asking the agent 
 
 Agents noticing what people do while they work, so a canvas runs both ways at once, came from [Daniel Bachhuber](https://github.com/danielbachhuber) asking for
 toucan to be full duplex.
+
+The systems map (panels of tiles in columns, a state on any part shown by colour and by word, a key made from what the picture
+uses, and lanes that take a long arrow round the outside) follows [open-diagram](https://github.com/lukendeasy/open-diagram) by
+Luke Deasy. So does a check that says how to clear each thing it finds. Reading open-diagram's examples beside toucan's own
+showed where a dense picture went wrong here without the check noticing. The ideas are his; toucan's code is its own.
 
 ## Licences
 

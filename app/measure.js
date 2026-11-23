@@ -2,6 +2,33 @@
 // use this, so there's one definition of what makes a diagram sound. Findings name the shapes involved. It reads the canvas through
 // the scene (app/scene.js), so it measures tldraw and Excalidraw canvases alike.
 
+/**
+ * What to do about each kind of finding: a finding's `kind` is its name here, so an agent can act on one without looking at the
+ * picture. Keep a kind's wording stable (routines and agents match on it), and give every new kind a line here. Findings that
+ * name their fix follow open-diagram by Luke Deasy (https://github.com/lukendeasy/open-diagram, MIT), whose layout problems each
+ * say how to clear them.
+ */
+export const FIXES = {
+	'overlap': 'Move one of the two, or run the fix-overlaps routine.',
+	'too close': 'Give the two more room: move one, or run distribute-evenly.',
+	'text outgrew its box': 'Shorten the text and put the rest in meta.detail, or run fit-text to make the box fit.',
+	'cut off by its frame': 'Run fit-frames, or move the box inside its frame.',
+	'arrow runs through a box': 'Run tidy-arrows; if it stays, move the box out of the way or draw the arrow from another side.',
+	'arrow runs through a panel': 'Run tidy-arrows; in a map, give the link "lane": "top" or "bottom" so it goes round the outside.',
+	'arrows cross': 'Reorder the boxes so the two arrows do not have to cross, or run tidy-arrows.',
+	'arrow too short to read': 'Move the two boxes apart.',
+	'arrow labels sit on each other': 'Run clear-arrow-labels, or shorten the labels.',
+	'arrow label sits on a box': 'Run clear-arrow-labels; if it stays, shorten the label or widen the gap it sits in.',
+	'arrow label sits on a line': 'Run clear-arrow-labels, or shorten the label.',
+	'arrow label hides its arrow': 'Shorten the label, or move the two boxes apart so its line is longer than it is.',
+	'an arrow runs through another arrow\'s label': 'Run clear-arrow-labels.',
+	'uneven row': 'Run match-sizes.',
+	'uneven column': 'Run match-sizes.',
+	'straight arrows among elbows': 'Run neat-arrows, or set the odd arrows to the route the rest use.',
+	'empty gutter down the frames': 'Run fit-frames.',
+	'text too small to read with the whole diagram in view': 'Tighten the gaps, shorten the longest chain, or draw it in the other direction.',
+}
+
 export function measureDiagram(scene) {
 	const findings = []
 	const found = (kind, ...on) => {
@@ -74,6 +101,9 @@ export function measureDiagram(scene) {
 		return false
 	}
 	const info = arrows.map((a) => ({ a, path: scene.arrowPath(a.id), ends: new Set([a.from, a.to].filter(Boolean)) }))
+	// A panel (a frame marked meta.panel, as the map layout draws) is solid: an arrow with no end in it goes round it, not through.
+	const panels = frames.filter((f) => f.meta?.panel === true)
+	let throughPanels = 0
 	let throughBoxes = 0, crossings = 0, labelOnBox = 0, labelOnMarker = 0, labelSqueezed = 0, shortArrows = 0, loose = 0, labelOnLabel = 0
 	const labels = [] // [arrow, its label's box], to find labels piled on each other (elbows that share a run put theirs together)
 	const markers = boxes.filter((s) => !s.text.trim() || isThin(bounds(s)))
@@ -85,6 +115,7 @@ export function measureDiagram(scene) {
 		const skip = new Set(ends)
 		for (const id of ends) for (const anc of scene.ancestors(id)) skip.add(anc)
 		for (const s of solid) if (!skip.has(s.id) && crossesBox(path, bounds(s))) (throughBoxes++, found('arrow runs through a box', a, s))
+		for (const f of panels) if (!skip.has(f.id) && crossesBox(path, bounds(f))) (throughPanels++, found('arrow runs through a panel', a, f))
 		for (let j = i + 1; j < info.length; j++) {
 			if ([...ends].some((x) => info[j].ends.has(x))) continue
 			for (let p = 1; p < path.length; p++) for (let q = 1; q < info[j].path.length; q++) if (cross(path[p - 1], path[p], info[j].path[q - 1], info[j].path[q])) (crossings++, found('arrows cross', a, info[j].a))
@@ -210,7 +241,7 @@ export function measureDiagram(scene) {
 	return {
 		findings,
 		boxes: solid.length, arrows: arrows.length, frames: frames.length,
-		overlaps, tooClose, outgrew, frameOverflow, framesOverlap: labelClipped, throughBoxes, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, labelOnLabel, labelCrossed, shortArrows, looseArrows: loose,
+		overlaps, tooClose, outgrew, frameOverflow, framesOverlap: labelClipped, throughBoxes, throughPanels, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, labelOnLabel, labelCrossed, shortArrows, looseArrows: loose,
 		aligned: +aligned.toFixed(2), sizeVariety: +sizeVariety.toFixed(2), gapEvenness: +cv(gaps).toFixed(2), lineEvenness: +mean(lineSpread).toFixed(2), lengthEvenness: +cv(lengths).toFixed(2), flow: +flow.toFixed(2),
 		aspect: page ? +(page.w / page.h).toFixed(2) : 1, fitZoom: +fitZoom.toFixed(2), textAtFit: +(fitZoom * minFont).toFixed(1), large,
 	}
@@ -221,7 +252,7 @@ export function scoreDiagram(m) {
 	let score = 100
 	const fault = (n, each, cap) => (score -= Math.min(cap, n * each))
 	fault(m.overlaps, 12, 40); fault(m.frameOverflow, 8, 24); fault(m.framesOverlap, 8, 16); fault(m.outgrew, 3, 15)
-	fault(m.throughBoxes, 6, 30); fault(m.crossings, 3, 15); fault(m.labelOnBox, 5, 20); fault(m.labelOnMarker, 3, 15); fault(m.labelOnLabel ?? 0, 5, 20); fault(m.labelCrossed ?? 0, 5, 20); fault(m.unevenRows, 1, 8); fault(m.unevenColumns ?? 0, 1, 8); fault(m.mixedArrows ?? 0, 2, 8); fault(m.emptyGutter ?? 0, 6, 6); fault(m.labelSqueezed, 3, 12); fault(m.tooClose, 2, 10); fault(m.shortArrows, 2, 8)
+	fault(m.throughBoxes, 6, 30); fault(m.throughPanels ?? 0, 6, 30); fault(m.crossings, 3, 15); fault(m.labelOnBox, 5, 20); fault(m.labelOnMarker, 3, 15); fault(m.labelOnLabel ?? 0, 5, 20); fault(m.labelCrossed ?? 0, 5, 20); fault(m.unevenRows, 1, 8); fault(m.unevenColumns ?? 0, 1, 8); fault(m.mixedArrows ?? 0, 2, 8); fault(m.emptyGutter ?? 0, 6, 6); fault(m.labelSqueezed, 3, 12); fault(m.tooClose, 2, 10); fault(m.shortArrows, 2, 8)
 	score -= (1 - m.aligned) * 12
 	if (m.arrows > 1) score -= (1 - m.flow) * 4
 	if (m.textAtFit < 11 && !m.large) score -= (11 - m.textAtFit) * 3

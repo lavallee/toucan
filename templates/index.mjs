@@ -93,6 +93,28 @@ export const TEMPLATES = [
 		edges: [{ from: 'site', to: 'cart' }, { from: 'cart', to: 'ord' }, { from: 'ord', to: 'pay' }, { from: 'ord', to: 'stock' }, { from: 'stock', to: 'pg' }, { from: 'pay', to: 'pg' }, { from: 'pay', to: 'mail' }],
 	},
 	{
+		// The form follows open-diagram by Luke Deasy (https://github.com/lukendeasy/open-diagram, MIT); the example is toucan's own.
+		id: 'systems-map', group: 'system', title: 'Systems map', format: 'system', kind: 'map', use: 'Many named parts in a few systems: what there is, what state each part is in, who owns it, and what feeds what.', heading: 'A furniture shop, from order to doorstep',
+		steps: [[1, 'Pay by link'], [2, 'One stock count'], [3, 'Same-day delivery']], stepsLabel: 'Rollout',
+		columns: [
+			[{ id: 'channels', title: 'Where orders come from', footer: 'Owner: Sales', tiles: [{ id: 'web', text: 'Web shop' }, { id: 'app', text: 'Phone app' }, { id: 'counter', text: 'Shop counter' }, { id: 'phone', text: 'Phone orders', status: 'retiring', detail: 'Closes when pay by link is live for every customer.' }] }],
+			[
+				{ id: 'orders', title: 'Orders', step: 1, footer: 'Owner: Commerce', tiles: [{ id: 'basket', text: 'Basket' }, { id: 'checkout', text: 'Checkout' }, { id: 'paylink', text: 'Pay by link', status: 'building' }, { id: 'refunds', text: 'Refunds' }] },
+				{ id: 'stock', title: 'Stock', step: 2, status: 'building', sub: 'One count for every shop and the warehouse', footer: 'Owner: Operations', tiles: [{ id: 'counts', text: 'Stock counts' }, { id: 'reorder', text: 'Reordering' }] },
+			],
+			[
+				{ id: 'money', title: 'Money', footer: 'Owner: Finance', cols: 2, tiles: [{ id: 'ledger', text: 'Ledger' }, { id: 'invoices', text: 'Invoices' }] },
+				{ id: 'fulfil', title: 'Fulfilment', footer: 'Owner: Operations', tiles: [{ id: 'picking', text: 'Picking' }, { id: 'packing', text: 'Packing' }, { id: 'couriers', text: 'Couriers' }, { id: 'sameday', text: 'Same-day delivery', status: 'planned' }, { id: 'lockers', text: 'Parcel lockers', status: 'trial' }] },
+			],
+			[{ id: 'people', title: 'Who uses it', footer: 'Owner: Service', tiles: [{ id: 'customers', text: 'Customers' }, { id: 'helpdesk', text: 'Help desk' }, { id: 'reports', text: 'Weekly reports', status: 'building' }] }],
+		],
+		links: [
+			{ from: 'channels', to: 'orders' }, { from: 'orders', to: 'stock', label: 'reserves' }, { from: 'orders', to: 'fulfil' }, { from: 'orders', to: 'money', label: 'payments' },
+			{ from: 'stock', to: 'fulfil', kind: 'planned' }, { from: 'fulfil', to: 'people', label: 'tracking' }, { from: 'money', to: 'people' },
+			{ from: 'people', to: 'channels', label: 'Returns start a new order' },
+		],
+	},
+	{
 		id: 'network', group: 'system', title: 'Network topology', format: 'system', kind: 'tree', use: 'How machines and networks connect.', boxWidth: 170, head: 'none', levelColors: ['violet', 'blue', 'green', 'grey'],
 		root: { text: 'Internet', shape: 'cloud', children: [
 			{ text: 'Firewall', children: [

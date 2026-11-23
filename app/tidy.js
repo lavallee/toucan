@@ -260,7 +260,8 @@ export function makeTidy(scene) {
 	 * does for the arrows it just drew.
 	 */
 	function rerouteBlocked({ only } = {}) {
-		const solid = scene.items().filter((s) => s.kind === 'box' && !isMarker(s))
+		// A panel (a frame marked meta.panel) is in the way too: an arrow with no end in it goes round.
+		const solid = scene.items().filter((s) => (s.kind === 'box' && !isMarker(s)) || (s.kind === 'frame' && s.meta?.panel === true))
 		const arrows = scene.arrows().filter((a) => a.from && a.to && a.from !== a.to)
 		const paths = new Map(arrows.map((a) => [a.id, scene.arrowPath(a.id)]))
 		let changed = 0

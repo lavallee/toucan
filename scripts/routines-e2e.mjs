@@ -114,6 +114,15 @@ try {
 	assert.equal(await onBox(), 0, JSON.stringify(cleared))
 	step('tldraw: clear arrow labels')
 
+	// A map's panel is in an arrow's way (a frame marked meta.panel): the check names it and says what to do, and tidying sends it round.
+	await ex('tl', "for (const [k, x, h] of [['pa', 0, 200], ['pb', 400, 520], ['pc', 800, 200]]) { toucan.frame(k, { x, y: 4000, w: 240, h, name: k, meta: { panel: true } }); toucan.node(k + '-tile', { parent: k, x: 30, y: 30, w: 180, h: 70, text: k }) } toucan.edge('pa', 'pc', { kind: 'elbow', anchors: { from: { x: 1, y: 0.5 }, to: { x: 0, y: 0.5 } } }); return 1")
+	const panelCheck = await routine('tl', 'check-diagram')
+	assert.ok(panelCheck.findings.some((f) => f.kind === 'arrow runs through a panel' && f.on.includes('pb')), JSON.stringify(panelCheck.findings))
+	assert.match(panelCheck.fixes['arrow runs through a panel'], /tidy-arrows/, 'a finding says what to do about it')
+	await routine('tl', 'tidy-arrows')
+	assert.equal(await ex('tl', 'return toucan.measure().throughPanels'), 0, 'tidy-arrows sends the arrow round the panel')
+	step('tldraw: an arrow through a panel is found, comes with its fix, and is sent round')
+
 	// Everything above ran as routines, and the work log knows it.
 	const stats = JSON.parse(await toucan('routine', 'stats'))
 	for (const n of ['arrows-to-links', 'open-details', 'fit-text', 'frame-these', 'stack-frames', 'clear-arrow-labels']) assert.ok(stats.routines.find((r) => r.name === n)?.runs > 0, `${n} is in the work log`)
