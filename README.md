@@ -389,7 +389,7 @@ toucan to be full duplex.
 
 The systems map (panels of tiles in columns, a state on any part shown by colour and by word, a key made from what the picture
 uses, and lanes that take a long arrow round the outside) follows [open-diagram](https://github.com/lukendeasy/open-diagram) by
-Luke Deasy. So does a check that says how to clear each thing it finds. Reading open-diagram's examples beside toucan's own
+Luke Deasy. So does a check that says how to clear each thing it finds, and `toucan describe`, which says a diagram in plain words and puts them inside an exported SVG. Reading open-diagram's examples beside toucan's own
 showed where a dense picture went wrong here without the check noticing. The ideas are his; toucan's code is its own.
 
 ## Licences

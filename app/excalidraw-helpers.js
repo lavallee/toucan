@@ -251,6 +251,28 @@ export function makeExcalidrawHelpers(api, ex) {
 		return btoa(s)
 	}
 
+
+	/** An SVG's opening tag, then a <title> and <desc>, so the picture carries what it says in words (for a screen reader, or a search). */
+	const withWords = (svg, { title, desc } = {}) => {
+		const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+		const words = (title ? `<title>${esc(title)}</title>` : '') + (desc ? `<desc>${esc(desc)}</desc>` : '')
+		return words ? svg.replace(/<svg\b[^>]*>/, (open) => open + words) : svg
+	}
+
+	/** The scene (or some keys) as an SVG, with its fonts inside it. `title` and `desc` go in as the SVG's own. */
+	async function svg({ keys, title, desc, padding = 32 } = {}) {
+		let els = live()
+		if (keys?.length) {
+			const ids = new Set(keys.map(get).filter(Boolean).map((e) => e.id))
+			els = els.filter((e) => ids.has(e.id) || ids.has(e.frameId) || ids.has(e.containerId))
+			const inner = new Set(els.map((e) => e.id))
+			els = live().filter((e) => inner.has(e.id) || inner.has(e.containerId))
+		}
+		if (!els.length) return null
+		const node = await ex.exportToSvg({ elements: els, appState: { ...api.getAppState(), exportBackground: true, viewBackgroundColor: '#ffffff', exportWithDarkMode: false }, files: api.getFiles(), exportPadding: padding })
+		return { svg: withWords(new XMLSerializer().serializeToString(node), { title, desc }), width: Math.round(parseFloat(node.getAttribute('width'))), height: Math.round(parseFloat(node.getAttribute('height'))) }
+	}
+
 	/**
 	 * An animated build of the scene as a GIF (app/animate.js): boxes appear in the order the arrows go, each with its arrows and
 	 * labels. Every frame of the GIF carries a transparent box the size of the whole scene, so they all export at one scale.
@@ -436,5 +458,5 @@ export function makeExcalidrawHelpers(api, ex) {
 	/** Is this element (or key, or id) a plan's: carrying customData.meta.plan, or in a frame that does? Then leave it to the plan. */
 	const isPlanShape = (shapeOrKey) => scene.isPlan(typeof shapeOrKey === 'string' ? get(shapeOrKey)?.id ?? shapeOrKey : shapeOrKey?.id)
 
-	return { engine: 'excalidraw', isPlanShape, scene, measure, fixes: FIXES, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, _planRender, _busyKeys, remove, zoomTo, screenshot, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
+	return { engine: 'excalidraw', isPlanShape, scene, measure, fixes: FIXES, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, _planRender, _busyKeys, remove, zoomTo, screenshot, svg, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
 }

@@ -671,6 +671,25 @@ export function makeHelpers(editor) {
 		return btoa(s)
 	}
 
+
+	/** An SVG's opening tag, then a <title> and <desc>, so the picture carries what it says in words (for a screen reader, or a search). */
+	const withWords = (svg, { title, desc } = {}) => {
+		const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+		const words = (title ? `<title>${esc(title)}</title>` : '') + (desc ? `<desc>${esc(desc)}</desc>` : '')
+		return words ? svg.replace(/<svg\b[^>]*>/, (open) => open + words) : svg
+	}
+
+	/**
+	 * The page (or some keys) as an SVG: sharp at any size, with its fonts inside it, for a document, a slide or a pull request.
+	 * `title` and `desc` go in as the SVG's own (`toucan export` gives it the canvas's title and its description in words).
+	 */
+	async function svg({ keys, title, desc, padding = 32 } = {}) {
+		const ids = keys?.length ? keys.map(idFor).filter((id) => editor.getShape(id)) : [...editor.getCurrentPageShapeIds()]
+		if (!ids.length) return null
+		const made = await editor.getSvgString(ids, { background: true, padding })
+		return made ? { svg: withWords(made.svg, { title, desc }), width: Math.round(made.width), height: Math.round(made.height) } : null
+	}
+
 	/**
 	 * An animated build of the page as a GIF (app/animate.js): boxes appear in the order the arrows go, each with its arrows.
 	 * tldraw exports a frame with everything in it, so frames (lanes, sections) are drawn here underneath, in its frame style,
@@ -746,7 +765,7 @@ export function makeHelpers(editor) {
 	const scene = tldrawScene(editor, { keyOf, text, toRichText })
 	/** Is this shape (or key, or id) a plan's: carrying meta.plan, or in a frame that does? Then leave it to the plan. */
 	const isPlanShape = (shapeOrKey) => scene.isPlan(typeof shapeOrKey === 'string' ? (shapeOrKey.startsWith('shape:') ? shapeOrKey : idFor(shapeOrKey)) : shapeOrKey?.id)
-	const api = { engine: 'tldraw', isPlanShape, idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, _planRender, _busyKeys, screenshot, animate, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
+	const api = { engine: 'tldraw', isPlanShape, idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, _planRender, _busyKeys, screenshot, svg, animate, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
 		const m = measureDiagram(scene)
 		return { ...m, score: scoreDiagram(m) }
 	}, fixes: FIXES, tidy: makeTidy(scene) }

@@ -594,7 +594,7 @@ const server = createServer(async (req, res) => {
 			const tg = { ...graphOf(canvas, { raw: url.searchParams.has('raw') }), canvas }
 			if (format === 'tg') return json(res, 200, tg)
 			res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
-			return res.end(FORMATS[format].export(tg, {}))
+			return res.end(FORMATS[format].export(tg, { title: readIndex()[canvas]?.title }))
 		}
 		if (sub === 'seed' && req.method === 'GET') return existsSync(seedPath(canvas)) ? json(res, 200, JSON.parse(readFileSync(seedPath(canvas), 'utf8'))) : (res.writeHead(204), res.end())
 		if (sub === 'seed' && req.method === 'DELETE') {

@@ -86,6 +86,20 @@ try {
 		assert.equal(buf.subarray(1, 4).toString(), 'PNG')
 		step(`${engine}: screenshot → ${buf.length} bytes, ${buf.readUInt32BE(16)}×${buf.readUInt32BE(20)} px`)
 
+		// Out again, as a picture that says what it shows and as words: `export` picks the kind by the file's ending.
+		const svgOut = join(home, `${name}.svg`)
+		await toucan('--canvas', name, 'export', svgOut)
+		const svg = readFileSync(svgOut, 'utf8')
+		assert.match(svg, /^<svg[^>]*>\s*<title>Headless (tldraw|excalidraw)<\/title><desc>[^<]*Alpha -&gt; Beta/, 'the SVG opens with the canvas title and what it says in words')
+		assert.ok(svg.includes('Gamma') || svg.length > 2000, 'the SVG has the drawing in it')
+		const said = (await toucan('--canvas', name, 'describe')).out
+		assert.match(said, /Boxes, left to right:\n- Alpha\n/)
+		assert.match(said, /Arrows:\n(- .*\n)*- Gamma -> Delta/)
+		const mmdOut = join(home, `${name}.mmd`)
+		await toucan('--canvas', name, 'export', mmdOut)
+		assert.match(readFileSync(mmdOut, 'utf8'), /^flowchart /)
+		step(`${engine}: export → ${svg.length} bytes of SVG with its title and description, and a Mermaid file; describe says it in words`)
+
 		const log = await json('--canvas', name, 'log')
 		assert.equal(log.length, 2, 'two edits on the trail (exec, import); reads are not logged')
 		assert.ok(log.every((e) => e.source === 'headless'))
@@ -147,6 +161,14 @@ try {
 
 	// A person opens each canvas through the sign-in link.
 	const token = JSON.parse(readFileSync(join(home, '.config/toucan/server.json'), 'utf8')).token
+	// A canvas made from a template is drawn by its first tab. The first command, arriving as that page opens, waits for it.
+	for (const engine of ['tldraw', 'excalidraw']) {
+		await toucan('new', `cold-${engine}`, '--engine', engine, '--template', 'flowchart')
+		const count = Number((await toucan('--canvas', `cold-${engine}`, 'exec', '-e', 'return toucan.summary().count')).out)
+		assert.ok(count >= 9, `${engine}: the first command on a new template canvas saw ${count} shapes`)
+		step(`${engine}: the first command on a canvas just made from a template sees the template (${count} shapes)`)
+	}
+
 	human = await chromium.launch()
 	for (const engine of ['tldraw', 'excalidraw']) {
 		const name = `hl-${engine}`
@@ -162,6 +184,18 @@ try {
 		const list = await page.locator('ol li').allInnerTexts()
 		assert.equal(list.length, 2)
 		await page.screenshot({ path: join(home, `${name}-human.png`) })
+		// The Export menu hands the person the same files.
+		await page.keyboard.press('Escape')
+		await page.getByRole('button', { name: 'Export' }).click()
+		for (const [label, ending, starts] of [['SVG', '.svg', '<svg'], ['Mermaid', '.mmd', 'flowchart']]) {
+			const [file] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: new RegExp(`^${label}`) }).first().click()])
+			assert.ok(file.suggestedFilename().endsWith(ending), file.suggestedFilename())
+			const saved = join(home, `menu-${name}${ending}`)
+			await file.saveAs(saved)
+			assert.ok(readFileSync(saved, 'utf8').startsWith(starts), `${label} from the menu`)
+		}
+		await page.keyboard.press('Escape')
+		step(`${engine}: the Export menu downloads an SVG and a Mermaid file`)
 		step(`${engine}: notice lists ${list.length} edits: ${list.map((l) => l.replace(/\s+/g, ' ').slice(0, 70)).join(' | ')}`)
 
 		// With a person's tab open, exec goes there, and the trail doesn't grow.

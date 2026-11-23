@@ -52,6 +52,15 @@ assert.equal(m.edges.find((e) => e.from === 'C' && e.to === 'D').style.dash, 'da
 	assert.equal(by.a.meta, undefined, 'an unmarked box has no state')
 	assert.deepEqual(st.warnings ?? [], [], 'front matter and class lines are read, not reported')
 }
+// A diagram in words: frames and what they hold, states, and arrows. What a layout drew for the reader (a key, a heading) is left out.
+{
+	const said = T.describe({ tg: 1, groups: [{ key: 'core', label: 'Core', box: { x: 300, y: 0, w: 200, h: 200 } }], nodes: [
+		{ key: 'app', text: 'App', box: { x: 0, y: 0, w: 100, h: 60 } }, { key: 'pay', text: 'Payments', group: 'core', meta: { status: 'building' }, box: { x: 320, y: 20, w: 100, h: 60 } },
+		{ key: 'map-key-live', text: 'Live', meta: { heading: true }, box: { x: 0, y: -100, w: 80, h: 40 } },
+	], edges: [{ from: 'app', to: 'core', label: 'orders' }, { from: 'pay', to: 'app', style: { dash: 'dotted' } }, { from: 'app', to: 'nowhere' }] }, { title: 'Shop' })
+	assert.equal(said, 'Shop\n\nFrames, left to right:\n- Core: Payments (being built)\nOutside any frame:\n- App\nArrows:\n- App -> Core, labeled "orders"\n- Payments -> App (dotted)\n')
+	assert.equal(T.FORMATS.text.export({ tg: 1, groups: [], nodes: [], edges: [] }), 'Nothing is drawn.\n')
+}
 console.log('ok  mermaid subset')
 
 // Layout of new items lands beside existing content and gives every new item a box.

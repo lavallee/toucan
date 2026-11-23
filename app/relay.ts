@@ -13,7 +13,8 @@ import { activity, say, turn, setRunning } from './pulses'
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 
-export type Scope = { editor: any; tl: any; toucan: any }
+// `ready`: settles once the canvas holds what it should (a template's seed has been drawn); code waits for it.
+export type Scope = { editor: any; tl: any; toucan: any; ready?: Promise<unknown> }
 
 /** Connects to /ws/canvas: runs exec requests and (re)installs canvas scripts. Returns a cleanup. */
 export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
@@ -66,6 +67,9 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 			}
 			if (msg.type !== 'exec') return
 			sock.send(JSON.stringify({ type: 'ack', id: msg.id }))
+			// A canvas just made from a template is drawn by its first tab: a command that arrives first waits, or it would see nothing
+			// (and the template's shapes would be counted as its own).
+			await scope.ready?.catch(() => {})
 			// One undo step per run, and a record of which shapes it added, changed or removed.
 			const done = scope.toucan._track?.()
 			setRunning(msg.agent)

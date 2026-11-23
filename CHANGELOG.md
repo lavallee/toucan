@@ -5,6 +5,38 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-11-23
+
+### Added
+
+- **Export.** One menu above the canvas for every way out: a picture as SVG or PNG, the animated build as a GIF, a file
+  another tool reads (Mermaid, JSON Canvas, Excalidraw, DOT, toucan graph), and what the diagram says, copied as words. It
+  replaces the Animate button, which is now a section of it. From the CLI, `toucan export OUT` writes any of them, choosing
+  the kind by the ending of `OUT`.
+- **SVG.** A canvas, or some of its shapes with `--keys`, as an SVG on both engines: sharp at any size, with its fonts inside
+  it. The SVG carries the canvas's title and a description of the diagram as its `<title>` and `<desc>`, so a screen reader,
+  a search, or an agent reading the file knows what the picture shows. `toucan.svg()` in the editor.
+- **A diagram in words.** `toucan describe` (and `graph --format text`, and `toucan_describe` over MCP) says what a diagram
+  says: each frame and what it holds, the state of each part, and every arrow with its label. It reads the server's copy, so
+  it needs no tab. Use it to check a diagram against what was asked without looking at a picture.
+
+### Changed
+
+- In a systems map, the gap between columns grows to fit the longest label on an arrow across it, so a label no longer
+  wraps in the middle of a word.
+
+### Fixed
+
+- The first command on a canvas just made from a template, run before anyone had opened it, could see an empty canvas: the
+  page that draws the template was still drawing it. A check then scored it 100 with nothing wrong. Commands now wait for the
+  template to be drawn.
+
+### Credits
+
+- `describe`, and putting those words inside the picture, follow `describe()` and the SVG `<desc>` in
+  [open-diagram](https://github.com/lukendeasy/open-diagram) by [Luke Deasy](https://github.com/lukendeasy) (MIT). No code of
+  open-diagram is used.
+
 ## [0.20.0] — 2026-11-23
 
 ### Added
