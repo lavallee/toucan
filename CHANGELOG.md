@@ -5,6 +5,40 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-11-23
+
+### Added
+
+- **Systems maps.** A new kind of diagram, `map`, for many named parts in a few systems: columns of panels, each a frame with
+  its tiles packed in a grid, so twenty parts fit where a flow chart held six. A tile or a panel can have a state (live, being
+  built, in trial, planned, retiring), shown by colour, line and word and kept in `meta.status`. The key at the top lists only the
+  states the picture uses. A panel takes a step number, a line under its name and a footer such as an owner. An arrow past a
+  column, or back against the reading direction, travels in a lane above or below the picture; arrows on one side of a panel
+  spread along it in the order of where they go; and arrows across one gap turn at different places, in the order that crosses
+  least. `toucan templates show systems-map` shows the form, and it draws on both engines.
+- **A check that says what to do.** `routine run check-diagram` now returns `fixes`: for each kind of finding, what to run or
+  change to clear it, so an agent can act on a finding without looking at the picture. `toucan.fixes` has the whole table.
+- **States from Mermaid.** On import, a class named like a state (`a:::planned`, or `class a,b building`) gives the box that
+  state. Front matter at the top of a Mermaid file is read past, not reported as a warning.
+
+### Changed
+
+- **A panel is in an arrow's way.** A map's panels are frames marked `meta.panel`. An arrow with no end in one goes round it:
+  the check reports `arrow runs through a panel`, and drawing, importing and `tidy-arrows` route round it, as they do round a box.
+  Other frames (lanes, sections) are as before: an arrow may cross them.
+
+### Fixed
+
+- On Excalidraw, an arrow that ends on a frame is drawn. It was left out when a canvas was made from a graph.
+
+### Credits
+
+- The systems map and the check's fixes follow [open-diagram](https://github.com/lukendeasy/open-diagram) by
+  [Luke Deasy](https://github.com/lukendeasy) (MIT): panels of tiles in columns, a state shown by word as well as colour, a key
+  made from what the picture uses, lanes round the outside, arrows spread along a side, and layout problems that each say how to
+  clear them. toucan's implementation is its own, on its own engines; no code of open-diagram is used. Thanks to him for
+  publishing the examples as well as the library: drawing them here is what showed the gap.
+
 ## [0.19.0] — 2026-11-20
 
 ### Changed

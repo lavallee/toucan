@@ -9,7 +9,7 @@ import ELK from 'elkjs/lib/elk.bundled.js'
 import { Box as tl_Box, createShapeId, createBindingId, toRichText, renderPlaintextFromRichText, fitFrameToContent, GeoShapeGeoStyle, DefaultColorStyle, DefaultFillStyle, DefaultDashStyle, DefaultSizeStyle } from 'tldraw'
 import { fromTldraw, layoutMissing } from '../lib/tg.mjs'
 import { pulse as glow } from './pulses'
-import { measureDiagram, scoreDiagram } from './measure'
+import { FIXES, measureDiagram, scoreDiagram } from './measure'
 import { makeTidy } from './tidy'
 import { buildOrder, makeGif } from './animate'
 import { tldrawScene } from './scene'
@@ -749,6 +749,6 @@ export function makeHelpers(editor) {
 	const api = { engine: 'tldraw', isPlanShape, idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, _planRender, _busyKeys, screenshot, animate, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
 		const m = measureDiagram(scene)
 		return { ...m, score: scoreDiagram(m) }
-	}, tidy: makeTidy(scene) }
+	}, fixes: FIXES, tidy: makeTidy(scene) }
 	return api
 }

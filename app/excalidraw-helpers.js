@@ -11,7 +11,7 @@ import { pulse as glow } from './pulses'
 import { refsOfShape } from './reference-links'
 import { excalidrawScene } from './scene'
 import { planBusy, planRender } from './plan-render-excalidraw'
-import { measureDiagram, scoreDiagram } from './measure'
+import { FIXES, measureDiagram, scoreDiagram } from './measure'
 import { makeTidy } from './tidy'
 import { buildOrder, makeGif } from './animate'
 
@@ -436,5 +436,5 @@ export function makeExcalidrawHelpers(api, ex) {
 	/** Is this element (or key, or id) a plan's: carrying customData.meta.plan, or in a frame that does? Then leave it to the plan. */
 	const isPlanShape = (shapeOrKey) => scene.isPlan(typeof shapeOrKey === 'string' ? get(shapeOrKey)?.id ?? shapeOrKey : shapeOrKey?.id)
 
-	return { engine: 'excalidraw', isPlanShape, scene, measure, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, _planRender, _busyKeys, remove, zoomTo, screenshot, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
+	return { engine: 'excalidraw', isPlanShape, scene, measure, fixes: FIXES, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, _planRender, _busyKeys, remove, zoomTo, screenshot, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
 }

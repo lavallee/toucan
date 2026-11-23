@@ -143,6 +143,65 @@ console.log(`ok  layouts: ${TEMPLATES.length} templates`)
 	console.log('ok  layouts: a loop goes round what it passes, and arrows go round boxes in their way')
 }
 
+// A map: panels of tiles in columns, with states, a key made from what's used, and arrows that go round panels (the form follows
+// open-diagram by Luke Deasy, https://github.com/lukendeasy/open-diagram).
+{
+	const { routePath, runsThrough, routeGraph } = await import('../lib/route.mjs')
+	const { STATUSES } = await import('../lib/status.mjs')
+	const { toExcalidrawElements } = await import('../lib/tg.mjs')
+	const spec = {
+		kind: 'map', heading: 'Shop',
+		columns: [
+			[{ id: 'in', title: 'Orders in', footer: 'Owner: Sales', tiles: ['Web', 'App', { text: 'Phone', status: 'retiring' }] }],
+			[{ id: 'core', title: 'Core', step: 1, status: 'building', tiles: [{ id: 'pay', text: 'Payments' }, 'Stock', 'Refunds', 'Fraud checks'] }, { id: 'data', title: 'Data', tiles: ['Ledger'] }],
+			[{ id: 'out', title: 'Out', tiles: ['Couriers', { text: 'Lockers', status: 'planned' }] }],
+		],
+		links: [{ from: 'in', to: 'core' }, { from: 'core', to: 'data' }, { from: 'core', to: 'out', kind: 'planned' }, { from: 'in', to: 'out', label: 'direct' }, { from: 'out', to: 'in', label: 'returns' }],
+	}
+	const tg = await layOut(spec)
+	const group = (k) => tg.groups.find((g) => g.key === k), nodeOf = (k) => tg.nodes.find((n) => n.key === k), edgeOf = (from, to) => tg.edges.find((e) => e.from === from && e.to === to)
+	assert.ok(tg.groups.every((g) => g.meta.panel === true), 'every panel says it is one')
+	assert.equal(group('core').label, '1 · Core (being built)', 'a panel\'s name carries its step and its state, in words')
+	assert.equal(group('core').meta.status, 'building')
+	// A state is a colour, a line and a word, and a tile takes its panel's unless it has its own.
+	assert.deepEqual([nodeOf('pay').style.color, nodeOf('pay').style.dash, nodeOf('pay').meta.status], ['orange', 'dashed', 'building'], 'a tile in a panel being built is drawn as being built')
+	assert.deepEqual([nodeOf('in-phone').style.color, nodeOf('in-phone').meta.status], [STATUSES.retiring.color, 'retiring'])
+	assert.equal(nodeOf('in-web').meta?.status, undefined, 'an unmarked tile has no state')
+	// The key lists the states the picture uses (and live, which is what unmarked means), and nothing it doesn't.
+	assert.deepEqual(tg.nodes.filter((n) => n.key.startsWith('map-key-')).map((n) => n.key), ['map-key-live', 'map-key-building', 'map-key-planned', 'map-key-retiring', 'map-key-dotted'], 'the key is made from what is used')
+	assert.equal((await layOut({ kind: 'map', columns: [[{ title: 'A', tiles: ['x'] }], [{ title: 'B', tiles: ['y'] }]], links: [{ from: 'a', to: 'b' }] })).nodes.filter((n) => n.key.startsWith('map-')).length, 0, 'no states, no key')
+	// Four tiles pack two across, and a column's panels are one width.
+	assert.equal(new Set(tg.nodes.filter((n) => n.group === 'core').map((n) => n.box.x)).size, 2, 'four tiles are packed two across')
+	assert.equal(group('core').box.w, group('data').box.w, 'a column\'s panels are one width')
+	// Next door joins across the gap, a panel joins the one under it straight down, and anything else goes round the outside.
+	assert.deepEqual([edgeOf('in', 'core').style.anchors.from.x, edgeOf('in', 'core').style.anchors.to.x], [1, 0])
+	assert.deepEqual([edgeOf('core', 'data').style.anchors.from.y, edgeOf('core', 'data').style.anchors.to.y], [1, 0])
+	assert.equal(edgeOf('core', 'out').style.dash, 'dotted', 'a planned link is dotted')
+	const lanes = [edgeOf('in', 'out'), edgeOf('out', 'in')].map((e) => [e.style.anchors.from.y, e.style.anchors.to.y])
+	assert.ok(lanes.every(([a, b]) => a === b && (a === 0 || a === 1)), `a link past a column, or back, leaves and arrives by the top or the bottom: ${JSON.stringify(lanes)}`)
+	assert.notEqual(lanes[0][0], lanes[1][0], 'two lanes take a side each')
+	for (const e of tg.edges) {
+		const drawn = routePath(group(e.from).box, group(e.to).box, { kind: 'elbow', anchors: e.style.anchors, elbowMid: e.style.elbowMid })
+		const others = tg.groups.filter((g) => g.key !== e.from && g.key !== e.to)
+		assert.deepEqual(others.filter((g) => runsThrough(drawn.points, g.box)).map((g) => g.key), [], `${e.key} runs through no panel`)
+	}
+	// Two arrows on one side of a panel don't share a point.
+	const ends = tg.edges.flatMap((e) => [`${e.from} ${JSON.stringify(e.style.anchors.from)}`, `${e.to} ${JSON.stringify(e.style.anchors.to)}`])
+	assert.equal(new Set(ends).size, ends.length, 'every arrow has its own place on a side')
+	assert.equal(routeGraph(structuredClone(tg)), 0, 'drawn clear, so nothing needs rerouting')
+	// A panel is in an arrow's way: a graph that sends one through a panel has it sent round, and Excalidraw draws arrows to frames.
+	const through = structuredClone(tg)
+	through.edges = [{ key: 'edge:in->out', from: 'in', to: 'out', style: { route: 'elbow', anchors: { from: { x: 1, y: 0.2 }, to: { x: 0, y: 0.2 } } } }]
+	assert.equal(routeGraph(through), 1, 'an arrow through a panel is rerouted')
+	const ex = toExcalidrawElements(tg)
+	assert.equal(ex.filter((e) => e.type === 'arrow').length, tg.edges.length, 'Excalidraw draws every arrow between panels')
+	// Mistakes are named.
+	await assert.rejects(layOut({ kind: 'map', columns: [[{ title: 'A', tiles: [{ text: 'x', status: 'soon' }] }]] }), /the tile "x" has the status "soon", which isn't one of live, building, trial, planned, retiring/)
+	await assert.rejects(layOut({ kind: 'map', columns: [[{ title: 'A', tiles: ['x'] }]], links: [{ from: 'a', to: 'zzz' }] }), /nothing has the id "zzz"; panels here: a/)
+	await assert.rejects(layOut({ kind: 'map' }), /a map needs columns/)
+	console.log('ok  layouts: a map packs tiles, shows states with a key, and sends arrows round panels')
+}
+
 // A flow written loosely still draws, and one that can't be drawn says why.
 {
 	const loose = await layOut({ kind: 'flow', nodes: [{ key: 'a', label: 'A' }, { name: 'The B' }], edges: [{ source: 'a', target: 'the-b' }] })

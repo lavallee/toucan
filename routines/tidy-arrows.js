@@ -40,9 +40,10 @@ const length = (p) => p.slice(1).reduce((s, q, i) => s + Math.hypot(q.x - p[i].x
 // A plan's own arrows keep the route the plan gave them (they still count as arrows to stay clear of).
 const arrowsWithEnds = () => scene.arrows().map((a) => ({ id: a.id, ends: new Set([a.from, a.to].filter(Boolean)) })).filter((a) => a.ends.size === 2)
 const free = (arrows) => arrows.filter((a) => !scene.skipPlan(a.id))
-const solids = () => scene.items().filter((s) => s.kind !== 'arrow' && s.kind !== 'frame').map((s) => ({ id: s.id, b: s }))
+// A panel (a frame marked meta.panel, as a map draws) is solid too: an arrow with no end in it goes round.
+const solids = () => scene.items().filter((s) => s.kind !== 'arrow' && (s.kind !== 'frame' || s.meta?.panel === true)).map((s) => ({ id: s.id, b: s }))
 
-/** Boxes an arrow could run through: anything but arrows, frames, and the shapes it connects (and their frames). */
+/** Boxes an arrow could run through: anything but arrows, plain frames, and the shapes it connects (and their frames). */
 function obstaclesFor(arrow, boxes) {
 	const skip = new Set(arrow.ends)
 	for (const id of arrow.ends) for (const anc of scene.ancestors(id)) skip.add(anc)
