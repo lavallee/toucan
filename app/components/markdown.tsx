@@ -10,7 +10,7 @@ import {
 	CodeBlockHeader,
 	CodeBlockLine,
 	CodeBlockTitle,
-} from '@/components/ui/code-block'
+} from '@lyra-forge/leyline/ui/code-block'
 import { cn } from '@/lib/utils'
 
 // Agent replies: Streamdown for streaming markdown, fenced code routed to CodeBlock

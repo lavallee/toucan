@@ -1,8 +1,8 @@
 import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@lyra-forge/leyline/ui/popover'
 import { cn } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
+import { Input } from '@lyra-forge/leyline/ui/input'
 import { myName, setMyName } from './threads-store'
 import { setLettering, setTheme, useAppearance, type Lettering, type Theme } from './theme'
 

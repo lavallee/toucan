@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { KanbanSquareIcon, LoaderCircleIcon, RefreshCwIcon, XIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@lyra-forge/leyline/ui/popover'
 import { cn } from '@/lib/utils'
 import { api } from './net'
+import { AppBarButton } from '@lyra-forge/leyline/app-bar'
 import { messageOf, planUrl, setPlan, usePlan, type PlanStatus, type PlanView } from './plan-store'
 
 type Kinds = Record<string, { title: string; about: string }>
@@ -83,11 +84,9 @@ export function PlanMenu() {
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button variant="ghost" size="sm" aria-label={`Plan: ${source.title}, ${state}`} title={`Plan: ${source.title} (${state})`}>
-					<KanbanSquareIcon />
-					<span className="max-w-40 truncate max-lg:hidden">{source.title}</span>
+				<AppBarButton icon={KanbanSquareIcon} label={source.title} aria-label={`Plan: ${source.title}, ${state}`} title={`Plan: ${source.title} (${state})`} className="[&>span:first-of-type]:max-w-40 [&>span:first-of-type]:truncate">
 					<span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', DOT[state])} />
-				</Button>
+				</AppBarButton>
 			</PopoverTrigger>
 			<PopoverContent className="w-80 p-0" align="end">
 				<header className="border-b px-3 py-2">

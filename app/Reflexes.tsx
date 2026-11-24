@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Trash2Icon, ZapIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@lyra-forge/leyline/ui/popover'
 import { cn } from '@/lib/utils'
 import { api, canvasName } from './net'
 import { myName } from './threads-store'
+import { AppBarButton } from '@lyra-forge/leyline/app-bar'
 import { useReflexes, type ReflexNode } from './reflexes-store'
 
 type Suggestion = { starter?: string; node?: string; about?: string; why: string }
@@ -51,11 +52,7 @@ export function Reflexes({ onAskAgent }: { onAskAgent: (text: string) => void })
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button variant="ghost" size="sm" aria-label={`Reflexes${asks.length ? `, ${asks.length} asking` : ''}`} title="Reflexes: what this canvas does by itself" className="relative">
-					<ZapIcon />
-					<span className="max-lg:hidden">Reflexes</span>
-					{asks.length > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-primary px-1 text-[10px] leading-4 text-primary-foreground">{asks.length}</span>}
-				</Button>
+				<AppBarButton icon={ZapIcon} label="Reflexes" count={asks.length} attention={asks.length > 0} aria-label={`Reflexes${asks.length ? `, ${asks.length} asking` : ''}`} title="Reflexes: what this canvas does by itself" />
 			</PopoverTrigger>
 			<PopoverContent className="w-96 p-0">
 				<header className="border-b px-3 py-2">

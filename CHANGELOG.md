@@ -5,6 +5,13 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The bar above the canvas, History and Routines now come from Leyline** (`@lyra-forge/leyline`, the package
+  toucan, Copycat and Skein share), so all three tools look and behave the same. Nothing moves for a person. The
+  Reflexes button's count is now the same amber pill as Threads. toucan's own copies of the UI primitives and the
+  chat dock are gone; the build pins Leyline in `vendor/` (`node scripts/update-leyline.mjs --source PATH`).
+
 ## [0.21.0] — 2026-11-23
 
 ### Added

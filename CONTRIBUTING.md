@@ -22,6 +22,9 @@ npm run dev        # server + vite with hot reload
 - Update the relevant agent guide, `website/content/` and `CHANGELOG.md` with any behaviour change. Keep `AGENTS.md` focused on rules agents need for everyday canvas work and links to the topic guides.
 - The server needs only `dependencies` at runtime. What the app needs at build time goes in `devDependencies`, and a release
   ships the built app, so installing one stays small.
+- The bar above the canvas, side panels, History, Routines, the chat dock and the UI primitives (`ui/*`) come from
+  Leyline (`@lyra-forge/leyline`, github.com/lavallee/leyline), shared with Copycat and Skein. Change them there, run
+  its tests, then pin it with `node scripts/update-leyline.mjs --source /path/to/leyline`. Do not copy them back here.
 - Do not commit canvases, tokens, private hostnames or internal project names. `npm run check` catches
   the obvious ones.
 

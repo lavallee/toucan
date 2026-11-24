@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeftIcon, BookOpenIcon, ExternalLinkIcon, FileIcon, FileTextIcon, GlobeIcon, ImageIcon, Maximize2Icon, Minimize2Icon, SearchIcon, XIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { CodeBlock, CodeBlockContent, CodeBlockLine } from '@/components/ui/code-block'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { Input } from '@lyra-forge/leyline/ui/input'
+import { CodeBlock, CodeBlockContent, CodeBlockLine } from '@lyra-forge/leyline/ui/code-block'
 import { Markdown } from '@/components/markdown'
 import { defaultRehypePlugins } from 'streamdown'
 import { useHighlightedCode } from '@/hooks/use-highlighted-code'
 import { cn } from '@/lib/utils'
+import { AppBarButton } from '@lyra-forge/leyline/app-bar'
 import { back, close, isWeb, listReferences, loadReference, nameOf, openReference, resolveLink, setWide, showList, useReferences, type Listing, type Loaded } from './references-store'
 
 /**
@@ -379,10 +380,7 @@ export function parseDelimited(text: string, sep: string) {
 /** The app bar's button. */
 export function ReferencesButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
 	return (
-		<Button variant="ghost" size="sm" onClick={onToggle} aria-expanded={open} aria-label="References" title="References: files and pages to read beside the canvas" className={cn(open && 'bg-muted')}>
-			<BookOpenIcon />
-			<span className="max-lg:hidden">References</span>
-		</Button>
+		<AppBarButton icon={BookOpenIcon} label="References" pressed={open} aria-expanded={open} title="References: files and pages to read beside the canvas" onClick={onToggle} />
 	)
 }
 

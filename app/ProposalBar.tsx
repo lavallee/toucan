@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@lyra-forge/leyline/ui/button'
 
 /**
  * "Dashed = proposed": when an agent has proposed shapes, a small bar above the canvas lets the person

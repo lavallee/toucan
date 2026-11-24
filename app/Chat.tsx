@@ -19,13 +19,13 @@ import {
 } from 'lucide-react'
 
 import { Markdown } from '@/components/markdown'
-import { Bubble, BubbleContent } from '@/components/ui/bubble'
-import { Button } from '@/components/ui/button'
-import { CodeBlock, CodeBlockContent, CodeBlockHeader, CodeBlockLine, CodeBlockTitle } from '@/components/ui/code-block'
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@/components/ui/input-group'
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
-import { Message, MessageContent } from '@/components/ui/message'
+import { Bubble, BubbleContent } from '@lyra-forge/leyline/ui/bubble'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { CodeBlock, CodeBlockContent, CodeBlockHeader, CodeBlockLine, CodeBlockTitle } from '@lyra-forge/leyline/ui/code-block'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@lyra-forge/leyline/ui/empty'
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from '@lyra-forge/leyline/ui/input-group'
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@lyra-forge/leyline/ui/item'
+import { Message, MessageContent } from '@lyra-forge/leyline/ui/message'
 import {
 	MessageScroller,
 	MessageScrollerButton,
@@ -33,7 +33,7 @@ import {
 	MessageScrollerItem,
 	MessageScrollerProvider,
 	MessageScrollerViewport,
-} from '@/components/ui/message-scroller'
+} from '@lyra-forge/leyline/ui/message-scroller'
 import {
 	Trace,
 	TraceCollapsible,
@@ -43,7 +43,7 @@ import {
 	TraceIcon,
 	TraceLine,
 	TraceTitle,
-} from '@/components/ui/trace'
+} from '@lyra-forge/leyline/ui/trace'
 import {
 	CodexTranscript,
 	type ChatMessage,

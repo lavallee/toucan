@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeftIcon, ArrowRightIcon, BookOpenIcon, MessageSquarePlusIcon, XIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@lyra-forge/leyline/ui/button'
 import { cn } from '@/lib/utils'
 import { getFormat, useFormat } from './formats'
 import { getThreads, openThread, update as updateThreads, useThreads } from './threads-store'
