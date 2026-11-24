@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { ImagesIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { Textarea } from '@lyra-forge/leyline/ui/textarea'
+import { AppBarButton } from '@lyra-forge/leyline/app-bar'
 import { api, canvasName, token } from './net'
 
 type Point = { x: number; y: number }
@@ -49,10 +50,7 @@ export function ReviewButton() {
 	const dialog = useRef<HTMLDialogElement>(null)
 	const [open, setOpen] = useState(false)
 	return <>
-		<Button variant="ghost" size="sm" onClick={() => { dialog.current?.showModal(); setOpen(true) }} aria-label="Review" title="Review screenshots">
-			<ImagesIcon />
-			<span className="max-lg:hidden">Review</span>
-		</Button>
+		<AppBarButton icon={ImagesIcon} label="Review" title="Review screenshots" onClick={() => { dialog.current?.showModal(); setOpen(true) }} />
 		<dialog ref={dialog} onClose={() => setOpen(false)} aria-labelledby="review-title" className="toucan-ui fixed inset-0 m-auto max-h-[90dvh] w-[min(96vw,76rem)] max-w-none overflow-auto rounded-lg border bg-background p-0 text-foreground shadow-xl backdrop:bg-black/50">
 			<div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b bg-background px-4 py-3">
 				<h2 id="review-title" className="font-semibold">Screenshot review</h2>

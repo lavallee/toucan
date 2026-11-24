@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { CheckIcon, LoaderCircleIcon, MessageSquarePlusIcon, MessagesSquareIcon, RotateCcwIcon, SendIcon, SquareIcon, StickyNoteIcon, XIcon } from 'lucide-react'
 import { Markdown } from '@/components/markdown'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { Textarea } from '@lyra-forge/leyline/ui/textarea'
 import { cn } from '@/lib/utils'
+import { AppBarButton } from '@lyra-forge/leyline/app-bar'
 import {
 	adoptNotes,
 	answerApproval,
@@ -406,10 +407,7 @@ export function ThreadsLayer({ toucan, subscribe }: { toucan: any; subscribe: (o
 export function CommentButton({ onComment }: { onComment: () => void }) {
 	const { placing } = useThreads()
 	return (
-		<Button variant="ghost" size="sm" aria-pressed={placing} aria-label="Comment" title="Comment on a shape or a region" className={cn(placing && 'bg-muted')} onClick={onComment}>
-			<MessageSquarePlusIcon />
-			<span className="max-lg:hidden">Comment</span>
-		</Button>
+		<AppBarButton icon={MessageSquarePlusIcon} label="Comment" pressed={placing} title="Comment on a shape or a region" onClick={onComment} />
 	)
 }
 
@@ -418,11 +416,7 @@ export function ThreadsButton() {
 	const open = threads.filter((t) => t.status === 'open')
 	const yours = open.filter((t) => stateOf(t) === 'yours').length
 	return (
-		<Button variant="ghost" size="sm" aria-expanded={panel} aria-label={`Threads, ${open.length} open`} title="Threads" className={cn(panel && 'bg-muted')} onClick={() => update({ panel: !panel })}>
-			<MessagesSquareIcon />
-			<span className="max-lg:hidden">Threads</span>
-			{open.length > 0 && <span className={cn('rounded-full px-1.5 text-[11px] font-semibold tabular-nums', yours ? 'bg-amber-400 text-amber-950' : 'bg-muted text-muted-foreground')}>{open.length}</span>}
-		</Button>
+		<AppBarButton icon={MessagesSquareIcon} label="Threads" count={open.length} attention={yours && open.length > 0} pressed={panel} aria-expanded={panel} aria-label={`Threads, ${open.length} open`} title="Threads" onClick={() => update({ panel: !panel })} />
 	)
 }
 

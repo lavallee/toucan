@@ -1,5 +1,5 @@
 import { XIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@lyra-forge/leyline/ui/button'
 import { api } from './net'
 import { messageOf, planUrl, setPlan, usePlan } from './plan-store'
 

@@ -1,0 +1,8 @@
+{
+  "name": "@lyra-forge/leyline",
+  "version": "0.8.0-shell.1",
+  "source": "https://github.com/lavallee/leyline.git",
+  "revision": "3972d40a02dba5694096900a2ac834910d4ad6b9",
+  "artifact": "lyra-forge-leyline-0.8.0-shell.1.tgz",
+  "integrity": "sha512-gVx2mMWE5jbVkfDjce2lKfF1S3bExCHWU7K/Sx4i8OVQN1efMpuOdNobAVwJapW1qRPv/4x/xifu2usjrsaCTg=="
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@lyra-forge/leyline/ui/button'
 import { api, canvasName } from './net'
 
 type Entry = { t: string; source: string; what: string; added: string[]; updated: string[]; removed: string[]; error?: string }

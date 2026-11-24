@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckIcon, ChevronDownIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@lyra-forge/leyline/ui/popover'
 import { cn } from '@/lib/utils'
 import { api, canvasName } from './net'
 

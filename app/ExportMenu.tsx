@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { CheckIcon, CopyIcon, DownloadIcon, FilmIcon, LoaderCircleIcon, ShareIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@lyra-forge/leyline/ui/popover'
 import { cn } from '@/lib/utils'
+import { AppBarButton } from '@lyra-forge/leyline/app-bar'
 import { canvasName, token } from './net'
 
 const SPEEDS = [
@@ -87,10 +88,7 @@ export function ExportMenu() {
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button variant="ghost" size="sm" aria-label="Export" title="Export: a picture, an animated build, or a file another tool reads" className={cn(open && 'bg-muted')}>
-					<ShareIcon />
-					<span className="max-lg:hidden">Export</span>
-				</Button>
+				<AppBarButton icon={ShareIcon} label="Export" pressed={open} title="Export: a picture, an animated build, or a file another tool reads" />
 			</PopoverTrigger>
 			<PopoverContent className="max-h-[80vh] w-80 overflow-y-auto p-0" align="end">
 				<header className="border-b px-3 py-2">

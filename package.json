@@ -65,6 +65,7 @@
   "devDependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
     "@fontsource-variable/geist": "5.3.0",
+    "@lyra-forge/leyline": "file:vendor/lyra-forge-leyline-0.8.0-shell.1.tgz",
     "@shadcn/react": "0.3.1",
     "@tailwindcss/vite": "4.3.3",
     "@tldraw/sync": "5.5.2",
