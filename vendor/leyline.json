@@ -2,7 +2,7 @@
   "name": "@lyra-forge/leyline",
   "version": "0.8.0-shell.1",
   "source": "https://github.com/lavallee/leyline.git",
-  "revision": "96228f0bb3a03cd0538555b0dd91593253bca0e9",
+  "revision": "db79f30b7c64304e30beef6cd2ba97a32997b7ab",
   "artifact": "lyra-forge-leyline-0.8.0-shell.1.tgz",
-  "integrity": "sha512-32nb/Fsz2hrFxMT0srt/mrjCMpgSSWXZRZc6jJ2z4h7B1uXtJA6nKuC1iOY334ReLeYbCLBTKrH+ttLtFR0ksg=="
+  "integrity": "sha512-hSO1qpJsObfTbGzRumRihx04zP/KOh/6ru76PvV709Fh5CZMOd+OEA/Z326qeFMc1LGhodOW2TLA0cFrX8H1dw=="
 }
