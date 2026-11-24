@@ -697,6 +697,16 @@
    "who": "person"
   },
   {
+   "id": "renditions",
+   "group": "formats",
+   "name": "Renditions",
+   "summary": "A named, published picture of part of a canvas that documents include by name, with a manifest of what it shows and what it was drawn from, so anyone can tell whether it is current. Redrawn only when asked.",
+   "app": "Export",
+   "cli": "rendition set NAME · rendition publish NAME · rendition list",
+   "engines": "both",
+   "who": "person"
+  },
+  {
    "id": "animate",
    "group": "formats",
    "name": "Animated build",

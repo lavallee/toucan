@@ -103,6 +103,7 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
 | Export | One menu for every way out of a canvas: a picture as SVG or PNG, the animated build, a file another tool reads, or what the diagram says in words. An SVG carries its title and that description inside it. | **Export**; CLI: `export OUT` · `describe` | 0.21.0 |
+| Renditions | A named, published picture of part of a canvas that documents include by name, with a manifest of what it shows and what it was drawn from, so anyone can tell whether it is current. Redrawn only when asked. | **Export**; CLI: `rendition set NAME` · `rendition publish NAME` · `rendition list` |  |
 | Animated build | A GIF of the diagram building up box by box, in the order the arrows go, to drop into a doc, a slide or a chat. | **Export**; CLI: `animate [OUT.gif]` · `export OUT.gif` | 0.14.0 |
 | [Mermaid in and out](tour.html#or-as-mermaid) | Paste or import Mermaid: on a blank canvas it looks like a template, and on a full one it merges by key. | **Chat: paste**; CLI: `import FILE --format mermaid` · `graph --format mermaid` | 0.1.0 |
 | [JSON Canvas, Excalidraw, DOT](tour.html#or-as-mermaid) | Import and export JSON Canvas (Obsidian) and .excalidraw; export DOT. | CLI: `import` · `graph --format jsoncanvas\|excalidraw\|dot` | 0.1.0 |
@@ -119,4 +120,4 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Remote and behind a proxy](how-it-works.html) | Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to. | **Sign-in page**; CLI: `--public-url` · `--allow-host` · `TOUCAN_URL` · `TOUCAN_TOKEN` | 0.11.0 |
 | [Plugins](extending.html#plugins) | One mechanism for programs on PATH that connect toucan to your own systems (agent profiles, plan sources), with one trust rule; lists what was found and, for anything refused, why. | CLI: `plugins` · `sources` · `profiles` | 0.15.0 |
 
-*68 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
+*69 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
