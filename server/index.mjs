@@ -23,6 +23,7 @@ import { createActivity, tldrawRows, excalidrawRows, describe as describeActivit
 import { createHeadless } from './headless.mjs'
 import * as trail from './trail.mjs'
 import * as versions from './versions.mjs'
+import * as renditions from './renditions.mjs'
 import { createRoutines, KINDS as ROUTINE_KINDS } from './routines.mjs'
 import * as worklog from './worklog.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
@@ -414,6 +415,63 @@ function snapshotSoon(n, { label, delay = QUIET_MS } = {}) {
 	unsaved.set(n, due)
 }
 
+// ---- renditions: named, published pictures of part of a canvas (server/renditions.mjs) ----------
+/** Every shape on the canvas with its key, what it sits in and its record, from the server's copy. */
+function shapeTree(n) {
+	if (engineOf(n) === 'excalidraw') return renditions.treeFromExcalidraw(sceneElements(n))
+	const room = rooms.has(n) ? rooms.get(n).room.getCurrentSnapshot() : existsSync(docPath(n)) ? JSON.parse(readFileSync(docPath(n), 'utf8')).room : null
+	return renditions.treeFromTldraw((room?.documents ?? []).map((d) => d.state))
+}
+/** A rendition as `rendition list` shows it: its manifest, whether it is current, and where its picture is. */
+function renditionRow(n, def, tree = shapeTree(n)) {
+	let shapes = null
+	try {
+		shapes = renditions.shapesHash(tree, renditions.pick(tree, def.select))
+	} catch {} // what it shows is gone
+	const picture = renditions.picturePath(CANVASES, n, def.name, def.format)
+	return { ...def, ...renditions.status(def, shapes), picture: def.published && existsSync(picture) ? picture : null, catalogue: renditions.entryName(n, def.name) }
+}
+/**
+ * Draws a rendition now, in a tab (a person's, or the headless page), the way `toucan export` draws a picture: an SVG
+ * with its title and what it shows in words, or a PNG. Writes it beside its definition, with the manifest, and puts it
+ * in the include catalogue unless asked not to. Only ever on request.
+ */
+async function publishRendition(n, name, { catalogue = true, agent } = {}) {
+	const def = renditions.get(CANVASES, n, name)
+	if (!def) throw new renditions.RenditionError(404, `no rendition ${name} on ${n}: define it with \`rendition set ${name}\``)
+	const tree = shapeTree(n)
+	const keys = renditions.pick(tree, def.select)
+	if (!keys.size) throw new renditions.RenditionError(400, 'the canvas is empty: nothing to draw')
+	// So the version number names the state the picture is drawn from (a version is saved only if something changed).
+	snapshotNow(n)
+	const version = { n: versions.list(CANVASES, n)[0]?.n ?? null, shapes: renditions.shapesHash(tree, keys) }
+	const drawKeys = def.select.all ? null : def.select.frame ? [def.select.frame] : def.select.keys
+	const who = { agent, doing: `publishing the rendition ${name}` }
+	let bytes
+	if (def.format === 'svg') {
+		const title = def.title ?? readIndex()[n]?.title ?? n
+		const tg = graphOf(n)
+		const desc = FORMATS.text.export(def.select.all ? tg : renditions.subGraph(tg, keys), { title: readIndex()[n]?.title })
+		const r = await exec(n, `return toucan.svg(${JSON.stringify({ keys: drawKeys, title, desc })})`, 120000, undefined, who)
+		if (!r?.svg) throw new renditions.RenditionError(400, 'nothing to draw: the shapes it shows are not on the page')
+		bytes = Buffer.from(renditions.stableIds(r.svg, name))
+	} else {
+		const b64 = await exec(n, `return toucan.screenshot(${JSON.stringify({ keys: drawKeys, max: 1800 })})`, 120000, undefined, who)
+		if (!b64) throw new renditions.RenditionError(400, 'nothing to draw: the shapes it shows are not on the page')
+		bytes = Buffer.from(b64, 'base64')
+	}
+	const out = renditions.publish(CANVASES, n, name, { bytes, version })
+	let registered = { skipped: true }
+	if (catalogue) {
+		try {
+			registered = renditions.register(out.rendition, out.picture)
+		} catch (e) {
+			registered = { error: e.message, file: renditions.cataloguePath() }
+		}
+	}
+	return { ...out, rendition: renditionRow(n, out.rendition), catalogue: registered }
+}
+
 /** Puts a version's document back. Every tab follows; what was there is saved first, and this is a version too. */
 function restoreVersion(n, version) {
 	const before = currentDocument(n)
@@ -652,7 +710,15 @@ const server = createServer(async (req, res) => {
 			mkdirSync(dest, { recursive: true })
 			plans.forget(canvas)
 			reflexes.forget(canvas)
-			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas), planPath(CANVASES, canvas), reflexesPath(CANVASES, canvas), reviewDir(CANVASES, canvas), filesDir(canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
+			// Its pictures move with it, so documents mustn't keep pointing at where they were.
+			for (const r of renditions.list(CANVASES, canvas)) {
+				try {
+					renditions.unregister(canvas, r.name)
+				} catch (e) {
+					console.error(`catalogue entry for ${canvas}/${r.name} not removed: ${e.message}`)
+				}
+			}
+			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas), planPath(CANVASES, canvas), reflexesPath(CANVASES, canvas), reviewDir(CANVASES, canvas), filesDir(canvas), renditions.renditionsDir(CANVASES, canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
 			chat.forgetThreads(canvas)
 			const idx = readIndex()
 			if (idx[canvas]) writeFileSync(join(dest, 'index-entry.json'), JSON.stringify(idx[canvas], null, 2) + '\n')
@@ -924,6 +990,53 @@ const server = createServer(async (req, res) => {
 				return json(res, 404, { error: 'not found' })
 			} catch (e) {
 				if (e instanceof PlanError) return json(res, { not_found: 404, invalid: 400, conflict: 409, forbidden: 403, unavailable: 502 }[e.code] ?? 500, { error: e.message, code: e.code })
+				throw e
+			}
+		}
+		// Renditions (server/renditions.mjs): /renditions, /renditions/NAME (PUT defines, DELETE removes), /renditions/NAME/publish.
+		if (sub === 'renditions') {
+			const action = url.pathname.split('/')[6]
+			try {
+				if (!canvasNames().includes(canvas)) throw new renditions.RenditionError(404, `no canvas ${canvas}`)
+				if (!subName && req.method === 'GET') {
+					const tree = shapeTree(canvas)
+					return json(res, 200, { dir: renditions.renditionsDir(CANVASES, canvas), catalogue: renditions.cataloguePath(), renditions: renditions.list(CANVASES, canvas).map((d) => renditionRow(canvas, d, tree)) })
+				}
+				renditions.checkName(subName)
+				if (!action && req.method === 'GET') {
+					const def = renditions.get(CANVASES, canvas, subName)
+					return def ? json(res, 200, renditionRow(canvas, def)) : json(res, 404, { error: `no rendition ${subName} on ${canvas}` })
+				}
+				if (!action && req.method === 'PUT') {
+					const input = JSON.parse((await body(req)) || '{}')
+					const exists = !!renditions.get(CANVASES, canvas, subName)
+					// Checked against the canvas now, so a typo is caught when it's made, not when someone publishes.
+					if (input.select !== undefined) renditions.pick(shapeTree(canvas), input.select)
+					const title = typeof input.title === 'string' ? input.title : exists ? undefined : readIndex()[canvas]?.title ?? canvas
+					const made = renditions.define(CANVASES, canvas, subName, { select: input.select, format: input.format, alt: input.alt, title })
+					return json(res, made.created ? 201 : 200, { ...renditionRow(canvas, made.rendition), created: made.created })
+				}
+				if (action === 'publish' && req.method === 'POST') {
+					const input = JSON.parse((await body(req)) || '{}')
+					return json(res, 200, await publishRendition(canvas, subName, { catalogue: input.catalogue !== false, agent: input.agent }))
+				}
+				if (!action && req.method === 'DELETE') {
+					const gone = renditions.remove(CANVASES, canvas, subName)
+					if (!gone) return json(res, 404, { error: `no rendition ${subName} on ${canvas}` })
+					let catalogue = { skipped: true }
+					if (url.searchParams.get('catalogue') !== '0') {
+						try {
+							catalogue = renditions.unregister(canvas, subName)
+						} catch (e) {
+							catalogue = { error: e.message, file: renditions.cataloguePath() }
+						}
+					}
+					return json(res, 200, { removed: subName, catalogue })
+				}
+				return json(res, 404, { error: 'not found' })
+			} catch (e) {
+				if (e instanceof renditions.RenditionError) return json(res, e.status, { error: e.message })
+				if (e instanceof SyntaxError) return json(res, 400, { error: `the request body isn't JSON: ${e.message}` })
 				throw e
 			}
 		}

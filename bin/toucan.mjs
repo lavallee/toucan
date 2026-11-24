@@ -40,6 +40,9 @@
 //     animate [OUT.gif]           GIF of the page building up, box by box along the arrows (--step ms, --hold ms, --max px)
 //     export OUT [--format F]     write the canvas as a file, by OUT's ending: .svg .png .gif .mmd .canvas .dot .excalidraw .json .txt
 //     describe                    what the diagram says, in plain words: frames, boxes, states and arrows (no tab needed)
+//     rendition set NAME [--keys a,b | --frame KEY | --all] [--format svg|png] [--alt TEXT] [--title TEXT]   name a picture of part of --canvas
+//     rendition publish NAME [--no-catalogue]   draw it now, beside the canvas, with a manifest; and list it in the include catalogue
+//     rendition list [--json] | remove NAME [--no-catalogue]   each with whether it is current or behind the canvas, and its picture
 //     script list | put NAME FILE | rm NAME     canvas scripts (persistent behaviour)
 //     proposals [accept|reject [KEY...]]   dashed = proposed: list, or accept (solid) / reject (remove)
 //     selection                   what people have selected (to resolve "this"), in the tab you run in and others
@@ -125,7 +128,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'export', 'describe', 'plan', 'sources', 'plugins', 'reflexes', 'review']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'export', 'describe', 'plan', 'sources', 'plugins', 'reflexes', 'review', 'rendition']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -354,6 +357,45 @@ switch (cmd) {
 			writeFileSync(out, typeof got === 'string' ? got : JSON.stringify(got, null, 2) + '\n')
 			print(out)
 		}
+		break
+	}
+	case 'rendition': {
+		// A named, published picture of part of the canvas (server/renditions.mjs). Drawn only when asked: never on a save.
+		const keys = flag('keys'), frame = flag('frame'), all = flag('all'), format = flag('format'), alt = flag('alt'), title = flag('title')
+		const noCatalogue = !!flag('no-catalogue'), asJson = !!flag('json')
+		const [, sub, name, extra] = argv
+		const at = (n = '') => cpath(`/renditions${n ? `/${encodeURIComponent(n)}` : ''}`)
+		const usage = 'usage: rendition set NAME [--keys a,b | --frame KEY | --all] [--format svg|png] [--alt TEXT] [--title TEXT] | publish NAME [--no-catalogue] | list [--json] | remove NAME [--no-catalogue]'
+		const catalogueSaid = (c) => {
+			if (c?.error) die(`the picture is done, but the include catalogue wasn't changed: ${c.error}`)
+		}
+		if (extra !== undefined) die(usage)
+		if (sub === 'set' && name) {
+			for (const [k, v] of [['keys', keys], ['frame', frame], ['format', format], ['alt', alt], ['title', title]]) if (v === true) die(`--${k} needs a value`)
+			if ([keys, frame, all].filter((v) => v !== undefined).length > 1) die('one of --keys, --frame or --all')
+			if (format !== undefined && !['svg', 'png'].includes(format)) die('--format: svg or png')
+			const select = keys !== undefined ? { keys: String(keys).split(',') } : frame !== undefined ? { frame } : all ? { all: true } : undefined
+			const r = await call(at(name), { method: 'PUT', body: JSON.stringify({ select, format, alt, title }) })
+			print(asJson ? r : `${r.created ? 'defined' : 'changed'} ${r.name}: ${r.select.all ? 'the whole canvas' : r.select.frame ? `frame ${r.select.frame}` : `keys ${r.select.keys.join(', ')}`}, as ${r.format.toUpperCase()}. \`toucan rendition publish ${r.name}\` draws it.`)
+			if (!r.alt) console.error(`toucan: ${r.name} has no --alt: a document that includes it would have no words for people who can't see it`)
+		} else if (sub === 'publish' && name) {
+			const r = await call(`${at(name)}/publish`, { method: 'POST', body: JSON.stringify({ catalogue: !noCatalogue, agent }) })
+			if (asJson) print(r)
+			else {
+				print(`${r.unchanged ? 'unchanged' : 'published'} ${r.rendition.name}: ${r.picture}${r.rendition.version?.n ? ` (from version ${r.rendition.version.n})` : ''}`)
+				if (r.catalogue?.name) console.error(`toucan: in the include catalogue as ${r.catalogue.name} (${r.catalogue.file}); a document includes it with <!-- include: ${r.catalogue.name} -->`)
+			}
+			catalogueSaid(r.catalogue)
+		} else if (sub === 'remove' && name) {
+			const r = await call(`${at(name)}${noCatalogue ? '?catalogue=0' : ''}`, { method: 'DELETE' })
+			print(asJson ? r : `removed ${r.removed}${r.catalogue?.removed ? `, and ${r.catalogue.name} from the include catalogue` : ''}`)
+			catalogueSaid(r.catalogue)
+		} else if ((sub === 'list' || !sub) && !name) {
+			const r = await call(at())
+			if (asJson) print(r.renditions)
+			else if (!r.renditions.length) print(`no renditions on ${canvas} yet: \`toucan rendition set NAME\` defines one`)
+			else print(r.renditions.map((x) => `${x.name}  ${x.state}${x.why ? ` (${x.why})` : ''}  ${x.format}  ${x.select.all ? 'all' : x.select.frame ? `frame ${x.select.frame}` : `keys ${x.select.keys.join(',')}`}  ${x.picture ?? '(not drawn yet)'}`).join('\n'))
+		} else die(usage)
 		break
 	}
 	case 'script': {
