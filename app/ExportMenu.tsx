@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { CheckIcon, CopyIcon, DownloadIcon, FilmIcon, LoaderCircleIcon, ShareIcon } from 'lucide-react'
+import { CheckIcon, CopyIcon, DownloadIcon, FilmIcon, ImageUpIcon, LoaderCircleIcon, ShareIcon } from 'lucide-react'
 import { Button } from '@lyra-forge/leyline/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@lyra-forge/leyline/ui/popover'
 import { cn } from '@/lib/utils'
 import { AppBarButton } from '@lyra-forge/leyline/app-bar'
-import { canvasName, token } from './net'
+import { api, canvasName, token } from './net'
 
 const SPEEDS = [
 	{ id: 'slow', label: 'Slow', step: 1100 },
@@ -35,6 +35,11 @@ function save(name: string, data: BlobPart, type: string) {
 }
 const bytesOf = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
 
+// A rendition: a named picture of part of the canvas that documents include by name (server/renditions.mjs).
+type Rendition = { name: string; state: 'current' | 'behind' | 'unpublished'; why?: string; format: string; picture: string | null; catalogue: string }
+const RENDITION = /^[a-z0-9][a-z0-9._-]{0,63}$/
+const renditionsAt = (name = '') => `/api/canvases/${encodeURIComponent(canvasName)}/renditions${name ? `/${encodeURIComponent(name)}` : ''}`
+
 /**
  * Everything a canvas can leave as: a picture (SVG or PNG), an animated build (a GIF, app/animate.js), a file another tool reads, or
  * what it says in words. Pictures are made in this tab from what's on the canvas now; nothing on it changes. `toucan export OUT`
@@ -48,6 +53,13 @@ export function ExportMenu() {
 	const [copied, setCopied] = useState(false)
 	const [made, setMade] = useState<{ url: string; frames: number } | null>(null)
 	useEffect(() => () => made && URL.revokeObjectURL(made.url), [made])
+	const [renditions, setRenditions] = useState<Rendition[]>([])
+	const [newName, setNewName] = useState('')
+	const [published, setPublished] = useState('')
+	const loadRenditions = () => api(renditionsAt()).then((r) => setRenditions(r.renditions)).catch(() => setRenditions([]))
+	useEffect(() => {
+		if (open) loadRenditions()
+	}, [open])
 	// One thing at a time, and whatever goes wrong is said in the menu.
 	const run = (what: string, work: () => Promise<void>) => async () => {
 		setBusy(what)
@@ -84,6 +96,21 @@ export function ExportMenu() {
 		setCopied(true)
 		setTimeout(() => setCopied(false), 2000)
 	})
+	// Publishing draws on the server's side, in this tab, and lists the picture in the include catalogue. A new name shows what is
+	// selected, or the whole canvas; an existing one keeps what it shows. Only ever when asked.
+	const publish = (name: string) =>
+		run(`rendition:${name}`, async () => {
+			if (!RENDITION.test(name)) throw new Error('A rendition name is lower case letters, digits and . _ -, starting with a letter or digit.')
+			if (!renditions.some((r) => r.name === name)) {
+				const keys: string[] = (toucan()?.selection?.().here ?? []).map((s: { key: string }) => s.key)
+				await api(renditionsAt(name), { method: 'PUT', body: JSON.stringify({ select: keys.length ? { keys } : { all: true }, format: 'svg' }) })
+			}
+			const r = await api(`${renditionsAt(name)}/publish`, { method: 'POST', body: JSON.stringify({ agent: 'toucan' }) })
+			if (r.catalogue?.error) throw new Error(`Published, but the include catalogue wasn't changed: ${r.catalogue.error}`)
+			setNewName('')
+			setPublished(`${r.unchanged ? 'Unchanged' : 'Published'}: ${r.catalogue?.name ?? name}`)
+			await loadRenditions()
+		})
 	const spin = (what: string, icon: React.ReactNode) => (busy === what ? <LoaderCircleIcon className="animate-spin" /> : icon)
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
@@ -110,6 +137,37 @@ export function ExportMenu() {
 							{spin('png', <DownloadIcon />)} PNG
 						</Button>
 					</div>
+				</section>
+				<section className="border-b p-2" aria-label="Rendition">
+					<h3 className="px-1 pb-0.5 text-xs font-medium text-muted-foreground">Rendition</h3>
+					<p className="px-1 pb-1.5 text-xs text-muted-foreground">A named picture of the selection (or the whole canvas) that documents include by name, and that says when the canvas has moved on.</p>
+					{renditions.length > 0 && (
+						<ul className="pb-1.5">
+							{renditions.map((r) => (
+								<li key={r.name} className="flex items-center gap-2 px-1 py-0.5 text-sm">
+									<span className="flex-1 truncate" title={r.picture ?? 'not drawn yet'}>
+										{r.name} <span className={cn('text-xs', r.state === 'current' ? 'text-muted-foreground' : 'text-amber-600')} title={r.why}>{r.state}</span>
+									</span>
+									<Button size="sm" variant="ghost" onClick={publish(r.name)} disabled={!!busy} aria-label={`Publish ${r.name}`}>
+										{spin(`rendition:${r.name}`, <ImageUpIcon />)} Publish
+									</Button>
+								</li>
+							))}
+						</ul>
+					)}
+					<form
+						className="flex gap-2"
+						onSubmit={(e) => {
+							e.preventDefault()
+							publish(newName.trim())()
+						}}
+					>
+						<input value={newName} onChange={(e) => setNewName(e.target.value.toLowerCase())} placeholder="name, e.g. how-it-works" aria-label="Rendition name" className="min-w-0 flex-1 rounded-md border bg-transparent px-2 py-1 text-sm" />
+						<Button type="submit" size="sm" variant="outline" disabled={!!busy || !newName.trim()}>
+							{spin(`rendition:${newName.trim()}`, <ImageUpIcon />)} Publish as a rendition
+						</Button>
+					</form>
+					{published && <p className="px-1 pt-1.5 text-xs text-muted-foreground" role="status">{published}</p>}
 				</section>
 				<section className="border-b p-2" aria-label="Animated build">
 					<h3 className="px-1 pb-0.5 text-xs font-medium text-muted-foreground">Animated build</h3>

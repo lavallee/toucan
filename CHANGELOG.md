@@ -5,6 +5,17 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Renditions.** A named, published picture of part of a canvas (a frame, some shapes, or all of it), so a document can include
+  it by name and tell whether it is current, instead of a folder of one-off exports nobody can trace. `toucan rendition set NAME
+  [--frame KEY | --keys a,b | --all] [--format svg|png] [--alt T] [--title T]` defines one; `rendition publish NAME` draws it into
+  `<data>/CANVAS.renditions/` with a manifest (what it shows, the canvas version and shapes it was drawn from, the picture's hash, when
+  it was published) and lists it in the shared include catalogue (`$INCLUDES_CATALOGUE`, else `~/.config/includes/catalogue.json`) as
+  `toucan:CANVAS/NAME`; `rendition list` says which are current and which are behind; `rendition remove NAME` takes one away. A
+  rendition is redrawn only when someone asks, never on a save. **Export** above the canvas publishes the selection as one, and
+  republishes the canvas's renditions. Archiving a canvas takes its renditions with it, and out of the catalogue.
+
 ### Changed
 
 - **The bar above the canvas, History and Routines now come from Leyline** (`@lyra-forge/leyline`, the package

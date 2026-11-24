@@ -91,6 +91,18 @@ writes the canvas as a file, by the ending of `OUT`: `.svg` (sharp at any size, 
 or a pull request), `.png`, `.gif` (the animated build), or the graph as `.mmd`, `.canvas`, `.dot`, `.excalidraw`, `.json` or `.txt`. People
 get the same from **Export** above the canvas.
 
+**Renditions** are for a picture a document keeps: a named, published picture of part of a canvas that other documents include by
+name, and that says whether the canvas has moved on since. `toucan rendition set NAME --frame KEY` (or `--keys a,b`, or `--all`,
+the default; `--format svg|png`, `--alt TEXT`, `--title TEXT`) says what it shows; set it again to change it, and what you leave out
+stays as it was. `toucan rendition publish NAME` draws it now, the way `export` does, into the canvas's data folder
+(`<data>/CANVAS.renditions/NAME.svg`, with `NAME.json` beside it: what it shows, the canvas version and a hash of the shapes it was
+drawn from, a hash of the picture, and when it was published; an unchanged picture keeps its date). It also lists the picture in the
+include catalogue shared by this machine's tools (`$INCLUDES_CATALOGUE`, else `~/.config/includes/catalogue.json`) as
+`toucan:CANVAS/NAME`, which a document names as `<!-- include: toucan:CANVAS/NAME -->`; `--no-catalogue` leaves it out.
+`toucan rendition list` says which are `current` and which are `behind`, and `rendition remove NAME` takes one away, with its entry.
+A rendition is drawn only when asked, never when the canvas is saved: publish again when the person wants the documents that include
+it to change, and give it `--alt` words for people who can't see it. People publish one from **Export**, under Rendition.
+
 `toucan.measure()` measures the diagram as drawn and returns a `score` out of 100 and `findings`, each naming the shapes involved: overlaps, text that
 outgrew its box, arrows through boxes, crossings, labels on boxes or on each other, arrows through other arrows' labels, arrows through a map's panels, boxes cut off by a frame. `routine run check-diagram` reports the same, points at
 the shapes, and gives a `fixes` line for each kind of finding: what to run or change to clear it. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing

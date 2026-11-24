@@ -13,6 +13,9 @@ toucan --canvas NAME screenshot [OUT.png]     # look at it (prints where it wrot
 toucan --canvas NAME animate [OUT.gif] [--step MS] [--hold MS] [--max PX]   # a GIF of the diagram building up, box by box along the arrows
 toucan --canvas NAME export OUT [--format F] [--keys a,b]   # the canvas as a file, by OUT's ending: .svg .png .gif .mmd .canvas .dot .excalidraw .json .txt
 toucan --canvas NAME describe                 # what the diagram says in plain words: frames, boxes, states, arrows; no tab needed
+toucan --canvas NAME rendition set NAME [--keys a,b | --frame KEY | --all] [--format svg|png] [--alt T] [--title T]   # name a picture of part of the canvas, for documents to include
+toucan --canvas NAME rendition publish NAME [--no-catalogue]   # draw it now, beside the canvas, and list it in the include catalogue as toucan:CANVAS/NAME
+toucan --canvas NAME rendition list [--json] | remove NAME [--no-catalogue]   # each with current or behind, and its picture; never republished by itself
 toucan --canvas NAME script list|put NAME FILE|rm NAME   # persistent canvas scripts
 toucan canvases                               # every canvas: title, description, shapes, open tabs
 toucan new NAME --title T [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--canvas-format F]   # make a canvas
