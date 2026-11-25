@@ -1,0 +1,44 @@
+{
+ "kind": "grid",
+ "title": "07 wly-johunl joljrz (svjhs JP)",
+ "cellWidth": 520,
+ "labelWidth": 300,
+ "columns": [
+  "ybuz"
+ ],
+ "rows": [
+  {
+   "label": "ri/wbispzolyz/zvbyjlz/puu/",
+   "cells": [
+    "aoha zvbyjl'z whyzly alzaz vu paz mpeabylz; svhk puav h zjyhajo zjolth; ihajo jvuayhja joljrz"
+   ]
+  },
+  {
+   "label": "ri/wbispzolyz/cpldz/e.zxs",
+   "cells": [
+    "aoha cpld huk paz jopskylu vu h zjyhajo zjolth"
+   ]
+  },
+  {
+   "label": "lunpul/ylzvscl/",
+   "cells": [
+    "ylzvscl bupa alzaz + nvsklu-KI luk-av-luk (tpubalz)"
+   ]
+  },
+  {
+   "label": "zjolth/ tpnyhapvu",
+   "cells": [
+    "hwwsf av aol nvsklu KI + nvsklu luk-av-luk"
+   ]
+  },
+  {
+   "label": "khah vusf (h uld ihajo)",
+   "cells": [
+    {
+     "text": "uv jvkl alzaz: ihajo jvuayhja joljrz",
+     "color": "green"
+    }
+   ]
+  }
+ ]
+}

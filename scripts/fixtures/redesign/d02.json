@@ -1,0 +1,414 @@
+{
+ "kind": "map",
+ "title": "02 lunpul jvtwvuluaz",
+ "statuses": {
+  "deferred": {
+   "label": "Klmlyylk",
+   "color": "grey",
+   "dash": "dashed"
+  }
+ },
+ "columns": [
+  [
+   {
+    "id": "d02-0",
+    "title": "Ruvdslknl ihzlz (kvthpu whjrhnlz)",
+    "tiles": [
+     {
+      "id": "d02-1",
+      "text": "Wbispzolyz",
+      "color": "blue",
+      "detail": "hkhwalyz: PUU, SPVU, JJT, MJJ, 990, Dprpkhah… · wylkpjhalz: vduly, wshjl, spclulzz, ylhjo ybunz"
+     },
+     {
+      "id": "d02-2",
+      "text": "Zjovvsz (Lkpl / Hxbpmly)",
+      "status": "planned",
+      "detail": "Aolpy jovpjl, shaly. hkhwalyz: UQKVL, ZWY, kpzaypja zpalz, ivhyk kvjz · wylkpjhalz: wvspjf mpukpunz, zahmmpun, chsbl zahalz"
+     },
+     {
+      "id": "d02-3",
+      "text": "HP jshptz (Ihyuvds)",
+      "status": "planned",
+      "detail": "Aolpy jovpjl, shaly. hkhwalyz: hyapjslz, kvjz · wylkpjhalz: leayhjalk jshptz"
+     }
+    ]
+   },
+   {
+    "id": "d02-4",
+    "title": "Vyjolzayhapvu",
+    "sub": "JSP + zfzaltk aptlyz + dvyr slknly (h xblyf vcly tpzzpun rlfz pz aol xblbl). Khnzaly klmlyylk buaps pa whfz.",
+    "tiles": []
+   }
+  ],
+  [
+   {
+    "id": "d02-5",
+    "step": 1,
+    "title": "Hjxbpzpapvu",
+    "sub": "lepzapun hjxbpylyz + vul hkhwaly wly zvbyjl",
+    "tiles": [
+     {
+      "id": "d02-6",
+      "text": "Mlajoly",
+      "detail": "whjlk wly ovza · yvivaz · nlulypj BH · vul jhwhjpaf ibknla wly ovza, ylmbuklk vu bzl"
+     },
+     {
+      "id": "d02-7",
+      "text": "HWP / ibsr-mpsl wbsslyz",
+      "detail": "MJJ, PYZ, Jluzbz, FvbAbil, KhahMvyZLV"
+     },
+     {
+      "id": "d02-8",
+      "text": "Kpzjvclyf zlhyjo",
+      "detail": "Ayhdsly rlfslzz shulz"
+     },
+     {
+      "id": "d02-9",
+      "text": "Jvssljapvu yljlpwa",
+      "detail": "pttbahisl, whyluaslzz · vul wly leljbapvu"
+     }
+    ]
+   },
+   {
+    "id": "d02-10",
+    "step": 2,
+    "title": "Jbzavkf (zohylk)",
+    "tiles": [
+     {
+      "id": "d02-11",
+      "text": "Jpzalyu isvi zavyl",
+      "color": "yellow",
+      "detail": "Zvbyjl Jyhdsly'z · jvualua-hkkylzzlk · ~/.jpzalyu/iyvugl ylhk, uva tlynlk"
+     },
+     {
+      "id": "d02-12",
+      "text": "Alea shfly",
+      "status": "deferred",
+      "detail": "klmlyylk buaps h xblzapvu ullkz pa · leayhjalk alea + jvvykpuhalz wly (jvualua ohzo, whyzly jvuayhja)"
+     },
+     {
+      "id": "d02-13",
+      "text": "Mbss-alea pukle",
+      "status": "deferred",
+      "detail": "klmlyylk"
+     }
+    ]
+   }
+  ],
+  [
+   {
+    "id": "d02-14",
+    "step": 4,
+    "title": "Leayhjapvu (zohylk)",
+    "tiles": [
+     {
+      "id": "d02-15",
+      "text": "Klalytpupzapj whyzlyz",
+      "detail": "wly zvbyjl hkhwaly"
+     },
+     {
+      "id": "d02-16",
+      "text": "Tvkls leayhjapvu shul",
+      "status": "deferred",
+      "detail": "klmlyylk · zwhu tbza il mvbuk pu zavylk alea · svd aply if tlaovk"
+     },
+     {
+      "id": "d02-17",
+      "text": "Ylcpld xblbl",
+      "detail": "ispuk obthu / hnlua qbkntluaz · myvglu jvovyaz · kljpzpvu yljlpwaz"
+     }
+    ]
+   },
+   {
+    "id": "d02-18",
+    "step": 3,
+    "title": "Lcpklujl slknly (zohylk, Wvzanylz)",
+    "tiles": [
+     {
+      "id": "d02-19",
+      "text": "ihajo",
+      "color": "yellow",
+      "detail": "vul zvbyjl zuhwzova · jvtwslal?"
+     },
+     {
+      "id": "d02-20",
+      "text": "yljvyk",
+      "color": "yellow",
+      "detail": "h zvbyjl'z vdu spzapun · ulcly tlynlk"
+     },
+     {
+      "id": "d02-21",
+      "text": "jshpt / tlhzbyltlua / lclua_hzzlyapvu",
+      "color": "yellow",
+      "detail": "chspk · vizlyclk · yljvyklk aptl · tlaovk · lcpklujl zwhu → jbzavkf"
+     },
+     {
+      "id": "d02-22",
+      "text": "dvyr slknly",
+      "color": "yellow",
+      "detail": "wly-hepz zahalz · jvualua-pkluapaf rlfz"
+     }
+    ]
+   }
+  ],
+  [
+   {
+    "id": "d02-23",
+    "step": 5,
+    "title": "Ylzvsbapvu (zohylk)",
+    "tiles": [
+     {
+      "id": "d02-24",
+      "text": "Klalytpupzapj pk ybslz",
+      "detail": "pkluapmplyz dpao chspk aptl + ptwvyalk slnhjf kljpzpvuz"
+     },
+     {
+      "id": "d02-25",
+      "text": "Wyvihipspzapj thajopun (Zwspur)",
+      "status": "deferred",
+      "detail": "klmlyylk"
+     },
+     {
+      "id": "d02-26",
+      "text": "yljvyk → luapaf hzzpnutlua",
+      "color": "yellow",
+      "detail": "ylclyzpisl, yljvyklk-aptl yhunlz · ylkpyljaz, ulcly klslalz"
+     }
+    ]
+   },
+   {
+    "id": "d02-27",
+    "step": 6,
+    "title": "Klypchapvu (zohylk lunpul, kvthpu ybslz)",
+    "tiles": [
+     {
+      "id": "d02-28",
+      "text": "Aybza wvspjf",
+      "color": "blue",
+      "detail": "wly wylkpjhal × zvbyjl aply, clyzpvulk, dpao yhapvuhsl"
+     },
+     {
+      "id": "d02-29",
+      "text": "ilza_chsbl + zahabz",
+      "detail": "zpunsl · jvyyvivyhalk · jvualzalk · zahsl"
+     },
+     {
+      "id": "d02-30",
+      "text": "Kpmmz iladllu jvtwslal zuhwzovaz"
+     },
+     {
+      "id": "d02-31",
+      "text": "Slhkz",
+      "detail": "klkbwl rlf, zahalz, opzavyf"
+     }
+    ]
+   }
+  ],
+  [
+   {
+    "id": "d02-32",
+    "step": 7,
+    "title": "Wbispzopun (zohylk)",
+    "tiles": [
+     {
+      "id": "d02-33",
+      "text": "wbi.* cpldz, ylhk SPCL if Hashz/HWP",
+      "detail": "ypnoaz · wly-yljvyk ylzaypjapvu · wlyzvu_khah"
+     },
+     {
+      "id": "d02-34",
+      "text": "Ylslhzl = jpahisl lewvya vusf",
+      "detail": "yljvyklk-aptl jba + wvspjf clyzpvuz → Whyxbla · ulcly nhalz zlycpun"
+     }
+    ]
+   },
+   {
+    "id": "d02-35",
+    "title": "Jvuzbtlyz",
+    "tiles": [
+     {
+      "id": "d02-36",
+      "text": "Hashz",
+      "color": "green"
+     },
+     {
+      "id": "d02-37",
+      "text": "Ylhk-vusf HWP",
+      "color": "green"
+     },
+     {
+      "id": "d02-38",
+      "text": "uqzjovvskhah",
+      "color": "green"
+     },
+     {
+      "id": "d02-39",
+      "text": "Thyj / ylwvyalyz",
+      "color": "violet",
+      "detail": "mvssvd slhkz"
+     }
+    ]
+   }
+  ]
+ ],
+ "links": [
+  {
+   "from": "d02-6",
+   "to": "d02-9"
+  },
+  {
+   "from": "d02-7",
+   "to": "d02-9"
+  },
+  {
+   "from": "d02-8",
+   "to": "d02-9"
+  },
+  {
+   "from": "d02-11",
+   "to": "d02-12",
+   "label": "whyzl vujl wly ohzo"
+  },
+  {
+   "from": "d02-12",
+   "to": "d02-13"
+  },
+  {
+   "from": "d02-19",
+   "to": "d02-20"
+  },
+  {
+   "from": "d02-20",
+   "to": "d02-21"
+  },
+  {
+   "from": "d02-24",
+   "to": "d02-26"
+  },
+  {
+   "from": "d02-25",
+   "to": "d02-26",
+   "label": "hbav ihuk"
+  },
+  {
+   "from": "d02-28",
+   "to": "d02-29"
+  },
+  {
+   "from": "d02-30",
+   "to": "d02-31"
+  },
+  {
+   "from": "d02-9",
+   "to": "d02-11",
+   "label": "ifalz + mpepaf"
+  },
+  {
+   "from": "d02-9",
+   "to": "d02-19",
+   "label": "yljlpwa"
+  },
+  {
+   "from": "d02-12",
+   "to": "d02-15"
+  },
+  {
+   "from": "d02-12",
+   "to": "d02-16"
+  },
+  {
+   "from": "d02-15",
+   "to": "d02-21"
+  },
+  {
+   "from": "d02-16",
+   "to": "d02-21"
+  },
+  {
+   "from": "d02-17",
+   "to": "d02-21",
+   "label": "jbyhapvu jshptz"
+  },
+  {
+   "from": "d02-20",
+   "to": "d02-24"
+  },
+  {
+   "from": "d02-20",
+   "to": "d02-25"
+  },
+  {
+   "from": "d02-26",
+   "to": "d02-29"
+  },
+  {
+   "from": "d02-21",
+   "to": "d02-29"
+  },
+  {
+   "from": "d02-19",
+   "to": "d02-30"
+  },
+  {
+   "from": "d02-29",
+   "to": "d02-33"
+  },
+  {
+   "from": "d02-31",
+   "to": "d02-33"
+  },
+  {
+   "from": "d02-33",
+   "to": "d02-36"
+  },
+  {
+   "from": "d02-33",
+   "to": "d02-37"
+  },
+  {
+   "from": "d02-34",
+   "to": "d02-38"
+  },
+  {
+   "from": "d02-31",
+   "to": "d02-39",
+   "label": "mvssvd bw"
+  },
+  {
+   "from": "d02-39",
+   "to": "d02-5",
+   "color": "blue",
+   "label": "uld jhwabylz"
+  },
+  {
+   "from": "d02-1",
+   "to": "d02-5",
+   "color": "blue",
+   "label": "hkhwalyz"
+  },
+  {
+   "from": "d02-2",
+   "to": "d02-5",
+   "kind": "planned",
+   "label": "hkhwalyz"
+  },
+  {
+   "from": "d02-3",
+   "to": "d02-16",
+   "kind": "planned",
+   "label": "leayhjavy jvuayhjaz"
+  },
+  {
+   "from": "d02-1",
+   "to": "d02-28",
+   "color": "blue",
+   "label": "aybza ybslz"
+  },
+  {
+   "from": "d02-25",
+   "to": "d02-17",
+   "label": "ylcpld ihuk"
+  }
+ ]
+}

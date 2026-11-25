@@ -646,13 +646,22 @@ switch (cmd) {
 	}
 	case 'draw': {
 		const label = flag('label'), move = !!flag('move'), update = move || !!flag('update')
+		const prefix = flag('prefix'), frameKey = flag('frame'), title = flag('title')
+		for (const [name, value] of [['prefix', prefix], ['frame', frameKey], ['title', title]]) if (value === true) die(`--${name} needs a value`)
 		const [, file] = argv
-		if (!file) die('usage: draw FILE|- [--update] [--move] [--label T]')
-		const { layOut, placeBeside } = await import('../lib/layouts.mjs')
+		if (!file) die('usage: draw FILE|- [--update] [--move] [--prefix P] [--frame KEY] [--title T] [--label T]')
+		const { layOut, placeDrawing } = await import('../lib/layouts.mjs')
 		const spec = JSON.parse(readFileSync(file === '-' ? 0 : file, 'utf8'))
 		const tg = await layOut(spec).catch((e) => die(e.message))
-		// A new drawing goes beside what's there, and never over it. --update means this is a new version of what's there.
-		const placed = update ? { prefix: null } : placeBeside(tg, await exec('const g = toucan.graph(); return { keys: [...g.nodes, ...g.groups].map((n) => n.key), boxes: [...g.nodes, ...g.groups].map((n) => n.box).filter(Boolean) }', undefined, undefined, 'finding room to draw'))
+		const { shapes } = await exec('const g = toucan.graph(); return { shapes: [...g.nodes, ...g.groups].filter((n) => n.box).map((n) => ({ key: n.key, box: n.box })) }', undefined, undefined, 'finding room to draw')
+		const frame = frameKey || title ? { key: typeof frameKey === 'string' ? frameKey : `frame-${String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'drawing'}`, title: typeof title === 'string' ? title : undefined } : null
+		const placed = (() => {
+			try {
+				return placeDrawing(tg, { spec, existing: shapes, update, prefix: typeof prefix === 'string' ? prefix : undefined, frame })
+			} catch (e) {
+				return die(e.message)
+			}
+		})()
 		const named = typeof label === 'string' ? label : `draw ${spec.title ?? spec.kind}`
 		const out = await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move })})`, 120000, named, typeof label === 'string' ? label : `drawing ${spec.title ?? spec.kind}`)
 		print(placed.prefix ? { ...out, keysPrefixed: placed.prefix } : out)

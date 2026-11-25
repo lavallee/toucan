@@ -1,0 +1,154 @@
+{
+ "kind": "map",
+ "title": "10 whssla",
+ "columns": [
+  [
+   {
+    "id": "d10-0",
+    "title": "whssla hsylhkf ohz",
+    "cols": 1,
+    "tiles": [
+     {
+      "id": "d10-1",
+      "text": "jbzavkf ilmvyl tlhupun",
+      "detail": "ZOH-256, yljlpwaz"
+     },
+     {
+      "id": "d10-2",
+      "text": "h jvuayhja wly zvbyjl",
+      "detail": "ypnoaz, wyvopipalk bzlz"
+     },
+     {
+      "id": "d10-3",
+      "text": "afwlk chsbl zahalz (zbwwylzzlk ≠ 0)"
+     },
+     {
+      "id": "d10-4",
+      "text": "pttbahisl ylslhzlz, havtpj wvpualy, yvssihjr"
+     },
+     {
+      "id": "d10-5",
+      "text": "wpuz + vmmspul clypmf"
+     },
+     {
+      "id": "d10-6",
+      "text": "ruvdu pzzblz zopw dpao lclyf ylslhzl"
+     },
+     {
+      "id": "d10-7",
+      "text": "lewspjpa spmljfjsl"
+     }
+    ]
+   }
+  ],
+  [
+   {
+    "id": "d10-8",
+    "title": "Mvsk puav 0.1.0",
+    "cols": 1,
+    "tiles": [
+     {
+      "id": "d10-9",
+      "text": "whssla kpmm H I",
+      "color": "blue",
+      "detail": "hkklk · yltvclk · johunlk yvdz if rlf; jvtwslal lkpapvuz vusf"
+     },
+     {
+      "id": "d10-10",
+      "text": "yvd wyvcluhujl hz h ZPKLJHY mpsl",
+      "color": "blue",
+      "detail": "yljlpwa pk + spul/vmmzla wly yvd; Mypjapvuslzz lewvya zahfz jslhu"
+     },
+     {
+      "id": "d10-11",
+      "text": "aoyll aptlz pu aol thupmlza",
+      "color": "blue",
+      "detail": "vizlyclk hz-vm · chspk aptl ihzpz · yljvyklk"
+     },
+     {
+      "id": "d10-12",
+      "text": "jvualua-rlflk zohwpun",
+      "color": "blue",
+      "detail": "zrpw dolu yhd ohzo + zwlj ohzo + clyzpvu bujohunlk"
+     },
+     {
+      "id": "d10-13",
+      "text": "zavyl_mvytha mplsk (mvy aol mbabyl)",
+      "color": "blue"
+     }
+    ]
+   }
+  ],
+  [
+   {
+    "id": "d10-14",
+    "title": "Ylslhzl kpzjpwspul myvt 0.1.0 vu",
+    "cols": 1,
+    "tiles": [
+     {
+      "id": "d10-15",
+      "text": "ZltCly",
+      "detail": "dopsl 0.e h tpuvy ibtw thf iylhr, huk zhfz zv"
+     },
+     {
+      "id": "d10-16",
+      "text": "Rllw h Johunlsvn",
+      "detail": "lclyf iylhrpun luayf zahyaz IYLHRPUN: dpao h vul-spul tpnyhapvu"
+     },
+     {
+      "id": "d10-17",
+      "text": "clyzpvulk zjolth pkz",
+      "detail": "hu vsk zavyl_mvytha pz ylmbzlk dpao h jslhy tlzzhnl"
+     },
+     {
+      "id": "d10-18",
+      "text": "ahn + ylslhzl uvalz = johunlsvn zljapvu",
+      "detail": "WfWP vusf myvt h jslhu ahnnlk jvttpa"
+     }
+    ]
+   },
+   {
+    "id": "d10-19",
+    "title": "Uva pu whssla",
+    "sub": "uvaopun pu pa dvbsk bzl aolt",
+    "cols": 1,
+    "tiles": [
+     {
+      "id": "d10-20",
+      "text": "pu-ylslhzl slhkz",
+      "color": "grey"
+     },
+     {
+      "id": "d10-21",
+      "text": "klypclz_myvt",
+      "color": "grey"
+     },
+     {
+      "id": "d10-22",
+      "text": "whssla tpnyhal",
+      "color": "grey",
+      "detail": "uvaopun av tpnyhal fla"
+     }
+    ]
+   }
+  ]
+ ],
+ "links": [
+  {
+   "from": "d10-0",
+   "to": "d10-8",
+   "label": "rllw"
+  },
+  {
+   "from": "d10-8",
+   "to": "d10-14",
+   "label": "zopw bukly"
+  },
+  {
+   "from": "d10-8",
+   "to": "d10-19",
+   "color": "red",
+   "label": "jvuzpklylk, kyvwwlk"
+  }
+ ]
+}

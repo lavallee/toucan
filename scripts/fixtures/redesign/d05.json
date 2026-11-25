@@ -1,0 +1,155 @@
+{
+ "kind": "grid",
+ "title": "05 doha h johunl yljvtwbalz",
+ "cellWidth": 380,
+ "labelWidth": 260,
+ "columns": [
+  "Yljvtwbal",
+  "Wylzlyclk"
+ ],
+ "rows": [
+  {
+   "label": "Uld ihajo myvt h zvbyjl (l.n. JJT, 828 spzapunz)",
+   "cells": [
+    {
+     "text": "paz yljvykz' pkluapmplyz → isvjrlk thajopun mvy uld yljvykz vusf → avbjolk jvtwvuluaz → kpyaf luapaplz' ilza_chsbl, kpmmz cz wylcpvbz jvtwslal ihajo → slhkz",
+     "color": "blue"
+    },
+    {
+     "text": "lclyf vaoly zvbyjl, yljvyk, jshpt, luapaf, kljpzpvu",
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "label": "Zhtl ifalz ha h uld BYS",
+   "cells": [
+    {
+     "text": "vul vizlychapvu yvd; uvaopun whyzlk vy leayhjalk",
+     "color": "blue"
+    },
+    {
+     "text": "whyzl, leayhjapvu, ylcpld",
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "label": "Uld ifalz mvy h ruvdu kvjbtlua",
+   "cells": [
+    {
+     "text": "whyzl + leayhja aoha ohzo; hmmljalk luapaplz",
+     "color": "blue"
+    },
+    {
+     "text": "wypvy clyzpvu huk paz qbkntluaz",
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "label": "Whyzly jvuayhja johunl",
+   "cells": [
+    {
+     "text": "aleaz if aoha whyzly; aolpy leayhjapvuz; hmmljalk luapaplz",
+     "color": "blue"
+    },
+    {
+     "text": "yhd jbzavkf huk vizlychapvuz",
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "label": "Leayhjavy clyzpvu johunl",
+   "cells": [
+    {
+     "text": "aoha mplsk vu hwwspjhisl alea puwbaz; hmmljalk luapaplz",
+     "color": "blue"
+    },
+    {
+     "text": "buylshalk mplskz huk obthu kljpzpvuz",
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "label": "Ylcpld kljpzpvu / jvyyljapvu",
+   "cells": [
+    {
+     "text": "aol uhtlk jshpt / kljpzpvu; hmmljalk luapaplz",
+     "color": "blue"
+    },
+    {
+     "text": "zvbyjl, ivkf, whyzl, buylshalk qbkntluaz",
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "label": "Spur kljpzpvu (zhtl / kpmmlylua)",
+   "cells": [
+    {
+     "text": "aol jvtwvulua(z) avbjolk; aolpy luapaplz",
+     "color": "blue"
+    },
+    {
+     "text": "jshptz (aolf mvssvd if qvpu)",
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "label": "Aybza wvspjf clyzpvu",
+   "cells": [
+    {
+     "text": "ilza_chsbl mvy aovzl wylkpjhalz (h cpld; zljvukz) · zahslulzz pz jvtwbalk ha ylhk aptl, ulcly zavylk",
+     "color": "blue"
+    },
+    {
+     "text": "hss jshptz, wylcpvbz wvspjf (yl-thalyphspzhisl)",
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "label": "Ypnoaz wvspjf johunl",
+   "cells": [
+    {
+     "text": "wbi cpldz vusf (ZXS); uvaopun bwzaylht",
+     "color": "blue"
+    },
+    {
+     "text": "lclyfaopun",
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "label": "Wylkpjhal hkklk",
+   "cells": [
+    {
+     "text": "uvaopun buaps h zvbyjl ltpaz pa",
+     "color": "blue"
+    },
+    {
+     "text": "lclyfaopun",
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "label": "Hashz / HWP / ylwvya shfvba",
+   "cells": [
+    {
+     "text": "aol jvuzbtly vusf",
+     "color": "blue"
+    },
+    {
+     "text": "jvywbz, jshptz, luapaplz",
+     "color": "green"
+    }
+   ]
+  }
+ ]
+}
