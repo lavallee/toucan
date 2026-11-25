@@ -22,6 +22,31 @@ const observer = new IntersectionObserver(entries => {
   }
 }, { threshold: [0, 0.2] })
 for (const video of demos) {
+  const bar = document.createElement('div')
+  bar.className = 'demo-controls'
+  const playback = document.createElement('button')
+  playback.type = 'button'
+  const labelPlayback = () => {
+    playback.textContent = video.paused ? 'Play demo' : 'Pause demo'
+  }
+  labelPlayback()
+  playback.addEventListener('click', () => {
+    if (video.paused) video.play().catch(labelPlayback)
+    else video.pause()
+  })
+  video.addEventListener('play', labelPlayback)
+  video.addEventListener('pause', labelPlayback)
+
+  const controls = document.createElement('button')
+  controls.type = 'button'
+  controls.textContent = 'Player controls'
+  controls.setAttribute('aria-pressed', 'false')
+  controls.addEventListener('click', () => {
+    video.controls = !video.controls
+    controls.setAttribute('aria-pressed', String(video.controls))
+  })
+  bar.append(playback, controls)
+  video.after(bar)
   video.addEventListener('pause', () => {
     if (!automaticPauses.delete(video)) manuallyPaused.add(video)
   })

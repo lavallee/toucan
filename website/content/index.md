@@ -22,7 +22,7 @@ image_alt: An illustrated broadcast rundown for Sounds from the river.
     <p class="platform"><a data-release href="https://github.com/lavallee/toucan/releases/tag/v0.21.0">Toucan v0.21.0</a> · Runs on your machine</p>
   </div>
   <figure class="opening-film" id="rundown">
-    <video data-demo loop controls muted playsinline preload="none" width="1280" height="800" poster="assets/use-cases/river-rundown.png" aria-label="The ferry interview gets a shorter cut and the episode fits its broadcast slot" src="assets/use-cases/river-rundown.mp4"></video>
+    <video data-demo loop muted playsinline preload="none" width="1280" height="800" poster="assets/use-cases/river-rundown.png" aria-label="The ferry interview gets a shorter cut and the episode fits its broadcast slot" src="assets/use-cases/river-rundown.mp4"></video><noscript><a href="assets/use-cases/river-rundown.mp4">Play demo</a></noscript>
     <figcaption><strong>Twenty minutes of tape. Eighteen minutes on air.</strong> A two-minute cut to the ferry interview brings the radio show in on time. <a href="use-cases.html#cut-a-radio-episode">See the edit ↗</a></figcaption>
   </figure>
   <div class="walkthrough">
@@ -35,7 +35,7 @@ image_alt: An illustrated broadcast rundown for Sounds from the river.
         <p>Sam asks for a password-reset path. While Codex works, Sam changes “Verify email” to “Confirm your email.” Watch the green path at the end. It includes Sam’s wording.</p>
         <a href="tour.html#draw-with-an-agent">Make a change together ↗</a>
       </div>
-      <figure><video data-demo loop controls muted playsinline preload="none" width="1280" height="800" poster="assets/demos/agents-notice.jpg" src="assets/demos/agents-notice.mp4" aria-label="Sam renames a step while Codex adds a branch to the same sign-up diagram"></video></figure>
+      <figure><video data-demo loop muted playsinline preload="none" width="1280" height="800" poster="assets/demos/agents-notice.jpg" src="assets/demos/agents-notice.mp4" aria-label="Sam renames a step while Codex adds a branch to the same sign-up diagram"></video><noscript><a href="assets/demos/agents-notice.mp4">Play demo</a></noscript></figure>
     </section>
     <section id="agents" class="spread parallel">
       <div class="copy">
@@ -43,7 +43,7 @@ image_alt: An illustrated broadcast rundown for Sounds from the river.
         <p>Alex selects two sign-in boxes and asks whether the app needs both. Sam asks what happens to bookings if the database goes down. Two agents work at once, each answering in the thread attached to its part of the diagram.</p>
         <a href="tour.html#start-parallel-comment-threads">Start a thread on a shape or region ↗</a>
       </div>
-      <figure><video data-demo loop controls muted playsinline preload="none" width="1600" height="900" poster="assets/demos/threads.poster.png" src="assets/demos/threads.mp4" aria-label="Two questions enter separate threads on a booking system canvas and two agents reply"></video><figcaption>The wait for the replies plays at 6× speed.</figcaption></figure>
+      <figure><video data-demo loop muted playsinline preload="none" width="1600" height="900" poster="assets/demos/threads.poster.png" src="assets/demos/threads.mp4" aria-label="Two questions enter separate threads on a booking system canvas and two agents reply"></video><noscript><a href="assets/demos/threads.mp4">Play demo</a></noscript><figcaption>The wait for the replies plays at 6× speed.</figcaption></figure>
     </section>
     <section id="review" class="spread review">
       <div class="copy">
@@ -59,7 +59,7 @@ image_alt: An illustrated broadcast rundown for Sounds from the river.
         <p>The ferry interview is mixed. Drag it from In progress to In review so the producer knows what to listen to next. The stage changes in the episode plan, too.</p>
         <a href="use-cases.html#send-the-mix-to-review">Try the episode board ↗</a>
       </div>
-      <figure><video data-demo loop controls muted playsinline preload="none" width="1440" height="900" poster="assets/use-cases/episode-board.png" src="assets/use-cases/river-move.mp4" aria-label="The ferry interview mix moves from In progress to In review"></video><figcaption>The file-backed task moved from <code>doing</code> to <code>review</code>.</figcaption></figure>
+      <figure><video data-demo loop muted playsinline preload="none" width="1440" height="900" poster="assets/use-cases/episode-board.png" src="assets/use-cases/river-move.mp4" aria-label="The ferry interview mix moves from In progress to In review"></video><noscript><a href="assets/use-cases/river-move.mp4">Play demo</a></noscript><figcaption>The file-backed task moved from <code>doing</code> to <code>review</code>.</figcaption></figure>
     </section>
     <section id="history" class="spread history">
       <div class="copy">
@@ -75,7 +75,7 @@ image_alt: An illustrated broadcast rundown for Sounds from the river.
         <p>Run <strong>Clean up</strong> from the Routines menu and watch the diagram settle into place. One undo brings the old layout back. When your agent finds a useful cleanup of its own, save it to the menu for the next canvas.</p>
         <a href="tour.html#run-a-cleanup-routine">Run a cleanup routine ↗</a>
       </div>
-      <figure><video data-demo loop controls muted playsinline preload="none" width="1600" height="900" poster="assets/demos/routines-menu.poster.png" src="assets/demos/routines-menu.mp4" aria-label="Running the Clean up routine on a diagram and undoing the layout change"></video></figure>
+      <figure><video data-demo loop muted playsinline preload="none" width="1600" height="900" poster="assets/demos/routines-menu.poster.png" src="assets/demos/routines-menu.mp4" aria-label="Running the Clean up routine on a diagram and undoing the layout change"></video><noscript><a href="assets/demos/routines-menu.mp4">Play demo</a></noscript></figure>
     </section>
     <section id="illustrate" class="spread illustrate">
       <div class="copy">

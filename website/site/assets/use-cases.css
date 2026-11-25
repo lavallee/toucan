@@ -84,3 +84,10 @@ body:has(.toucan-home) .article-title { font-size: clamp(3.5rem, 5.8vw, 6.6rem);
   .story-nav { flex-wrap:nowrap; overflow-x:auto; }
   .story-nav a { flex:none; }
 }
+
+.demo-controls { display:flex; gap:1.25rem; margin-top:.25rem; }
+.demo-controls button {
+  min-height:2.75rem; padding:0; border:0; background:transparent; color:inherit;
+  font:600 .9rem/1.4 var(--font-ui); cursor:pointer; text-underline-offset:.2em;
+}
+.demo-controls button:is(:hover,:focus-visible,[aria-pressed="true"]) { text-decoration:underline; }

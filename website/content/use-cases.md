@@ -17,7 +17,7 @@ description: See how a radio producer cuts two minutes, an editor handles a repo
 ::: html
 <figure class="article-breakout case-capture">
   <link rel="stylesheet" href="assets/use-cases.css">
-  <video data-demo loop controls muted playsinline preload="none" width="1280" height="800" poster="assets/use-cases/river-rundown.png" src="assets/use-cases/river-rundown.mp4" aria-label="A two-minute interview cut brings a radio rundown to eighteen minutes"></video>
+  <video data-demo loop muted playsinline preload="none" width="1280" height="800" poster="assets/use-cases/river-rundown.png" src="assets/use-cases/river-rundown.mp4" aria-label="A two-minute interview cut brings a radio rundown to eighteen minutes"></video><noscript><a href="assets/use-cases/river-rundown.mp4">Play demo</a></noscript>
   <figcaption>A scripted CLI edit to a real Toucan canvas. The revised rundown moves the final cue from 13:00 to 11:00 and keeps all seven minutes of the closing tape.</figcaption>
 </figure>
 :::
