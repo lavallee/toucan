@@ -35,3 +35,11 @@ Luna followed explicit, inspectable instructions about sources, routes, footer f
 I revised the guide after freezing the trial. It now asks for the old journey and the intended reader-visible difference before implementation, separate assessments of shell and content, an explanation for keeping a project's identity, and a run of the repository's own site tests. It also gives canonical studio destinations and calls for preserving useful project-specific footer links. The frozen guide above is exactly what Luna received. The revised guidance has not had a second model trial.
 
 For a repeat on Flip, a discriminating task would be: **From the homepage, show me why Flip refused to verify claim C6, let me inspect the command output, and take me to the claim in the finished notebook.** Preserve the full investigation and the existing installation route. A reviewer can execute that task in both versions, compare the path, check the copy against the record, and see whether the new design actually helps.
+
+## Visual review after the first public release
+
+The first repair shipped a better path from the refusal to claim C6 and its sources. Marc's review identified a separate failure: the public site still looked like the cream-and-blue Artoo starter. Its headings resolved to a system serif, while Toucan's rendered headings used Instrument Serif. The original release decision gave too much weight to the improved reader path.
+
+The subsequent Flip repair carries the Admiralty colors, chart-paper surfaces and locally served type across all six pages and illustrates C6 as an inspectable research record. The comparison captures below use matching browser viewports for the previous release, live Toucan and the corrected Flip pages. This repair was made after the Luna trial and earns no credit toward its score.
+
+[Desktop comparison](admiralty-1440.webp) · [Phone comparison](admiralty-390.webp) · [Release PR](https://github.com/lavallee/flip/pull/10)
