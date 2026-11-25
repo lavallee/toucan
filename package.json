@@ -53,7 +53,8 @@
     "test:reflexes": "node scripts/reflexes-e2e.mjs",
     "test:renditions": "node scripts/renditions-e2e.mjs",
     "check": "node scripts/check-repo.mjs",
-    "docs": "node scripts/build-features.mjs && artoo build website",
+    "docs:version": "node scripts/docs-version.mjs --write",
+    "docs": "npm run docs:version && node scripts/build-features.mjs && artoo build website",
     "prepack": "npm run build",
     "test:install": "node scripts/install-check.mjs"
   },

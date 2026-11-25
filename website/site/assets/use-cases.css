@@ -1,134 +1,86 @@
-/* Project landing page. The rest of the collection uses the Artoo article layout. */
 body:has(.toucan-home) {
-  --home-paper: #f4f7f1;
-  --home-ink: #16362c;
-  --home-soft: #dce8dc;
-  --home-rule: #a8b9ae;
-  background: var(--home-paper);
-  color: var(--home-ink);
+  --gutter: max(1.15rem, calc((100vw - 88rem) / 2), 4vw);
+  background: var(--navy);
+  color: var(--chart-white);
 }
-
-body:has(.toucan-home) .site-nav {
-  background: var(--home-paper);
-  border-color: var(--home-rule);
-}
-
-body:has(.toucan-home) main > :is([aria-label="Breadcrumb"], .toc, .collection-pager, .article-colophon),
-body:has(.toucan-home) .article-header > :not(h1) {
-  display: none;
-}
-
-body:has(.toucan-home) .article-header, .toucan-home {
-  grid-column: full;
-  width: min(100% - 2 * clamp(1rem, 5vw, 5rem), 86rem);
-  margin-inline: auto;
-  font-family: var(--font-ui);
-}
-
-body:has(.toucan-home) .article-header {
-  margin-block: clamp(3rem, 8vw, 7.5rem) clamp(1.75rem, 3vw, 3.25rem);
-}
-
-body:has(.toucan-home) .article-title {
-  max-width: 19ch;
-  margin: 0;
-  color: var(--home-ink);
-  font: 620 clamp(3rem, 7.2vw, 6.8rem) / 0.97 var(--font-ui);
-  letter-spacing: -0.072em;
-  text-wrap: balance;
-}
-
-.toucan-home { padding-bottom: clamp(3rem, 7vw, 7rem); }
-.toucan-home a { color: inherit; text-underline-offset: 0.24em; }
-
-.home-hero {
+body:has(.toucan-home) main.article {
   display: grid;
-  grid-template-columns: minmax(14rem, 1fr) minmax(0, 2.6fr);
-  align-items: start;
-  gap: clamp(2rem, 5vw, 5rem);
-}
-
-.home-intro > p:first-child {
-  max-width: 28ch;
-  margin-block: 0 1.5rem;
-  font-size: clamp(1.125rem, 1.7vw, 1.5rem);
-  line-height: 1.43;
-}
-
-.home-actions {
-  display: flex;
-  gap: 0.75rem 1.15rem;
-  flex-wrap: wrap;
-  align-items: center;
-  font-size: 0.96rem;
-  font-weight: 650;
-}
-
-.toucan-home .home-primary {
-  padding: 0.55rem 0.9rem;
-  border-radius: 3px;
-  background: var(--home-ink);
-  color: var(--home-paper);
-  text-decoration: none;
-}
-
-.toucan-home .home-primary:hover { text-decoration: underline; }
-
-.home-runtime {
-  max-width: 33ch;
-  margin-block: 1.2rem 0;
-  color: var(--muted);
-  font-size: 0.88rem;
-}
-
-.home-hero figure { margin: 0; }
-.home-hero figure > a { display: block; border: 1px solid var(--home-rule); }
-.home-hero img { display: block; width: 100%; height: auto; }
-.home-hero figcaption { margin-top: 0.55rem; }
-
-.home-work {
-  margin-top: clamp(3.25rem, 8vw, 8rem);
-  border-top: 1px solid var(--home-rule);
-  padding-top: 1.2rem;
-}
-
-.home-work-lead {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem 1.5rem;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
-}
-
-.toucan-home h2 {
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.45fr);
+  align-items: end;
+  gap: 0 clamp(1.8rem, 4vw, 4rem);
+  padding: clamp(2rem, 4vw, 4rem) var(--gutter) 0;
   margin: 0;
-  font: 650 clamp(1.65rem, 3.4vw, 3.45rem) / 1.07 var(--font-ui);
-  letter-spacing: -0.055em;
+  max-width: none;
 }
-
-.home-cases { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.home-cases > section { padding: 1rem clamp(0.8rem, 2vw, 2rem) 0.7rem 0; border-top: 1px solid var(--home-rule); }
-.home-cases h3 { font: 650 1.15rem / 1.25 var(--font-ui); margin-block: 0 0.5rem; }
-.home-cases h3 a:hover, .home-cases h3 a:focus-visible { text-decoration: underline; }
-.home-cases p { margin: 0; max-width: 29ch; font-size: 0.93rem; line-height: 1.55; }
-
-.home-next {
-  margin-top: clamp(3rem, 7vw, 6rem);
-  padding: clamp(1.25rem, 4vw, 3rem);
-  background: var(--home-soft);
+body:has(.toucan-home) main > :is([aria-label="Breadcrumb"], .toc, .collection-pager, .article-colophon),
+body:has(.toucan-home) .article-header > :not(h1) { display: none; }
+body:has(.toucan-home) .article-header { grid-area: 1 / 1; margin: 0; }
+.toucan-home { display: contents; }
+body:has(.toucan-home) .article-title, .toucan-home h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-wrap: balance;
+  line-height: .99;
+  letter-spacing: -.025em;
+  color: inherit;
+  margin: 0;
 }
+body:has(.toucan-home) .article-title { font-size: clamp(3.5rem, 5.8vw, 6.6rem); }
+.toucan-home { font-family: var(--font-ui); }
+.toucan-home a { color: inherit; text-underline-offset: .2em; }
+.opening-copy { grid-area: 2 / 1; align-self: start; }
+.opening-copy > p:first-child, .copy p, .closing p { font: 400 clamp(1.06rem, 1.45vw, 1.4rem)/1.45 var(--font-ui); max-width: 38ch; margin: 1.25em 0; }
+.toucan-home .install { display:inline-flex; gap: 1.6em; align-items:center; font: 650 1rem var(--font-ui); background:var(--beacon); color:var(--navy); padding:.8em 1.1em; border-radius:2em; text-decoration:none; }
+.toucan-home .install:hover { text-decoration:underline; }
+.platform, .toucan-home figcaption { font: 450 .9rem/1.5 var(--font-ui); }
+.platform { margin: .8rem 0; }
+.toucan-home figure { min-width:0; margin:0; }
+.toucan-home figure :is(img,video) { width:100%; height:auto; display:block; }
+.toucan-home figcaption { margin-top:.75rem; }
+.opening-film { grid-area: 1 / 2 / span 2; align-self: center; }
+.opening-film video { border-radius:.4rem; }
+.opening-film figcaption { color:var(--chart-white); }
+.opening-film figcaption strong { display:block; font-size:1.1rem; }
+.walkthrough { grid-column:1 / -1; margin:clamp(2.4rem,5vw,5rem) calc(-1 * var(--gutter)) 0; background:var(--chart-white); color:var(--navy); }
+.story-nav { position:sticky; top:var(--docs-nav-height); z-index:4; display:flex; align-items:center; flex-wrap:nowrap; overflow-x:auto; white-space:nowrap; gap:.4rem clamp(.75rem, 3vw, 3rem); padding:.8rem var(--gutter); background:var(--chart-white); border-block:1px solid var(--line); font:600 .9rem var(--font-ui); }
+.story-nav a { text-decoration:none; padding:.3em 0; }
+.story-nav a:hover, .story-nav a:focus-visible { text-decoration:underline; }
+.spread { display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.65fr); align-items:center; gap:clamp(2rem,5vw,6rem); padding:clamp(3rem,7vw,7rem) var(--gutter); scroll-margin-top:4rem; }
+.spread h2,.closing h2 { font-size:clamp(2.8rem,4.9vw,5.15rem); }
+.copy > a, .closing a { font:650 .96rem/1.5 var(--font-ui); }
+.spread figure :is(img,video) { border-radius:.35rem; border:1px solid var(--line); }
+.review { --rose: var(--review-wash); background:var(--rose); grid-template-columns:minmax(0,1.65fr) minmax(0,.8fr); }
+.review .copy { grid-column:2; grid-row:1; }
+.review figure { grid-column:1; grid-row:1; }
+.plan { background:var(--shallows); }
+.illustrate { border-top:1px solid var(--line); }
+.closing { background:var(--navy); color:var(--chart-white); padding:clamp(3rem,7vw,7rem) var(--gutter); }
+.closing p { max-width:54ch; }
+.closing div { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; }
+.case-capture { margin-block:1.25rem 2.25rem; }
+.case-capture :is(img,video) { display:block; width:100%; height:auto; border:1px solid var(--border); }
+.case-capture a { display:block; }
 
-.home-next p { max-width: 60ch; }
-.case-capture { margin-block: 1.25rem 2.25rem; }
-.case-capture :is(img, video) { display: block; width: 100%; height: auto; border: 1px solid var(--border); }
-.case-capture a { display: block; }
-@media (max-width: 59rem) {
-  .home-hero { grid-template-columns: minmax(0, 1fr); gap: 1.75rem; }
-  .home-intro > p:first-child { max-width: 45ch; }
-  .home-cases { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 48rem) {
+  body:has(.toucan-home) main.article { display:block; }
+  body:has(.toucan-home) .article-title { max-width:13ch; }
+  .opening-copy > p:first-child { max-width:40ch; margin-block:.8em; }
+  .opening-film { margin-top:1.6rem !important; }
+  .spread { display:flex; flex-direction:column; align-items:stretch; gap:1.35rem; scroll-margin-top:5.5rem; }
+  .copy p { max-width:50ch; margin:.85rem 0; }
+  .story-nav { font-size:.8rem; }
 }
-
-@media (max-width: 25rem) {
-  .home-cases { grid-template-columns: minmax(0, 1fr); }
+.story-nav a[aria-current="location"] { text-decoration: underline; text-decoration-thickness: .16em; text-underline-offset: .32em; }
+.episode { background:var(--night); color:var(--chart-white); }
+.episode-player { position:relative; display:block; }
+.episode-player span { position:absolute; left:1rem; bottom:1rem; background:var(--navy); color:var(--chart-white); padding:.5em 1em; border-radius:2em; font:600 1rem var(--font-ui); }
+.episode iframe { width:100%; aspect-ratio:16/9; border:0; display:block; margin-bottom:.5rem; }
+.parallel, .routines { background:var(--shallows); }
+.history { background:var(--chart-white); }
+.closing .next-pages { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr)); gap:2rem; margin-top:2.5rem; }
+.closing .next-pages div { display:grid; align-content:start; justify-items:start; gap:.6rem; border-top:1px solid var(--mist); padding-top:1rem; }
+.next-pages h3 { margin:0 0 .5rem; color:var(--chart-white); font:400 1.8rem/1.12 var(--font-display); }
+@media (max-width:48rem) {
+  .story-nav { flex-wrap:nowrap; overflow-x:auto; }
+  .story-nav a { flex:none; }
 }

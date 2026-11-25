@@ -1,4 +1,14 @@
-# Extending
+---
+kicker: Reference
+description: Build a routine, register a plugin, or connect an external source to a canvas.
+---
+# Extension reference
+
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
 
 toucan stays small; the things specific to your work live outside it.
 
@@ -333,10 +343,9 @@ to describe your house canvases and extension commands without forking toucan.
 
 ## Licences
 
-toucan's own code is MIT. It builds on **tldraw**, which is not: the
-[tldraw licence](https://github.com/tldraw/tldraw/blob/main/LICENSE.md) allows development use freely,
-but production use (anything served over HTTPS) needs a licence key, including tldraw's free hobby
-licence for non-commercial projects. Set `TLDRAW_LICENSE_KEY` in the server environment or in the
+Toucan’s original code and documentation are released under the [MIT License](https://github.com/lavallee/toucan/blob/main/LICENSE). Third-party dependencies are licensed by their respective owners.
+
+The tldraw SDK has its own [license terms](https://tldraw.dev/community/license). Its default terms cover development. Production deployments need a valid trial, commercial, or qualifying non-commercial hobby key. Set `TLDRAW_LICENSE_KEY` in the server environment or in the
 `.env` beside Toucan’s `package.json`, then restart the server. Use a key that covers your deployment
 host. The SDK displays its tldraw attribution for hobby keys. Versions through 0.17.0 read
 `VITE_TLDRAW_LICENSE_KEY` during the app build.
@@ -344,17 +353,7 @@ Excalidraw (MIT) needs no key.
 
 ## Screenshot review
 
-A producer posts screenshots to the canvas that owns the work. Open **Review** in either editor to choose an artifact and revision, compare it with the previous screenshot, or click a point to leave feedback. Keyboard users can focus the screenshot button and press Enter to pin its center. Feedback stays on the revision where it was left, including when the producer links a later screenshot in a reply. The reviewer can close the note.
-
-```sh
-toucan --canvas shop review post checkout before.png --title "Checkout" --producer session-42
-toucan --canvas shop review inbox session-42
-toucan --canvas shop review image REV scratch.png
-toucan --canvas shop review post checkout after.png --title "Checkout" --producer session-42 --previous REV
-toucan --canvas shop review reply NOTE "Spaced out the controls." --producer session-42 --replacement AFTER_REV
-```
-
-Use the first command's `revision.id` as `REV`, the inbox entry's `note.id` as `NOTE`, and the second post's `revision.id` as `AFTER_REV`. A producer can reply without a replacement. Add `--mutation ID` to posts and replies if you need to retry safely after an interrupted request. Keep the same ID and input for a retry. `toucan review` shows the complete history for this canvas. Agents can use these commands through `toucan_cli`.
+For the reviewer and producer workflow, follow [Review a screenshot](tour.html#review-a-screenshot). An integration can use the same CLI commands or the HTTP interface below. Pass `--mutation ID` to a CLI post or reply to retry safely with identical input. Use `toucan --canvas NAME review image REV scratch.png` to retrieve the original image.
 
 ### Adapter protocol
 

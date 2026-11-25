@@ -1,19 +1,20 @@
-# Habits
+---
+kicker: Design proposal
+description: When should the chat offer to turn repeated work into a routine?
+---
+# Design note on routine suggestions
+
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
 
 **From a repeated request to a button.**
 
-*A design note, not a feature. Banking a chore is built (routines); noticing one isn't. This records how
-toucan could notice a chore and offer to bank it, so the idea can be argued with before it is coded.*
+Toucan already lists repeated work in the Routines menu. **Bank it** asks an agent to turn a suggestion into a reusable routine. [Run a routine on your canvas](tour.html#run-a-cleanup-routine).
 
-## Where things stand
-
-A routine is a chore banked once for every canvas on a server, listed in the Routines menu and run with a
-click or `toucan routine run`. [`routines/tidy-arrows.js`](https://github.com/lavallee/toucan/blob/main/routines/tidy-arrows.js)
-is one: it re-routes arrows (straight, curved either way, or elbow) to run through fewer boxes and cross
-fewer arrows, without moving a box, and reports the before and after counts.
-
-Today a person notices the pattern ("I keep asking for this; bank it") and asks an agent to write the routine. The aim is for the system to notice the pattern and **offer**. It should never install
-anything on its own.
+This proposal explores a different moment for that offer. Could the chat recognize a recurring chore just after finishing it and ask whether to save it? The sections below describe that proposed interaction.
 
 ## Noticing
 

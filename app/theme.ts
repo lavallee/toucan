@@ -15,6 +15,8 @@ const read = <T extends string>(key: string, allowed: readonly T[], fallback: T)
 		return fallback
 	}
 }
+const PALETTES = ['default', 'press', 'admiralty'] as const
+export type CanvasPalette = typeof PALETTES[number]
 const THEMES = ['system', 'light', 'dark'] as const
 const LETTERINGS = ['clean', 'handwritten'] as const
 const system = matchMedia('(prefers-color-scheme: dark)')
@@ -23,11 +25,11 @@ const listeners = new Set<() => void>()
 let state = compute()
 function compute() {
 	const theme = read('toucan.theme', THEMES, 'system')
-	return { theme, dark: theme === 'dark' || (theme === 'system' && system.matches), lettering: read('toucan.lettering', LETTERINGS, 'clean') }
+	return { theme, palette: read('toucan.palette', PALETTES, 'default'), dark: theme === 'dark' || (theme === 'system' && system.matches), lettering: read('toucan.lettering', LETTERINGS, 'clean') }
 }
 function refresh() {
 	const next = compute()
-	if (next.theme === state.theme && next.dark === state.dark && next.lettering === state.lettering) return
+	if (next.palette === state.palette && next.theme === state.theme && next.dark === state.dark && next.lettering === state.lettering) return
 	state = next
 	document.documentElement.classList.toggle('dark', state.dark)
 	listeners.forEach((f) => f())
@@ -46,5 +48,10 @@ export function setTheme(theme: Theme) {
 }
 export function setLettering(lettering: Lettering) {
 	localStorage.setItem('toucan.lettering', lettering)
+	refresh()
+}
+
+export function setPalette(palette: CanvasPalette) {
+	localStorage.setItem('toucan.palette', palette)
 	refresh()
 }

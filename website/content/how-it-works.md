@@ -1,4 +1,14 @@
-# How it works
+---
+kicker: Design
+description: Follow an edit from the browser to the server and out to the other people on the canvas.
+---
+# Architecture
+
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
 
 ## One server, many tabs
 

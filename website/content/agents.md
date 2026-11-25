@@ -1,4 +1,14 @@
-# Agent guide
+---
+kicker: Reference
+description: Commands and conventions for an agent working on a shared canvas.
+---
+# Agent CLI reference
+
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
 
 [`AGENTS.md`](https://github.com/lavallee/toucan/blob/main/AGENTS.md) gives agents the everyday rules
 and links to the topic guides. This page brings the reference material together for web readers.

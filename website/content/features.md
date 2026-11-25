@@ -1,8 +1,14 @@
 ---
-description: Everything toucan 0.19.0 does, in one list: where to find each feature, and when it arrived.
+description: Toucan features, where to find them and the release that introduced each one.
 kicker: Reference
 ---
-# Features
+# Feature index
+
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
 
 Each row says where you find it: in the app, or as a `toucan` command an agent (or you) runs. Names link to where it's shown or explained, and "(tldraw)" marks what works on the tldraw engine only.
 
@@ -24,7 +30,7 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
-| [Chat panel](tour.html#ask-and-it-draws) | Ask in plain words and the agent draws, edits and checks its work on the canvas, using Codex on your own ChatGPT sign-in. | **Chat** | 0.1.0 |
+| [Chat panel](tour.html#draw-with-an-agent) | Ask in plain words and the agent draws, edits and checks its work on the canvas, using Codex on your own ChatGPT sign-in. | **Chat** | 0.1.0 |
 | Fast and Thorough | Pick a quick default model or a slower, more careful one for the chat, per browser. | **Chat: Fast / Thorough** | 0.4.0 |
 | Steer a turn in progress | Send a message while the agent works and it adjusts the turn instead of waiting for it to end. | **Chat** | 0.4.0 |
 | [Agents notice people](agents.html#what-people-do-while-you-work) | Edit, select and comment while an agent works: it hears what you did between its steps and builds on it. A message sent mid-turn carries what's selected then, and terminal and MCP agents hear it with their next command. | **Chat · Threads** | 0.18.0 |
@@ -39,7 +45,7 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
 | [Sticky notes for the agent](tour.html#leave-a-sticky-note) (tldraw) | Pin a note where the problem is; the agent acts on each and turns it green with a one-line reply. Notes are never deleted. | **Note tool (N)**; CLI: `notes` · `notes resolve KEY --reply TEXT` | 0.2.0 |
-| [Comment threads](tour.html#comment-and-have-it-answered) | Comment on a shape, several shapes or a region and go back and forth until someone closes it. Each thread has its own agent, so several are worked at once. | **Comment · Threads**; CLI: `threads new TEXT --on KEY --ask` · `threads reply N TEXT` | 0.5.0 |
+| [Comment threads](tour.html#start-parallel-comment-threads) | Comment on a shape, several shapes or a region and go back and forth until someone closes it. Each thread has its own agent, so several are worked at once. | **Comment · Threads**; CLI: `threads new TEXT --on KEY --ask` · `threads reply N TEXT` | 0.5.0 |
 | [Screenshot review](extending.html#screenshot-review) | Compare screenshot revisions and pin feedback to an exact image. The original producer can reply with an updated screenshot. | **Review**; CLI: `review post` · `review inbox` · `review reply` | 0.17.0 |
 | [Notes into threads](agents.html#threads-comments-on-shapes-and-regions) (tldraw) | Bring sticky notes into threads, keeping their replies and resolutions. | **Threads panel**; CLI: `threads adopt-notes` | 0.5.0 |
 | [Proposals](tour.html#take-it-or-leave-it) | An agent's suggestion arrives dashed, with Accept and Reject above the canvas. Nothing is final until you say so. | **Proposal bar: Accept all / Reject all**; CLI: `import --propose` · `proposals accept\|reject` | 0.2.0 |
@@ -63,11 +69,11 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
-| [Routines](tour.html#tidy-it-up) | Chores banked once and run from a menu, the chat (/name) or the CLI, each one undoable in a single step; grouped by kind (tidy, arrows, layout, style, content, check), each saying when to use it. | **Routines menu**; CLI: `routine list [--kind K]` · `routine run NAME` | 0.3.0 |
-| [Clean up and the tidying set](tour.html#tidy-it-up) | Clean up, Lay it out again, Line things up, Even out the gaps, Match box sizes, Fix overlaps, Fit frames, Neat arrows, Colour by frame, Tidy arrows. All run on Excalidraw too. | **Routines menu**; CLI: `routine run clean-up` | 0.7.0 |
+| [Routines](tour.html#run-a-cleanup-routine) | Chores banked once and run from a menu, the chat (/name) or the CLI, each one undoable in a single step; grouped by kind (tidy, arrows, layout, style, content, check), each saying when to use it. | **Routines menu**; CLI: `routine list [--kind K]` · `routine run NAME` | 0.3.0 |
+| [Clean up and the tidying set](tour.html#run-a-cleanup-routine) | Clean up, Lay it out again, Line things up, Even out the gaps, Match box sizes, Fix overlaps, Fit frames, Neat arrows, Colour by frame, Tidy arrows. All run on Excalidraw too. | **Routines menu**; CLI: `routine run clean-up` | 0.7.0 |
 | Routines from real work | Arrows to links, Fit text, Clear arrow labels, Frame these, Stack frames and Open out details: chores agents kept doing by hand. | **Routines menu**; CLI: `routine run NAME` | 0.13.0 |
 | [Air out](tour.html#air-out-a-dense-diagram) | Moves long text from crowded boxes into their details, enlarges names and spreads things a little. | **Routines menu**; CLI: `routine run air-out` | 0.7.0 |
-| [Check this diagram](tour.html#tidy-it-up) | Scores what's drawn out of 100 and names the shapes at fault (overlaps, arrows through boxes, labels on boxes or crossed by other arrows), and says what to run or change for each, so an agent can fix what it finds. It also catches frame names cut off, arrows sharing a run, words broken inside boxes and mostly empty frames, can look at one frame alone (`measure({ within })`), and scores a canvas of several sections section by section. | **Routines menu**; CLI: `routine run check-diagram` | 0.7.0 |
+| [Check this diagram](tour.html#run-a-cleanup-routine) | Scores what's drawn out of 100 and names the shapes at fault (overlaps, arrows through boxes, labels on boxes or crossed by other arrows), and says what to run or change for each, so an agent can fix what it finds. It also catches frame names cut off, arrows sharing a run, words broken inside boxes and mostly empty frames, can look at one frame alone (`measure({ within })`), and scores a canvas of several sections section by section. | **Routines menu**; CLI: `routine run check-diagram` | 0.7.0 |
 | [Bank your own routine](agents.html#routines-chores-worth-keeping) | Ask the chat to make a chore a routine, paste code, or save one from the CLI; it appears in the menu for every canvas. | **Chat · Routines menu**; CLI: `routine save NAME FILE` | 0.3.0 |
 | [Routines learned from work](agents.html#routines-chores-worth-keeping) | A work log of what agents do on canvases; toucan suggests the code they keep writing by hand as routines to bank, and shows which routines get used. | **Routines menu: From your work**; CLI: `routine suggest` · `routine stats` · `routine learn --codex` | 0.13.0 |
 | [Reflexes](agents.html#reflexes-what-the-canvas-does-by-itself) | The canvas fixes some things by itself the moment they happen, without the agent: text that outgrew its box, a frame cutting off what's in it, an arrow through a box. A tree of them, switched on per canvas; each fix is one undo step, a fix someone undoes stays undone, and what's already there when one is switched on is left. After Sihan Xu's growing behavior tree and The Harness. | **Reflexes menu**; CLI: `reflexes` · `reflexes starters` · `reflexes add --starter NAME --on` · `reflexes on\|watch\|off NAME` | 0.16.0 |
@@ -80,7 +86,7 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
-| [History and restore](tour.html#go-back) | Every canvas keeps versions, whoever made the change. Step through them read-only over the live canvas and restore one; a restore can be undone. | **History**; CLI: `versions` · `versions save LABEL` · `versions restore N` | 0.3.0 |
+| [History and restore](tour.html#save-and-revisit-a-version) | Every canvas keeps versions, whoever made the change. Step through them read-only over the live canvas and restore one; a restore can be undone. | **History**; CLI: `versions` · `versions save LABEL` · `versions restore N` | 0.3.0 |
 | [One undo per agent action](agents.html#what-people-see-presence-and-undo) | An agent's run, a routine or an accepted proposal is a single undo step. | **⌘Z** | 0.2.0 |
 | [While you were away](agents.html#headless-mode) | Edits agents made with no tab open are logged and announced when you come back. | **Banner**; CLI: `log [--since T]` | 0.2.0 |
 | [A folder per canvas](agents.html#files-what-you-write-for-a-canvas) | What agents write for a canvas goes in its own folder, archived with it, and nowhere else in the data directory. | CLI: `files` | 0.6.0 |

@@ -7,6 +7,8 @@ All notable changes to toucan are recorded here. The format follows
 
 ### Added
 
+- Letterpress and Lyra Forge Admiralty palettes for tldraw with light and dark inks. The docs show a full editor capture and SVG export of an illustrated community radio field guide.
+
 - **Renditions.** A named, published picture of part of a canvas (a frame, some shapes, or all of it), so a document can include
   it by name and tell whether it is current, instead of a folder of one-off exports nobody can trace. `toucan rendition set NAME
   [--frame KEY | --keys a,b | --all] [--format svg|png] [--alt T] [--title T]` defines one; `rendition publish NAME` draws it into

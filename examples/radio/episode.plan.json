@@ -1,0 +1,81 @@
+{
+  "plan": 1,
+  "source": {
+    "title": "Sounds from the river"
+  },
+  "fields": [
+    {
+      "id": "title",
+      "label": "Title",
+      "type": "text",
+      "writable": true
+    },
+    {
+      "id": "stage",
+      "label": "Stage",
+      "type": "option",
+      "writable": true,
+      "options": [
+        {
+          "id": "todo",
+          "label": "To do",
+          "color": "grey"
+        },
+        {
+          "id": "doing",
+          "label": "In progress",
+          "color": "blue"
+        },
+        {
+          "id": "review",
+          "label": "In review",
+          "color": "violet"
+        },
+        {
+          "id": "done",
+          "label": "Done",
+          "color": "green",
+          "done": true
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "credits",
+      "version": 1,
+      "title": "Clear the ferry credits",
+      "stage": "todo"
+    },
+    {
+      "id": "transcript",
+      "version": 1,
+      "title": "Proof the transcript",
+      "stage": "todo"
+    },
+    {
+      "id": "mix",
+      "version": 1,
+      "title": "Mix the ferry interview",
+      "stage": "doing"
+    },
+    {
+      "id": "page",
+      "version": 1,
+      "title": "Draft the episode page",
+      "stage": "doing"
+    },
+    {
+      "id": "opening",
+      "version": 1,
+      "title": "Check the dawn chorus",
+      "stage": "review"
+    },
+    {
+      "id": "tape",
+      "version": 1,
+      "title": "Log the field tapes",
+      "stage": "done"
+    }
+  ]
+}

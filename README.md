@@ -394,10 +394,9 @@ showed where a dense picture went wrong here without the check noticing. The ide
 
 ## Licences
 
-toucan's own code is [MIT](LICENSE). It builds on **tldraw**, which is *not* MIT: the
-[tldraw licence](https://github.com/tldraw/tldraw/blob/main/LICENSE.md) allows development use freely,
-but production use (anything served over HTTPS) needs a licence key, including tldraw's free hobby
-licence for non-commercial projects. Set `TLDRAW_LICENSE_KEY` in the server environment or in the
+Toucan’s original code and documentation are released under the [MIT License](LICENSE). Third-party dependencies are licensed by their respective owners.
+
+The tldraw SDK has its own [license terms](https://tldraw.dev/community/license). Its default terms cover development. Production deployments need a valid trial, commercial, or qualifying non-commercial hobby key. Set `TLDRAW_LICENSE_KEY` in the server environment or in the
 `.env` beside Toucan’s `package.json`, then restart the server. Use a key that covers your deployment
 host. Toucan loads it at runtime, and the SDK displays the required tldraw attribution for hobby keys.
 Excalidraw canvases need no key (MIT).

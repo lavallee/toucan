@@ -151,7 +151,7 @@
    "summary": "Ask in plain words and the agent draws, edits and checks its work on the canvas, using Codex on your own ChatGPT sign-in.",
    "app": "Chat",
    "since": "0.1.0",
-   "docs": "tour.html#ask-and-it-draws",
+   "docs": "tour.html#draw-with-an-agent",
    "engines": "both",
    "who": "person"
   },
@@ -257,7 +257,7 @@
    "app": "Comment · Threads",
    "cli": "threads new TEXT --on KEY --ask · threads reply N TEXT",
    "since": "0.5.0",
-   "docs": "tour.html#comment-and-have-it-answered",
+   "docs": "tour.html#start-parallel-comment-threads",
    "engines": "both",
    "who": "person"
   },
@@ -421,7 +421,7 @@
    "app": "Routines menu",
    "cli": "routine list [--kind K] · routine run NAME",
    "since": "0.3.0",
-   "docs": "tour.html#tidy-it-up",
+   "docs": "tour.html#run-a-cleanup-routine",
    "engines": "both",
    "who": "person"
   },
@@ -433,7 +433,7 @@
    "app": "Routines menu",
    "cli": "routine run clean-up",
    "since": "0.7.0",
-   "docs": "tour.html#tidy-it-up",
+   "docs": "tour.html#run-a-cleanup-routine",
    "engines": "both",
    "who": "person"
   },
@@ -468,7 +468,7 @@
    "app": "Routines menu",
    "cli": "routine run check-diagram",
    "since": "0.7.0",
-   "docs": "tour.html#tidy-it-up",
+   "docs": "tour.html#run-a-cleanup-routine",
    "engines": "both",
    "who": "person"
   },
@@ -559,7 +559,7 @@
    "app": "History",
    "cli": "versions · versions save LABEL · versions restore N",
    "since": "0.3.0",
-   "docs": "tour.html#go-back",
+   "docs": "tour.html#save-and-revisit-a-version",
    "engines": "both",
    "who": "person"
   },

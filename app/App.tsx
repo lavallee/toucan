@@ -15,6 +15,7 @@ import { DetailsCard } from './Details'
 import { keepPicturesWhole, overviewShowing, overviewVisibility, SystemOverview, systemFormat } from './Overview'
 import { useFormat } from './formats'
 import { myName, startComment } from './threads-store'
+import { canvasThemes } from './canvas-palettes'
 import { getAppearance, setTheme, useAppearance, type Theme } from './theme'
 import geist from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url'
 import geistItalic from '@fontsource-variable/geist/files/geist-latin-wght-italic.woff2?url'
@@ -73,7 +74,13 @@ function AgentPulses() {
 		</div>
 	)
 }
-const components: TLComponents = { InFrontOfTheCanvas: AgentPulses }
+function CanvasPaper() {
+	const editor = useEditor()
+	const backgroundColor = useValue('canvas paper', () => editor.getCurrentTheme().colors[editor.getColorMode()].background, [editor])
+	return <div className="tl-background" style={{ backgroundColor }} />
+}
+const components: TLComponents = { InFrontOfTheCanvas: AgentPulses, Background: CanvasPaper }
+const previewComponents: TLComponents = { Background: CanvasPaper }
 
 /** A saved version, read-only: its own little store, stepped through without touching the live canvas. */
 function VersionPreview({ data, licenseKey }: { data: any; licenseKey?: string }) {
@@ -84,6 +91,9 @@ function VersionPreview({ data, licenseKey }: { data: any; licenseKey?: string }
 	}, [data])
 	return (
 		<Tldraw
+			components={previewComponents}
+			themes={canvasThemes}
+			initialTheme={getAppearance().palette}
 			hideUi
 			autoFocus={false}
 			assetUrls={assetUrls}
@@ -103,7 +113,7 @@ export function App({ licenseKey }: { licenseKey?: string }) {
 	const [status, setStatus] = useState('connecting')
 	const [helpers, setHelpers] = useState<{ toucan: any; subscribe: (f: () => void) => () => void } | null>(null)
 	const [editor, setEditor] = useState<Editor | null>(null)
-	const { theme } = useAppearance()
+	const { theme, palette } = useAppearance()
 	const format = useFormat()
 	useEffect(() => {
 		systemFormat.set(format?.id === 'system')
@@ -163,7 +173,7 @@ export function App({ licenseKey }: { licenseKey?: string }) {
 			{helpers && <ThreadsLayer {...helpers} />}
 			{editor && <SystemOverview editor={editor} />}
 			{helpers && <DetailsCard {...helpers} />}
-			<Tldraw store={store} onMount={onMount} components={components} assetUrls={assetUrls} getShapeVisibility={overviewVisibility} colorScheme="system" licenseKey={licenseKey} />
+			<Tldraw themes={canvasThemes} initialTheme={palette} store={store} onMount={onMount} components={components} assetUrls={assetUrls} getShapeVisibility={overviewVisibility} colorScheme="system" licenseKey={licenseKey} />
 		</CanvasFrame>
 	)
 }

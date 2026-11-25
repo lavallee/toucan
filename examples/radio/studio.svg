@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+<title>Studio microphone and audio waveform</title>
+<defs><pattern id="mesh" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 1h6" stroke="#efe4cb" stroke-width="2"/></pattern></defs>
+<rect width="320" height="180" fill="#e7d0b0"/>
+<circle cx="153" cy="81" r="69" fill="#f7e9c9"/>
+<g fill="none" stroke="#a05a37" stroke-width="2"><path d="M0 90h28l4-9 4 17 5-30 6 44 5-58 7 71 8-90 7 109 5-65 6 20 6-9h18m71 0h18l4-8 5 18 5-39 6 59 6-79 7 97 6-70 5 46 6-31 4 13 6-6h44"/></g>
+<g stroke="#263d39" stroke-width="5"><rect x="127" y="29" width="54" height="91" rx="26" fill="#364c46"/><rect x="133" y="35" width="42" height="59" rx="21" fill="url(#mesh)"/><path d="M117 85v9a37 37 0 0 0 74 0v-9m-37 46v20" fill="none"/><path d="M132 157q22-14 44 0z" fill="#364c46"/></g></svg>

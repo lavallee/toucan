@@ -121,7 +121,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 						setDraftRequest({ text: text ?? BANK_PROMPT })
 					}}
 				/>
-				<AppearanceMenu />
+				<AppearanceMenu tldraw={engine === 'tldraw'} />
 				<AppBarButton icon={MessageSquareIcon} label="Chat" variant="outline" pressed={chatOpen} aria-expanded={chatOpen} aria-label={chatOpen ? 'Hide chat' : 'Show chat'} title={chatOpen ? 'Hide chat' : 'Show chat'} className={cn(chatOpen && 'bg-muted')} onClick={() => setChatOpen((o) => !o)} />
 			</AppBar>
 			<div ref={stage} className={cn('relative flex min-h-0 flex-1', chat.dock === 'left' ? 'flex-row-reverse' : chat.dock === 'bottom' ? 'flex-col' : 'flex-row')}>

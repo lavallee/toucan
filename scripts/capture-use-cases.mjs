@@ -10,10 +10,11 @@ import { join, resolve } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
+import { captureRundown } from './radio-rundown.mjs'
 import { chromium } from 'playwright-core'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const dest = join(root, 'website/site/assets/use-cases')
+const dest = process.env.CAPTURE_DIR ?? join(root, 'website/site/assets/use-cases')
 mkdirSync(dest, { recursive: true })
 const home = mkdtempSync(join(tmpdir(), 'toucan-use-cases-'))
 const socket = createServer().listen(0, '127.0.0.1')
@@ -85,55 +86,138 @@ try {
 	async function open(name, key) {
 		await page.goto(`${origin}/?canvas=${name}#token=${token}`)
 		await page.waitForFunction((key) => window.toucan && (!key || window.toucan.get(key)), key, { timeout: 30000 })
-		// Retain the editor chrome and keep its floating palette clear of the example.
-		await page.addStyleTag({ content: '.tlui-style-panel__wrapper { visibility: hidden }' })
 	}
 	async function shot(name, height = 720) {
 		await page.setViewportSize({ width: 1440, height })
 		await page.evaluate(() => {
 			window.editor.selectNone()
-			window.editor.zoomToFit({ animation: { duration: 0 } })
+			window.editor.zoomToBounds(window.editor.getCurrentPageBounds(), { inset: 150, animation: { duration: 0 } })
 		})
 		await page.waitForFunction(() => !document.querySelector('.toucan-pulse, .toucan-pulse-tag, .toucan-agent-status, .toucan-agent-cursor'), null, { timeout: 10000 })
 		await page.screenshot({ path: join(dest, name + '.png'), animations: 'disabled' })
 	}
+	// Editable captions sit beside three original vector illustrations on the same canvas.
+	const label = (key, text, x, y, w, size) => ({
+		key, text, box: { x, y, w, h: 42 }, style: { geo: 'text', size },
+	})
+	const scenes = [
+		['studio', 'Record', 'Hosts record the show and send audio with their notes.'],
+		['archive', 'Archive', 'The station keeps a master tape and catalogs the episode.'],
+		['air', 'Broadcast', 'The scheduler puts the episode on air at its release time.'],
+	]
+	const labels = [
+		label('title', 'From studio to air', 0, 0, 1000, 'xl'),
+		label('subtitle', 'How a community station gets a recording to its listeners', 0, 60, 1040, 'm'),
+	]
+	for (const [i, [id, title, caption]] of scenes.entries()) {
+		const x = i * 352
+		labels.push(label(id + '-title', title, x, 323, 320, 'l'))
+		labels.push(label(id + '-caption', caption, x, 375, 320, 's'))
+	}
+	await cli('new', 'radio-field-guide', '--title', 'Community radio field guide', '--from', fixture('guide.tg.json', { groups: [], nodes: labels, edges: [] }))
+	await open('radio-field-guide', 'title')
+	const plates = scenes.map(([id]) => ({ id, src: 'data:image/svg+xml;base64,' + readFileSync(join(root, 'examples/radio', id + '.svg')).toString('base64') }))
+	await page.evaluate((plates) => {
+		for (const shape of window.editor.getCurrentPageShapes().filter((s) => s.type === 'text')) {
+			const heading = shape.meta.key === 'title' || shape.meta.key.endsWith('-title')
+			window.editor.updateShape({ id: shape.id, type: 'text', props: { font: heading ? 'serif' : 'sans' } })
+		}
+		for (const [i, { id, src }] of plates.entries()) {
+			const assetId = 'asset:' + id
+			window.editor.createAssets([{ id: assetId, type: 'image', typeName: 'asset', meta: {}, props: { name: id + '.svg', src, w: 320, h: 180, mimeType: 'image/svg+xml', isAnimated: false } }])
+			window.editor.createShape({ id: window.toucan.idFor(id), type: 'image', x: i * 352, y: 126, props: { assetId, w: 320, h: 180 }, meta: { key: id } })
+		}
+	}, plates)
+	await page.getByRole('button', { name: /^Appearance:/ }).click()
+	await page.getByRole('radio', { name: 'Letterpress' }).click()
+	await page.waitForFunction(() => window.editor.getCurrentThemeId() === 'press')
+	await page.getByRole('radio', { name: 'Dark', exact: true }).click()
+	await page.waitForFunction(() => getComputedStyle(document.querySelector('.tl-background')).backgroundColor === 'rgb(32, 37, 34)')
+	await page.getByRole('radio', { name: 'Light', exact: true }).click()
+	await page.waitForFunction(() => getComputedStyle(document.querySelector('.tl-background')).backgroundColor === 'rgb(247, 242, 230)')
+	await page.keyboard.press('Escape')
+	await page.setViewportSize({ width: 1440, height: 900 })
+	await page.evaluate(() => {
+		window.editor.setCamera({ x: 140, y: 200, z: 1 })
+	})
+	await page.evaluate(async () => { await document.fonts.ready })
+	await page.screenshot({ path: join(dest, 'radio-field-guide.png'), animations: 'disabled' })
+	const illustration = await page.evaluate(() => window.toucan.svg({ title: 'From studio to air', desc: 'Hosts record the show, the station archives the master, and the scheduler puts the episode on air.' }))
+	writeFileSync(join(dest, 'radio-field-guide.svg'), illustration.svg)
+	await page.reload()
+	await page.waitForFunction(() => window.editor?.getCurrentThemeId() === 'press')
+	await captureRundown({ cli, open, page, root, dest, home, fixture, run })
 	await cli('new', 'radio-map', '--title', 'Community radio system', '--from', fixture('radio.tg.json', system))
 	await open('radio-map', 'hosts')
 	const mapCheck = await page.evaluate(() => window.toucan.measure())
 	assert.equal(mapCheck.findings.length, 0, JSON.stringify(mapCheck.findings))
-	await shot('radio-map', 650)
+	await shot('radio-map', 900)
 
 	await cli('new', 'editorial-handoff', '--title', 'Editorial handoff', '--from', fixture('handoff.tg.json', handoff))
 	await open('editorial-handoff', 'edit')
 	const flowCheck = await page.evaluate(() => window.toucan.measure())
 	assert.equal(flowCheck.findings.length, 0, JSON.stringify(flowCheck.findings))
-	await shot('editorial-handoff', 650)
+	await shot('editorial-handoff', 900)
 
 	const plan = JSON.parse(readFileSync(join(root, 'examples/website-relaunch.plan.json')))
 	const demoItems = ['audit', 'sitemap', 'voice', 'wireframes', 'design-system', 'scaffold', 'analytics', 'redirects']
 	plan.items = plan.items.filter((item) => demoItems.includes(item.id))
 	for (const item of plan.items) if (item.dependsOn) item.dependsOn = item.dependsOn.filter((id) => demoItems.includes(id))
-	await cli('new', 'relaunch-board', '--title', 'Website relaunch', '--plan', 'file', fixture('relaunch.plan.json', plan), '--views', 'board')
-	await open('relaunch-board')
-	await cli('--canvas', 'relaunch-board', 'plan', 'sync')
-	await page.waitForFunction(() => window.toucan.get('plan:board:item:wireframes'), null, { timeout: 30000 })
-	await shot('relaunch-board', 690)
-	await page.evaluate(() => {
-		const card = window.toucan.get('plan:board:item:scaffold')
-		const lane = window.toucan.get('plan:board:col:review')
-		window.editor.reparentShapes([card.id], lane.id)
-	})
-	await page.waitForFunction(() => {
-		const card = window.toucan.get('plan:board:item:scaffold')
-		return card?.meta?.plan?.version === 2 && card.parentId === window.toucan.get('plan:board:col:review')?.id
-	}, null, { timeout: 20000 })
-	const copied = JSON.parse(readFileSync(join(home, 'data/relaunch-board.files/relaunch.plan.json')))
-	assert.equal(copied.items.find((item) => item.id === 'scaffold').stage, 'review')
+	async function filmBoard(boardName, title, source, filmName, taskKey) {
+		await cli('new', boardName, '--title', title, '--plan', 'file', fixture('board.plan.json', source), '--views', 'board')
+		await open(boardName)
+		await cli('--canvas', boardName, 'plan', 'sync')
+		await page.waitForFunction((key) => window.toucan.get('plan:board:item:' + key), taskKey, { timeout: 30000 })
+		await shot(boardName, 900)
+		// Film a real pointer drag, then check that the file-backed plan received it.
+		const { start, end } = await page.evaluate((key) => {
+			const bounds = (key) => window.editor.getShapePageBounds(window.toucan.get(key))
+			const card = bounds('plan:board:item:' + key)
+			const lane = bounds('plan:board:col:review')
+			return {
+				start: window.editor.pageToScreen(card.center),
+				end: window.editor.pageToScreen({ x: lane.center.x, y: card.center.y }),
+			}
+		}, taskKey)
+		const frameDir = join(home, boardName + '-frames')
+		mkdirSync(frameDir)
+		let frame = 0
+		async function recordFrame() {
+			await page.screenshot({ path: join(frameDir, String(frame++).padStart(3, '0') + '.png') })
+		}
+		await page.mouse.move(start.x, start.y)
+		await recordFrame()
+		await page.mouse.down()
+		for (let step = 1; step <= 24; step++) {
+			const t = step / 24
+			const position = t * t * (3 - 2 * t)
+			await page.mouse.move(start.x + (end.x - start.x) * position, start.y + (end.y - start.y) * position)
+			await recordFrame()
+		}
+		await page.mouse.up()
+		await page.waitForFunction((key) => {
+			const card = window.toucan.get('plan:board:item:' + key)
+			return card?.meta?.plan?.version === 2 && card.parentId === window.toucan.get('plan:board:col:review')?.id
+		}, taskKey, { timeout: 20000 })
+		const copied = JSON.parse(readFileSync(join(home, 'data', boardName + '.files', 'board.plan.json')))
+		assert.equal(copied.items.find((item) => item.id === taskKey).stage, 'review')
+
+		// Let the sync feedback clear before holding on the settled board.
+		await page.waitForFunction(() => !document.querySelector('.toucan-pulse, .toucan-pulse-tag, .toucan-agent-status, .toucan-agent-cursor'), null, { timeout: 10000 })
+		await page.evaluate(() => { window.editor.selectNone() })
+		await recordFrame()
+		await run('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', '12', '-i', join(frameDir, '%03d.png'), '-vf', 'tpad=start_mode=clone:start_duration=1:stop_mode=clone:stop_duration=2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', join(dest, filmName)])
+	}
+	await filmBoard('relaunch-board', 'Website relaunch', plan, 'relaunch-move.mp4', 'scaffold')
+	const episodeFile = readFileSync(join(root, 'examples/radio/episode.plan.json'))
+	writeFileSync(join(dest, 'episode.plan.json'), episodeFile)
+	const episodePlan = JSON.parse(episodeFile)
+	await filmBoard('episode-board', 'Fieldnote Radio · Sounds from the river', episodePlan, 'river-move.mp4', 'mix')
 
 	// The sample website has fictional copy, but the screenshot review and its reply are real Toucan records.
 	const sample = await browser.newPage({ viewport: { width: 720, height: 420 }, deviceScaleFactor: 1 })
 	async function captureSample(name, revised) {
-		const file = join(home, name + '.png')
+		const file = join(dest, 'episode-' + name + '.png')
 		await sample.setContent(`<!doctype html><html lang="en"><style>
 body{margin:0;background:#edf2ec;color:#1c3129;font:18px system-ui,sans-serif}
 main{max-width:540px;margin:0 auto;padding:35px}
@@ -176,7 +260,7 @@ aside{font-size:15px;margin-top:16px;color:#39554a}
 	await dialog.locator('figure img').first().evaluate((img) => img.decode())
 	await dialog.locator('figure img').last().evaluate((img) => img.decode())
 	await page.screenshot({ path: resolve(dest, 'radio-review.png'), animations: 'disabled' })
-	console.log(`Captured four local examples. Diagram scores: ${mapCheck.score}, ${flowCheck.score}. Board move verified against its source file.`)
+	console.log(`Captured the field guide, system map, handoff, board and screenshot review. Diagram scores: ${mapCheck.score}, ${flowCheck.score}. Board move verified against its source file.`)
 } finally {
 	await browser?.close()
 	const stopped = once(server, 'exit')

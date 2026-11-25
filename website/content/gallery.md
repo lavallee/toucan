@@ -1,8 +1,14 @@
-# Gallery
+# Diagram templates
 
-Every diagram toucan starts from, as it draws them. Each one is ordinary shapes you can change. These same diagrams are the test set for layout, so a change that makes one worse fails the build.
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
 
-A canvas *has* diagrams rather than *being* one. Each diagram below is a **block**: start a canvas with one (`toucan new NAME --template ID`, or **Start from** on the index page), or add it beside what is already on a canvas (`toucan --canvas NAME add ID`, or **Add** above the canvas). An agent can read the description behind any of them with `toucan templates show ID`, then draw its own in the same form with `toucan --canvas NAME draw -`. See [See it work](tour.html) for that in action.
+Choose a starting layout for your own canvas. Each preview includes the command to create an editable copy.
+
+A canvas *has* diagrams rather than *being* one. Each diagram below is a **block**: start a canvas with one (`toucan new NAME --template ID`, or **Start from** on the index page), or add it beside what is already on a canvas (`toucan --canvas NAME add ID`, or **Add** above the canvas). An agent can read the description behind any of them with `toucan templates show ID`, then draw its own in the same form with `toucan --canvas NAME draw -`.
 
 ## Starters
 

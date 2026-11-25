@@ -93,6 +93,8 @@ writes the canvas as a file, by the ending of `OUT`: `.svg` (sharp at any size, 
 or a pull request), `.png`, `.gif` (the animated build), or the graph as `.mmd`, `.canvas`, `.dot`, `.excalidraw`, `.json` or `.txt`. People
 get the same from **Export** above the canvas.
 
+In a tldraw workspace, **Appearance → Canvas palette → Letterpress** switches the local editor to paper and ink colors. **Admiralty** uses Lyra Forge chart white, navy and magenta. The choice persists in that browser. SVG exported by that editor uses its current palette.
+
 **Renditions** are for a picture a document keeps: a named, published picture of part of a canvas that other documents include by
 name, and that says whether the canvas has moved on since. `toucan rendition set NAME --frame KEY` (or `--keys a,b`, or `--all`,
 the default; `--format svg|png`, `--alt TEXT`, `--title TEXT`) says what it shows; set it again to change it, and what you leave out

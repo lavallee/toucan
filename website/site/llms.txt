@@ -44,5 +44,5 @@ Tell the person what you're drawing. Commands run anywhere inside the project us
 ## More
 
 - [Agent guide](https://lavallee.github.io/toucan/agents.html): every command and helper.
-- [See it work](https://lavallee.github.io/toucan/tour.html): screenshots of real runs.
+- [Canvas guide](https://lavallee.github.io/toucan/tour.html): editing, comments, screenshot review, routines, and version history.
 - [Source](https://github.com/lavallee/toucan), with [AGENTS.md](https://raw.githubusercontent.com/lavallee/toucan/main/AGENTS.md) in plain text.

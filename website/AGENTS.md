@@ -36,3 +36,7 @@ Open `ARTOO_REFERENCE.md` only when you need the full vendored class vocabulary,
 
 <!-- Yours. Everything below the marker above survives regeneration: the
      reader decision, house conventions, what this piece must not claim. -->
+
+Use the shared Admiralty stylesheet for every page, including generated pages and the explorer. Keep the visible release link in step with `package.json`. Run `npm run docs:version` for each version bump and commit the link with the release. `npm run check` rejects a stale version or destination.
+
+Collection pages use the same header on every route. Load `assets/site-nav.js` alongside the Admiralty stylesheet before the deferred footer, including in page generators. Keep homepage chapter links below the shared header when scrolling. When changing navigation, compare the control positions across pages and open a menu after scrolling at both phone and desktop widths.

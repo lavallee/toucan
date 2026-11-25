@@ -2,6 +2,7 @@
 // reflex's trial (lib/reflexes.mjs, tryProgram) brings its situation about there, answers it and judges again, so the live
 // canvas never changes and nobody sees a thing. The copy measures text with the same fonts as the canvas, so what fits there
 // fits here.
+import { canvasThemes } from './canvas-palettes'
 import { createRoot } from 'react-dom/client'
 import { Tldraw, getSnapshot, loadSnapshot, type Editor } from 'tldraw'
 
@@ -17,7 +18,7 @@ export function makeCopy(editor: Editor, makeHelpers: Helpers, assetUrls?: Recor
 		try {
 			const copy = await new Promise<Editor>((resolve, reject) => {
 				const timer = setTimeout(() => reject(new Error('the copy of the canvas did not start')), 15000)
-				root.render(<Tldraw hideUi autoFocus={false} assetUrls={assetUrls as any} licenseKey={licenseKey} onMount={(e) => (clearTimeout(timer), resolve(e))} />)
+				root.render(<Tldraw themes={canvasThemes} initialTheme={editor.getCurrentThemeId()} hideUi autoFocus={false} assetUrls={assetUrls as any} licenseKey={licenseKey} onMount={(e) => (clearTimeout(timer), resolve(e))} />)
 			})
 			loadSnapshot(copy.store, { document: getSnapshot(editor.store).document })
 			const page = editor.getCurrentPageId()
