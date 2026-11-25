@@ -19,7 +19,7 @@ All notable changes to toucan are recorded here. The format follows
 ### Layout and checks, from drawing ten architecture diagrams in Toucan and in D2
 
 - **`flow` keeps the order you wrote.** A cycle between groups or boxes breaks on the arrow written last, so a group that feeds
-  an earlier one runs backward as a loop instead of turning the picture round (ELK `MODEL_ORDER` cycle breaking).
+  an earlier one runs backward as a loop instead of turning the picture round (ELK `MODEL_ORDER` cycle breaking, in flows with groups; a plain flow such as a small state machine keeps the default, which laid it out better).
 - **`flow` packs separate pieces in a grid.** Groups or boxes with no arrows between them (six state machines) are laid out one
   by one and packed in rows in the order written, three to a row for six, instead of one 6890 px row; `columns` and `aspect`
   choose the shape. In a flow running down the page, a group is as narrow as its boxes, and no wider than its own name needs.
