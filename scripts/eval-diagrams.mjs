@@ -489,7 +489,7 @@ async function evalRedesign() {
 	assert.ok((await kindsOf()).includes('word broken inside a box'), 'a word longer than its box is found')
 	await put({ nodes: [box('ra', 0, 600, 100, 60), box('rb', 0, 800, 100, 60), box('rc', 700, 700, 100, 60)], edges: [0, 1].map((i) => ({ key: `edge:r${'ab'[i]}->rc`, from: `r${'ab'[i]}`, to: 'rc', style: { color: 'grey', dash: 'solid', route: 'elbow', anchors: { from: { x: 1, y: 0.5 }, to: { x: 0, y: 0.5 } } } })) })
 	assert.ok((await kindsOf()).includes('arrows share a run'), 'two arrows on one run are found')
-	await put({ groups: [{ key: 'sparse', label: 'sparse', box: { x: 2000, y: 0, w: 2400, h: 1800 } }], nodes: Array.from({ length: 12 }, (_, i) => box(`s${i}`, 2040 + (i % 4) * 600, 60 + Math.floor(i / 4) * 560, 120, 70, `s${i}`, { group: 'sparse' })) })
+	await put({ groups: [{ key: 'sparse', label: 'sparse', box: { x: 2000, y: 0, w: 2400, h: 1800 } }], nodes: Array.from({ length: 24 }, (_, i) => box(`s${i}`, 2040 + (i % 6) * 380, 60 + Math.floor(i / 6) * 420, 120, 70, `s${i}`, { group: 'sparse' })) })
 	assert.ok((await kindsOf()).includes('frame mostly empty'), 'a mostly empty frame is found')
 	// ...and each is found where it is, and not in a tidy frame beside it.
 	await put({ groups: [{ key: 'fine', label: 'fine', box: { x: 5000, y: 0, w: 400, h: 200 } }], nodes: [box('f1', 5040, 70, 140, 70, 'one', { group: 'fine' }), box('f2', 5220, 70, 140, 70, 'two', { group: 'fine' })] })

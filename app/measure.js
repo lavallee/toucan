@@ -29,6 +29,7 @@ export const FIXES = {
 	'straight arrows among elbows': 'Run neat-arrows, or set the odd arrows to the route the rest use.',
 	'empty gutter down the frames': 'Run fit-frames.',
 	'frame name cut off': 'Run fit-frames, or widen the frame (or shorten its name).',
+	'arrow label sits under a box': 'Run clear-arrow-labels, or move the label along its arrow, away from the box it comes back to.',
 	'arrows share a run': 'Run tidy-arrows, or move one of the two boxes so the arrows leave by different sides.',
 	'word broken inside a box': 'Widen the box (or run fit-text), or use a shorter word.',
 	'frame mostly empty': 'Run fit-frames, or lay the contents out more compactly (a grid, or fewer columns).',
@@ -83,12 +84,13 @@ export function measureDiagram(scene) {
 	// A frame's name is set on one line above it, and cut off where the frame ends.
 	const nameCut = frames.filter((f) => String(f.text ?? '').trim() && String(f.text).length * 8 + 16 > bounds(f).w)
 	nameCut.forEach((f) => found('frame name cut off', f))
-	// A frame of a dozen boxes with most of it bare: the layout spread them out and left the room empty.
+	// A frame of many boxes with most of it bare: the layout spread them out and left the room empty.
 	const sparse = frames.filter((f) => {
 		const inside = solid.filter((s) => ancestors(s).includes(f.id))
-		if (inside.length <= 10) return false
+		// Not a dozen boxes in a long row or a sequence, which are wide by nature: a frame of over twenty with a tenth of it covered.
+		if (inside.length <= 20) return false
 		const a = bounds(f)
-		return inside.reduce((sum, s) => sum + bounds(s).w * bounds(s).h, 0) / (a.w * a.h) < 0.15
+		return inside.reduce((sum, s) => sum + bounds(s).w * bounds(s).h, 0) / (a.w * a.h) < 0.1
 	})
 	sparse.forEach((f) => found('frame mostly empty', f))
 	// A word that is longer than the box it is in is broken in the middle of it.
@@ -129,7 +131,7 @@ export function measureDiagram(scene) {
 	// A panel (a frame marked meta.panel, as the map layout draws) is solid: an arrow with no end in it goes round it, not through.
 	const panels = frames.filter((f) => f.meta?.panel === true)
 	let throughPanels = 0
-	let throughBoxes = 0, crossings = 0, labelOnBox = 0, labelOnMarker = 0, labelSqueezed = 0, shortArrows = 0, loose = 0, labelOnLabel = 0
+	let throughBoxes = 0, crossings = 0, labelUnder = 0, labelOnBox = 0, labelOnMarker = 0, labelSqueezed = 0, shortArrows = 0, loose = 0, labelOnLabel = 0
 	const labels = [] // [arrow, its label's box], to find labels piled on each other (elbows that share a run put theirs together)
 	const markers = boxes.filter((s) => !s.text.trim() || isThin(bounds(s)))
 	const lengths = []
@@ -157,7 +159,7 @@ export function measureDiagram(scene) {
 			labels.push([a, box])
 			for (const s of solid) if (!ends.has(s.id) && hit(box, bounds(s), 2)) (labelOnBox++, found('arrow label sits on a box', a, s))
 			// Under one of its own ends too: a loop's label drawn half under the box it comes back to.
-			for (const s of solid) if (ends.has(s.id) && hit(box, bounds(s), 6)) (labelOnBox++, found('arrow label sits on a box', a, s))
+			for (const s of solid) if (ends.has(s.id) && hit(box, bounds(s), 6)) (labelUnder++, found('arrow label sits under a box', a, s))
 			for (const s of markers) if (!ends.has(s.id) && hit(box, bounds(s), 0)) (labelOnMarker++, found('arrow label sits on a line', a))
 			// A label longer than the line it sits on: it hides its own arrow.
 			const horizontal = Math.abs(last.x - first.x) >= Math.abs(last.y - first.y)
@@ -179,8 +181,12 @@ export function measureDiagram(scene) {
 	}
 	let sharedRuns = 0
 	for (let i = 0; i < info.length; i++) for (let j = i + 1; j < info.length; j++) {
-		const joined = [...info[i].ends].some((x) => info[j].ends.has(x))
-		if (runAlong(info[i].path, info[j].path) > (joined ? 120 : 40)) (sharedRuns++, found('arrows share a run', info[i].a, info[j].a))
+		const a = info[i].a, b = info[j].a
+		// One arrow ending where the next begins is a chain, not a shared run.
+		if (a.to && a.to === b.from || b.to && b.to === a.from) continue
+		// Arrows that leave or arrive at one box share the way to it for a while (a fork, a join); it's a run past a long stretch.
+		const joined = (a.from && a.from === b.from) || (a.to && a.to === b.to)
+		if (runAlong(info[i].path, info[j].path) > (joined ? 200 : 40)) (sharedRuns++, found('arrows share a run', a, b))
 	}
 	// A label another arrow runs through: elbows that share a run put one arrow's label on the other's line.
 	let labelCrossed = 0
@@ -286,7 +292,7 @@ export function measureDiagram(scene) {
 	return {
 		findings,
 		boxes: solid.length, arrows: arrows.length, frames: frames.length,
-		overlaps, tooClose, outgrew, frameOverflow, frameNameCut: nameCut.length, sparseFrames: sparse.length, brokenWords: broken.length, sharedRuns, framesOverlap: labelClipped, throughBoxes, throughPanels, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, labelOnLabel, labelCrossed, shortArrows, looseArrows: loose,
+		overlaps, tooClose, outgrew, frameOverflow, frameNameCut: nameCut.length, labelUnder, sparseFrames: sparse.length, brokenWords: broken.length, sharedRuns, framesOverlap: labelClipped, throughBoxes, throughPanels, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, labelOnLabel, labelCrossed, shortArrows, looseArrows: loose,
 		aligned: +aligned.toFixed(2), sizeVariety: +sizeVariety.toFixed(2), gapEvenness: +cv(gaps).toFixed(2), lineEvenness: +mean(lineSpread).toFixed(2), lengthEvenness: +cv(lengths).toFixed(2), flow: +flow.toFixed(2),
 		aspect: page ? +(page.w / page.h).toFixed(2) : 1, fitZoom: +fitZoom.toFixed(2), textAtFit: +(fitZoom * minFont).toFixed(1), large,
 	}
@@ -296,7 +302,7 @@ export function measureDiagram(scene) {
 export function scoreDiagram(m) {
 	let score = 100
 	const fault = (n, each, cap) => (score -= Math.min(cap, n * each))
-	fault(m.frameNameCut ?? 0, 4, 12); fault(m.sparseFrames ?? 0, 6, 6); fault(m.brokenWords ?? 0, 3, 15); fault(m.sharedRuns ?? 0, 2, 8)
+	fault(m.frameNameCut ?? 0, 4, 12); fault(m.sparseFrames ?? 0, 6, 6); fault(m.brokenWords ?? 0, 3, 15); fault(m.sharedRuns ?? 0, 2, 8); fault(m.labelUnder ?? 0, 4, 16)
 	fault(m.overlaps, 12, 40); fault(m.frameOverflow, 8, 24); fault(m.framesOverlap, 8, 16); fault(m.outgrew, 3, 15)
 	fault(m.throughBoxes, 6, 30); fault(m.throughPanels ?? 0, 6, 30); fault(m.crossings, 3, 15); fault(m.labelOnBox, 5, 20); fault(m.labelOnMarker, 3, 15); fault(m.labelOnLabel ?? 0, 5, 20); fault(m.labelCrossed ?? 0, 5, 20); fault(m.unevenRows, 1, 8); fault(m.unevenColumns ?? 0, 1, 8); fault(m.mixedArrows ?? 0, 2, 8); fault(m.emptyGutter ?? 0, 6, 6); fault(m.labelSqueezed, 3, 12); fault(m.tooClose, 2, 10); fault(m.shortArrows, 2, 8)
 	score -= (1 - m.aligned) * 12
