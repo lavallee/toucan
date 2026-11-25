@@ -70,6 +70,8 @@ Prefer the product's words for controls and the reader's words for goals. For ex
 
 Start with the project's shared stylesheet, layout or template. Extend its semantic tokens once, then map headings, body, navigation, figures, links, forms, tables, code, and footer to those roles. Check hand-authored pages and generator templates separately. Keep an established product palette where it encodes information, such as the colors of categories in an actual chart. Apply the family identity around the artifact.
 
+**Acceptance for an estate style rollout.** Start with the live Toucan homepage and a reading page as the visual reference. A toolkit's default colors and system fonts do not establish a project identity. Use Admiralty for the shared shell, display and reading type, paper, actions and footer unless the owner named a different visual identity. Preserve meaningful colors within the product specimen. Before releasing, compare rendered screenshots of the reference and candidate at 390px and 1440px, including an ordinary subpage and the densest view. Verify the computed colors and that the local font files actually loaded. If the reader journey improves but the family resemblance is missing, record the content gain and hold the visual rollout.
+
 **Default Lyra palette and type.** Use these values when the project lacks an approved identity. They are the Admiralty values used by Toucan. Select foreground and background as a pair and check the rendered contrast, including hover, focus and selected states.
 
 | Role | Default | Where it earns its place |
