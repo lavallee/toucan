@@ -1,0 +1,37 @@
+# Can Luna use the project-pages guide to improve Flip?
+
+**Verdict: useful navigation patch, insufficient as a collection redesign.** One uncoached GPT-6 Luna agent correctly identified the sources, preserved Flip's substantive examples and fixed a reproducible mobile-menu problem. Its interpretation of the larger assignment was to document that the existing content journey was adequate. A new visitor sees the same promise, specimen, calls to action and destination as before. I would keep the interaction work and request a second editorial pass before merging.
+
+[Baseline preview](https://lavallee--18386.getbb.app/flip/) · [Candidate preview](https://lavallee--18387.getbb.app/flip/) · [Trial protocol](protocol.md) · [Guide as assigned](guide-as-assigned.md)
+
+## What changed for a reader
+
+Open either preview at phone width, open the menu, move focus to a link, and press Escape. On the baseline the menu remains open and focus stays on the link. On the candidate it closes and focus returns to Menu. On the 404 page the baseline has no menu trigger; the candidate has the same operable menu as its siblings. The candidate also gives sticky-header deep links extra clearance and supplies a common footer with source and license destinations.
+
+Now try the home page's main button. Both versions say “See it happen,” open the beginning of the same ten-exchange conversation, and require the same work to locate the refusal. “Get flip” still goes to the existing installation section. The handoff calls the install link primary in its verification; the more prominent filled button is the replay. The distinction matters because a passing test of installation does not establish that the principal proof became easier to find.
+
+| Question from the trial protocol | Result | Evidence |
+| --- | --- | --- |
+| Did orientation and proof improve? | Partial | Flip already had a useful proof-first opening. Both versions retain the EV-charger comparison, then use a different specimen for the generated OKF investigation. The real C6 refusal remains available. Luna supplied no new connection between the opening claim and this evidence. |
+| Did a visitor gain a more useful next action? | Partial | Both homepage actions work. In a fresh directory I ran the documented CLI notebook-creation command and inspected the result with `flip show`. The new visitor journey is the baseline journey. A complete harness installation was outside this test. |
+| Did the page collection become easier to navigate? | Pass | Luna inventoried all six routes, respected the intentional separation of replay, finished notebook and specification, gave the 404 its menu, and standardized the footer. The original specialized reader still works. |
+| Did the visual design improve across the collection? | Partial | The layout remains readable at the tested widths. In paired home screenshots the visible difference is the current-page treatment on the brand. The copy, typography, layout, example and CTA hierarchy are identical. Keeping a project identity can be a good decision; this trial did not demonstrate translating the family visual guidance into an improved editorial surface. |
+| Were working behavior, links and claims preserved? | Partial | All ten replay receipts render; the actual refusal expands; the notebook's eight claim rows and claim/source navigation work; the format tree updates its detail panel. All 26 distinct internal fragment references counted per page resolve. The homepage lost the direct link to the notebook behind the site's own provenance. The footer's “Lyra Forge” goes to the plugin marketplace, rather than the studio promised by the guide. |
+| Can another agent reproduce and verify the result? | Partial | I independently rebuilt from the candidate's owning sources, ran Artoo verification, and checked the mounted collection under `/flip/`. Flip's own website tests were **9/9 on baseline and 8/9 on candidate**. The failing test expects the literal opening tag `<nav class="site-nav">`; adding an accessible label changes that text. The Format link itself still works. Update the assertion to check the navigation element and its destination semantically, then rerun it. |
+
+**Visual comparison:** [Desktop, before and after](homepage-1440.webp) · [Phone, before and after](homepage-390.webp). Same Chromium, content position and viewport for each pair. These captures show the first screen; the menu and footer changes are visible elsewhere.
+
+## How the comparison was run
+
+- Same baseline commit `66f87bc`, Flip 0.27.0. Luna worked alone in an isolated checkout with the complete guide and its starter assignment. The evaluator recorded the decision rule before looking at the candidate and supplied no implementation feedback. Candidate snapshot `ffd1721` is local on `experiment/luna-project-pages`. Flip main and its public site were left alone.
+- Served both versions at a project prefix, then visited all six routes at 390, 720, 721 and 1440 CSS pixels. Neither version produced a page-level horizontal overflow or a browser exception in that sweep. Checks included the real menu breakpoint, navigating from the homepage, a direct legacy refusal URL, the spec tree, an expandable receipt and a notebook evidence link.
+- A timestamp-derived session ID changed when the example data was regenerated. The old generated fragment is absent on the candidate; no inspected internal link points to it. That differs from a stable editorial anchor. Also, with JavaScript off the home badge still reads v0.21 on both versions. With scripts on it correctly shows v0.27.0. These are separate from the new regression in the test suite.
+- The Artoo build checked six pages at phone and desktop sizes. It repeated baseline content-quality suggestions, including table headers and numbered eyebrows. The local CLI check establishes that a notebook can be created and read. The test does not establish comprehension by a first-time human, physical-device behavior, or acceptance by the project owner.
+
+## What the result says about the guide
+
+Luna followed explicit, inspectable instructions about sources, routes, footer fields, menu state and anchor clearance. The phrases “preserve the best example” and “implement one complete homepage-to-task path” also admitted an interpretation under which an existing path satisfied the assignment without any substantive edit. My brief reinforced that ambiguity by asking Luna to preserve existing product content. The run tested the guide plus that brief on a mature site. It cannot establish that another Luna run or another project would behave the same way.
+
+I revised the guide after freezing the trial. It now asks for the old journey and the intended reader-visible difference before implementation, separate assessments of shell and content, an explanation for keeping a project's identity, and a run of the repository's own site tests. It also gives canonical studio destinations and calls for preserving useful project-specific footer links. The frozen guide above is exactly what Luna received. The revised guidance has not had a second model trial.
+
+For a repeat on Flip, a discriminating task would be: **From the homepage, show me why Flip refused to verify claim C6, let me inspect the command output, and take me to the claim in the finished notebook.** Preserve the full investigation and the existing installation route. A reviewer can execute that task in both versions, compare the path, check the copy against the record, and see whether the new design actually helps.
