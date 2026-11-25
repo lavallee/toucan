@@ -50,7 +50,7 @@ toucan --canvas NAME plan items [--json] | set ITEM field=value... | add --title
 toucan templates                                  # blocks and starters; `new NAME --template ID` makes a canvas from one
 toucan --canvas NAME add ID                       # add a block or starter beside what's on the canvas
 toucan templates show ID                          # a template's description, to copy the form of
-toucan --canvas NAME draw FILE|- [--update] [--move] [--label T]   # lay out a diagram described as data onto a canvas
+toucan --canvas NAME draw FILE|- [--update] [--move] [--prefix P] [--frame KEY] [--title T] [--label T]   # lay out a diagram described as data onto a canvas
 toucan --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes   # comment threads
 ```
 

@@ -16,6 +16,27 @@ All notable changes to toucan are recorded here. The format follows
   rendition is redrawn only when someone asks, never on a save. **Export** above the canvas publishes the selection as one, and
   republishes the canvas's renditions. Archiving a canvas takes its renditions with it, and out of the catalogue.
 
+### Layout and checks, from drawing ten architecture diagrams in Toucan and in D2
+
+- **`flow` keeps the order you wrote.** A cycle between groups or boxes breaks on the arrow written last, so a group that feeds
+  an earlier one runs backward as a loop instead of turning the picture round (ELK `MODEL_ORDER` cycle breaking).
+- **`flow` packs separate pieces in a grid.** Groups or boxes with no arrows between them (six state machines) are laid out one
+  by one and packed in rows in the order written, three to a row for six, instead of one 6890 px row; `columns` and `aspect`
+  choose the shape. In a flow running down the page, a group is as narrow as its boxes, and no wider than its own name needs.
+- **`map` gives panels room for their own arrows**: tiles with arrows between them are spaced by the longest label across and a
+  label's height down. A link takes `"dash": "dashed"` without meaning "planned" (only `kind: planned` or `dash: dotted` is
+  dotted and appears in the key).
+- **`draw` keeps keys stable and places a drawing where it belongs.** `--prefix P` prefixes every key; on a clash only the keys
+  the layout made up are renamed, not the ones you wrote; `--update` moves the new layout to where the section is now, not the
+  origin; `--frame KEY --title T` wraps the drawing in a titled frame (also on `toucan_draw`).
+- **Boxes and sequence columns are as wide as their longest word needs**, so `typed_no_body` no longer breaks inside an oval. A
+  sequence sizes participants by their longest name, widens each gap to the label of the message across it, and makes each row
+  as tall as its label or self-message note, so notes stay off the next arrow.
+- **`measure({ within })` and `tidy.*({ within })` look at one frame.** A canvas of several sections is scored section by section
+  (`sections`), and its `score` is their mean, instead of one score that falls to 0 as sections are added.
+- **`measure()` sees more**: frame names cut off, two arrows sharing a run, a word broken inside a box, a label half under a box
+  (its own end too), a frame of over ten boxes that is mostly empty. A grid's cells are no longer flagged "uneven column".
+
 ### Changed
 
 - **The bar above the canvas, History and Routines now come from Leyline** (`@lyra-forge/leyline`, the package

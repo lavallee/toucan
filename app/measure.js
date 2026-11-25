@@ -2,6 +2,8 @@
 // use this, so there's one definition of what makes a diagram sound. Findings name the shapes involved. It reads the canvas through
 // the scene (app/scene.js), so it measures tldraw and Excalidraw canvases alike.
 
+import { scopeScene } from './scene'
+
 /**
  * What to do about each kind of finding: a finding's `kind` is its name here, so an agent can act on one without looking at the
  * picture. Keep a kind's wording stable (routines and agents match on it), and give every new kind a line here. Findings that
@@ -26,6 +28,10 @@ export const FIXES = {
 	'uneven column': 'Run match-sizes.',
 	'straight arrows among elbows': 'Run neat-arrows, or set the odd arrows to the route the rest use.',
 	'empty gutter down the frames': 'Run fit-frames.',
+	'frame name cut off': 'Run fit-frames, or widen the frame (or shorten its name).',
+	'arrows share a run': 'Run tidy-arrows, or move one of the two boxes so the arrows leave by different sides.',
+	'word broken inside a box': 'Widen the box (or run fit-text), or use a shorter word.',
+	'frame mostly empty': 'Run fit-frames, or lay the contents out more compactly (a grid, or fewer columns).',
 	'text too small to read with the whole diagram in view': 'Tighten the gaps, shorten the longest chain, or draw it in the other direction.',
 }
 
@@ -74,6 +80,25 @@ export function measureDiagram(scene) {
 	})
 	spilling.forEach((s) => found('cut off by its frame', s))
 	const frameOverflow = spilling.length
+	// A frame's name is set on one line above it, and cut off where the frame ends.
+	const nameCut = frames.filter((f) => String(f.text ?? '').trim() && String(f.text).length * 8 + 16 > bounds(f).w)
+	nameCut.forEach((f) => found('frame name cut off', f))
+	// A frame of a dozen boxes with most of it bare: the layout spread them out and left the room empty.
+	const sparse = frames.filter((f) => {
+		const inside = solid.filter((s) => ancestors(s).includes(f.id))
+		if (inside.length <= 10) return false
+		const a = bounds(f)
+		return inside.reduce((sum, s) => sum + bounds(s).w * bounds(s).h, 0) / (a.w * a.h) < 0.15
+	})
+	sparse.forEach((f) => found('frame mostly empty', f))
+	// A word that is longer than the box it is in is broken in the middle of it.
+	const SHAPE_WIDER = { diamond: 1.75, ellipse: 1.35, oval: 1.2, hexagon: 1.25, cloud: 1.5 }
+	const broken = solid.filter((s) => {
+		if (s.kind !== 'box' || s.meta?.borderless === true) return false
+		const longest = Math.max(0, ...String(s.text).split(/\s+|(?<=-)/).map((w) => w.length))
+		return longest * (s.fontSize ?? 18) * 0.58 > (bounds(s).w - 32) / Math.sqrt(SHAPE_WIDER[s.geo] ?? 1)
+	})
+	broken.forEach((s) => found('word broken inside a box', s))
 	let labelClipped = 0
 	frames.forEach((f, i) => frames.forEach((g, j) => {
 		if (j <= i) return
@@ -131,12 +156,32 @@ export function measureDiagram(scene) {
 			for (const [other, b] of labels) if (hit(box, b, 2)) (labelOnLabel++, found('arrow labels sit on each other', a, other))
 			labels.push([a, box])
 			for (const s of solid) if (!ends.has(s.id) && hit(box, bounds(s), 2)) (labelOnBox++, found('arrow label sits on a box', a, s))
+			// Under one of its own ends too: a loop's label drawn half under the box it comes back to.
+			for (const s of solid) if (ends.has(s.id) && hit(box, bounds(s), 6)) (labelOnBox++, found('arrow label sits on a box', a, s))
 			for (const s of markers) if (!ends.has(s.id) && hit(box, bounds(s), 0)) (labelOnMarker++, found('arrow label sits on a line', a))
 			// A label longer than the line it sits on: it hides its own arrow.
 			const horizontal = Math.abs(last.x - first.x) >= Math.abs(last.y - first.y)
 			if ((horizontal ? box.maxX - box.x : box.maxY - box.y) > len * 0.8) (labelSqueezed++, found('arrow label hides its arrow', a))
 		}
 	})
+	// Two arrows that run along one line for a stretch read as one arrow. Arrows that leave or arrive at the same box may share the
+	// first few steps (a fork, a join); beyond that, it's a run.
+	const runAlong = (p, q) => {
+		let run = 0
+		for (let i = 1; i < p.length; i++) for (let k = 1; k < q.length; k++) {
+			const a0 = p[i - 1], a1 = p[i], b0 = q[k - 1], b1 = q[k]
+			const horiz = Math.abs(a0.y - a1.y) < 1 && Math.abs(b0.y - b1.y) < 1 && Math.abs(a0.y - b0.y) < 3
+			const vert = Math.abs(a0.x - a1.x) < 1 && Math.abs(b0.x - b1.x) < 1 && Math.abs(a0.x - b0.x) < 3
+			if (horiz) run += Math.max(0, Math.min(Math.max(a0.x, a1.x), Math.max(b0.x, b1.x)) - Math.max(Math.min(a0.x, a1.x), Math.min(b0.x, b1.x)))
+			else if (vert) run += Math.max(0, Math.min(Math.max(a0.y, a1.y), Math.max(b0.y, b1.y)) - Math.max(Math.min(a0.y, a1.y), Math.min(b0.y, b1.y)))
+		}
+		return run
+	}
+	let sharedRuns = 0
+	for (let i = 0; i < info.length; i++) for (let j = i + 1; j < info.length; j++) {
+		const joined = [...info[i].ends].some((x) => info[j].ends.has(x))
+		if (runAlong(info[i].path, info[j].path) > (joined ? 120 : 40)) (sharedRuns++, found('arrows share a run', info[i].a, info[j].a))
+	}
 	// A label another arrow runs through: elbows that share a run put one arrow's label on the other's line.
 	let labelCrossed = 0
 	// Where two arrows share a run (a fork leaving a decision), the other one runs along this one's own line, which reads fine;
@@ -178,7 +223,7 @@ export function measureDiagram(scene) {
 	// The same in a stack of equally wide boxes: a column of cards that differ by a line of text.
 	// A table's rows may differ, since each row keeps one height across; text without a border has no visible box to compare.
 	let unevenColumns = 0
-	const boxed = solid.filter((s) => s.geo === 'rectangle' && s.meta?.borderless !== true && s.dash !== 'none' && s.color !== undefined)
+	const boxed = solid.filter((s) => s.geo === 'rectangle' && s.meta?.borderless !== true && s.meta?.grid !== true && s.dash !== 'none' && s.color !== undefined)
 	const inRow = (s) => {
 		const a = bounds(s)
 		return boxed.some((o) => o !== s && o.parent === s.parent && Math.abs(bounds(o).y - a.y) < 2 && Math.abs(bounds(o).h - a.h) < 2)
@@ -241,7 +286,7 @@ export function measureDiagram(scene) {
 	return {
 		findings,
 		boxes: solid.length, arrows: arrows.length, frames: frames.length,
-		overlaps, tooClose, outgrew, frameOverflow, framesOverlap: labelClipped, throughBoxes, throughPanels, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, labelOnLabel, labelCrossed, shortArrows, looseArrows: loose,
+		overlaps, tooClose, outgrew, frameOverflow, frameNameCut: nameCut.length, sparseFrames: sparse.length, brokenWords: broken.length, sharedRuns, framesOverlap: labelClipped, throughBoxes, throughPanels, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, labelOnLabel, labelCrossed, shortArrows, looseArrows: loose,
 		aligned: +aligned.toFixed(2), sizeVariety: +sizeVariety.toFixed(2), gapEvenness: +cv(gaps).toFixed(2), lineEvenness: +mean(lineSpread).toFixed(2), lengthEvenness: +cv(lengths).toFixed(2), flow: +flow.toFixed(2),
 		aspect: page ? +(page.w / page.h).toFixed(2) : 1, fitZoom: +fitZoom.toFixed(2), textAtFit: +(fitZoom * minFont).toFixed(1), large,
 	}
@@ -251,10 +296,41 @@ export function measureDiagram(scene) {
 export function scoreDiagram(m) {
 	let score = 100
 	const fault = (n, each, cap) => (score -= Math.min(cap, n * each))
+	fault(m.frameNameCut ?? 0, 4, 12); fault(m.sparseFrames ?? 0, 6, 6); fault(m.brokenWords ?? 0, 3, 15); fault(m.sharedRuns ?? 0, 2, 8)
 	fault(m.overlaps, 12, 40); fault(m.frameOverflow, 8, 24); fault(m.framesOverlap, 8, 16); fault(m.outgrew, 3, 15)
 	fault(m.throughBoxes, 6, 30); fault(m.throughPanels ?? 0, 6, 30); fault(m.crossings, 3, 15); fault(m.labelOnBox, 5, 20); fault(m.labelOnMarker, 3, 15); fault(m.labelOnLabel ?? 0, 5, 20); fault(m.labelCrossed ?? 0, 5, 20); fault(m.unevenRows, 1, 8); fault(m.unevenColumns ?? 0, 1, 8); fault(m.mixedArrows ?? 0, 2, 8); fault(m.emptyGutter ?? 0, 6, 6); fault(m.labelSqueezed, 3, 12); fault(m.tooClose, 2, 10); fault(m.shortArrows, 2, 8)
 	score -= (1 - m.aligned) * 12
 	if (m.arrows > 1) score -= (1 - m.flow) * 4
 	if (m.textAtFit < 11 && !m.large) score -= (11 - m.textAtFit) * 3
 	return Math.max(0, Math.round(score))
+}
+
+/**
+ * What `toucan.measure()` reports. Scoped (`within`: the id of a frame), it judges that frame and what is in it, as if it were the
+ * whole canvas. Unscoped, a canvas of several sections (top-level frames marked `meta.section`, as `draw --frame` makes them; or,
+ * with none marked, two or more top-level frames that each hold frames of their own) is scored section by section: the score is
+ * their mean, and `sections` lists each one's. Penalties add up across everything counted, so one score for several diagrams
+ * says little (ten good sections scored 0 together). Anything else is one diagram, scored whole.
+ */
+export function measureCanvas(scene, { within } = {}) {
+	const one = (sc) => {
+		const m = measureDiagram(sc)
+		return { ...m, score: scoreDiagram(m) }
+	}
+	if (within) return { ...one(scopeScene(scene, within)), within }
+	const frames = scene.items().filter((i) => i.kind === 'frame' && !i.parent && i.meta?.panel !== true)
+	const holders = (f) => scene.items().some((i) => i.kind === 'frame' && scene.ancestors(i.id).includes(f.id))
+	const marked = frames.filter((f) => f.meta?.section === true)
+	const sections = marked.length ? marked : frames.filter(holders)
+	if (sections.length < 2) return one(scene)
+	const whole = one(scene)
+	const parts = sections.map((f) => ({ f, m: one(scopeScene(scene, f.id)) }))
+	const mean = Math.round(parts.reduce((sum, p) => sum + p.m.score, 0) / parts.length)
+	return {
+		...whole,
+		score: mean,
+		wholeScore: whole.score,
+		sections: parts.map(({ f, m }) => ({ key: f.key, name: f.text || f.key, score: m.score, boxes: m.boxes, arrows: m.arrows, findings: m.findings.length })),
+		findings: parts.flatMap(({ f, m }) => m.findings.map((x) => ({ ...x, section: f.key }))).slice(0, 60),
+	}
 }

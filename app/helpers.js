@@ -9,8 +9,8 @@ import ELK from 'elkjs/lib/elk.bundled.js'
 import { Box as tl_Box, createShapeId, createBindingId, toRichText, renderPlaintextFromRichText, fitFrameToContent, GeoShapeGeoStyle, DefaultColorStyle, DefaultFillStyle, DefaultDashStyle, DefaultSizeStyle } from 'tldraw'
 import { fromTldraw, layoutMissing } from '../lib/tg.mjs'
 import { pulse as glow } from './pulses'
-import { FIXES, measureDiagram, scoreDiagram } from './measure'
-import { makeTidy } from './tidy'
+import { FIXES, measureCanvas } from './measure'
+import { scopedTidy } from './tidy'
 import { buildOrder, makeGif } from './animate'
 import { tldrawScene } from './scene'
 import { refsOfShape } from './reference-links'
@@ -659,12 +659,29 @@ export function makeHelpers(editor) {
 	}
 
 	/** PNG of the page (or of some keys) as base64, at most `max` px on its long side. */
+	const MAX_SIDE = 4096 // the longest side, in pixels, a picture is first drawn at (a bigger board is drawn smaller, then shrunk)
 	async function screenshot({ keys, max = 1800 } = {}) {
 		const ids = keys?.length ? keys.map(idFor) : [...editor.getCurrentPageShapeIds()]
 		if (!ids.length) return null
 		const b = editor.getShapesPageBounds(ids)
-		const scale = Math.min(1, max / Math.max(b.w + 64, b.h + 64))
-		const { blob } = await editor.toImage(ids, { format: 'png', background: true, scale, pixelRatio: 1, padding: 32 })
+		const side = Math.max(b.w + 64, b.h + 64)
+		const scale = Math.min(1, max / side)
+		// tldraw sets a label's text for the scale it draws at, so a short arrow label that fits on one line at full size wraps (and loses
+		// its top line) in a picture drawn at a fifth of it. Draw at full size, as far as a canvas holds, and shrink the picture instead.
+		const drawn = Math.max(scale, Math.min(1, MAX_SIDE / side))
+		const { blob: full } = await editor.toImage(ids, { format: 'png', background: true, scale: drawn, pixelRatio: 1, padding: 32 })
+		let blob = full
+		if (drawn > scale * 1.01) {
+			const bitmap = await createImageBitmap(full)
+			const canvas = document.createElement('canvas')
+			canvas.width = Math.max(1, Math.round((bitmap.width * scale) / drawn))
+			canvas.height = Math.max(1, Math.round((bitmap.height * scale) / drawn))
+			const ctx = canvas.getContext('2d')
+			ctx.imageSmoothingQuality = 'high'
+			ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+			bitmap.close()
+			blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+		}
 		const buf = new Uint8Array(await blob.arrayBuffer())
 		let s = ''
 		for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000))
@@ -765,9 +782,12 @@ export function makeHelpers(editor) {
 	const scene = tldrawScene(editor, { keyOf, text, toRichText })
 	/** Is this shape (or key, or id) a plan's: carrying meta.plan, or in a frame that does? Then leave it to the plan. */
 	const isPlanShape = (shapeOrKey) => scene.isPlan(typeof shapeOrKey === 'string' ? (shapeOrKey.startsWith('shape:') ? shapeOrKey : idFor(shapeOrKey)) : shapeOrKey?.id)
-	const api = { engine: 'tldraw', isPlanShape, idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, _planRender, _busyKeys, screenshot, svg, animate, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: () => {
-		const m = measureDiagram(scene)
-		return { ...m, score: scoreDiagram(m) }
-	}, fixes: FIXES, tidy: makeTidy(scene) }
+	/** A frame given as a key (or an id) for `within`: measure and tidy then look at that frame alone. */
+	const scopeId = (frame) => {
+		const id = typeof frame === 'string' && frame.startsWith('shape:') ? frame : idFor(frame)
+		if (!id || !scene.get(id)) throw new Error(`within: no frame "${frame}"`)
+		return id
+	}
+	const api = { engine: 'tldraw', isPlanShape, idFor, get, text, summary, node, frame, edge, remove, layout, find, zoomTo, graph, applyGraph, _planRender, _busyKeys, screenshot, svg, animate, pulse, notes, resolveNote, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView, keyOf, scene, measure: ({ within } = {}) => measureCanvas(scene, { within: within ? scopeId(within) : undefined }), fixes: FIXES, tidy: scopedTidy(scene, scopeId) }
 	return api
 }

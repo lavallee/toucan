@@ -11,8 +11,8 @@ import { pulse as glow } from './pulses'
 import { refsOfShape } from './reference-links'
 import { excalidrawScene } from './scene'
 import { planBusy, planRender } from './plan-render-excalidraw'
-import { FIXES, measureDiagram, scoreDiagram } from './measure'
-import { makeTidy } from './tidy'
+import { FIXES, measureCanvas } from './measure'
+import { scopedTidy } from './tidy'
 import { buildOrder, makeGif } from './animate'
 
 const elk = new ELK()
@@ -450,13 +450,16 @@ export function makeExcalidrawHelpers(api, ex) {
 		},
 	}
 
-	const measure = () => {
-		const m = measureDiagram(scene)
-		return { ...m, score: scoreDiagram(m) }
+	/** A frame given as a key (or an id) for `within`: measure and tidy then look at that frame alone. */
+	const scopeId = (frame) => {
+		const id = scene.get(frame)?.id ? frame : get(frame)?.id
+		if (!id || !scene.get(id)) throw new Error(`within: no frame "${frame}"`)
+		return id
 	}
+	const measure = ({ within } = {}) => measureCanvas(scene, { within: within ? scopeId(within) : undefined })
 
 	/** Is this element (or key, or id) a plan's: carrying customData.meta.plan, or in a frame that does? Then leave it to the plan. */
 	const isPlanShape = (shapeOrKey) => scene.isPlan(typeof shapeOrKey === 'string' ? get(shapeOrKey)?.id ?? shapeOrKey : shapeOrKey?.id)
 
-	return { engine: 'excalidraw', isPlanShape, scene, measure, fixes: FIXES, tidy: makeTidy(scene), get, text, keyOf, summary, graph, applyGraph, _planRender, _busyKeys, remove, zoomTo, screenshot, svg, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
+	return { engine: 'excalidraw', isPlanShape, scene, measure, fixes: FIXES, tidy: scopedTidy(scene, scopeId), get, text, keyOf, summary, graph, applyGraph, _planRender, _busyKeys, remove, zoomTo, screenshot, svg, animate, pulse, selection, propose, proposals, accept, reject, selectedProposals, _track, reveal, ...threadView }
 }

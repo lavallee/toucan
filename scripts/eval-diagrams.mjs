@@ -422,6 +422,81 @@ async function evalRoutines() {
 	}
 }
 
+
+/**
+ * The redesign test: ten architecture diagrams drawn on one canvas, each in a frame of its own (scripts/fixtures/redesign: their
+ * structure and word lengths, with the words scrambled). A canvas of several sections is scored section by section, `within` a
+ * frame judges and tidies that frame alone, and measure() names what a person sees at a glance: a frame name cut off, two arrows
+ * on one run, a word broken inside a box, a frame of boxes with nothing in most of it.
+ */
+async function evalRedesign() {
+	const FX = join(ROOT, 'scripts/fixtures/redesign')
+	const sections = ['d01', 'd02', 'd03', 'd04-one', 'd05', 'd06', 'd07', 'd08', 'd09', 'd10']
+	const open = async (canvas) => {
+		await page.goto(`http://127.0.0.1:${port}/?canvas=${canvas}`)
+		await page.waitForSelector('.tl-canvas')
+		await page.waitForTimeout(800)
+	}
+	console.log('\nthe redesign test: score of each section, alone')
+	await toucan('new', 'redesign')
+	await open('redesign')
+	for (const name of sections) await toucan('--canvas', 'redesign', 'draw', join(FX, `${name}.json`), '--prefix', `${name}-`, '--frame', `sec-${name}`, '--title', name)
+	await page.waitForTimeout(500)
+	const scored = await page.evaluate((names) => Object.fromEntries(names.map((n) => {
+		const m = window.toucan.measure({ within: `sec-${n}` })
+		const kinds = {}
+		for (const f of m.findings) kinds[f.kind] = (kinds[f.kind] ?? 0) + 1
+		return [n, { score: m.score, kinds, boxes: m.boxes, arrows: m.arrows }]
+	})), sections)
+	for (const n of sections) console.log(`${n.padEnd(8)} ${String(scored[n].score).padStart(3)}  ${JSON.stringify(scored[n].kinds)}`)
+	writeFileSync(join(OUT, 'redesign.json'), JSON.stringify(scored, null, 1) + '\n')
+	for (const n of ['d05', 'd10']) assert.ok(scored[n].score >= 95 && !Object.keys(scored[n].kinds).some((k) => /cut off|share a run|word broken|mostly empty|uneven column/.test(k)), `${n} is a good diagram, and the new checks leave it alone: ${JSON.stringify(scored[n])}`)
+	assert.ok(!scored['d07'].kinds['uneven column'], 'a table (d07\'s grid) has no uneven columns')
+	const whole = await page.evaluate(() => {
+		const m = window.toucan.measure()
+		return { score: m.score, wholeScore: m.wholeScore, sections: m.sections?.map((s) => [s.key, s.score]) }
+	})
+	assert.equal(whole.sections?.length, sections.length, `the canvas is ${sections.length} sections: ${JSON.stringify(whole)}`)
+	const meanScore = Math.round(sections.reduce((sum, n) => sum + scored[n].score, 0) / sections.length)
+	assert.equal(whole.score, meanScore, 'the whole canvas scores as the mean of its sections')
+	assert.ok(whole.score > whole.wholeScore || whole.wholeScore >= 60, `one score for ten sections says little (${whole.wholeScore}); the mean says ${whole.score}`)
+	console.log(`whole canvas: mean ${whole.score} over ${sections.length} sections (summed, it would be ${whole.wholeScore})`)
+	// tidy within one frame leaves every other frame's shapes where they were.
+	const before = await page.evaluate(() => Object.fromEntries(window.editor.getCurrentPageShapes().map((s) => [s.id, [Math.round(s.x), Math.round(s.y)]])))
+	await page.evaluate(() => window.toucan.tidy.all({ within: 'sec-d03' }))
+	const after = await page.evaluate(() => Object.fromEntries(window.editor.getCurrentPageShapes().map((s) => [s.id, [Math.round(s.x), Math.round(s.y)]])))
+	const ids = await page.evaluate(() => {
+		const root = window.toucan.idFor('sec-d03')
+		return window.editor.getCurrentPageShapes().filter((s) => s.id === root || window.editor.getShapeAncestors(s).some((a) => a.id === root)).map((s) => s.id)
+	})
+	const outsideMoved = Object.keys(before).filter((id) => !ids.includes(id) && JSON.stringify(before[id]) !== JSON.stringify(after[id]))
+	assert.deepEqual(outsideMoved, [], 'tidy.all({ within }) moved nothing outside its frame')
+	// A screenshot drawn small is the picture drawn at full size, shrunk: the size asked for, and labels set as in the editor.
+	const shot = join(data, 'sec-d10.png')
+	await toucan('--canvas', 'redesign', 'screenshot', shot, '--keys', 'sec-d10', '--max', '480')
+	const png = readFileSync(shot)
+	const dims = [png.readUInt32BE(16), png.readUInt32BE(20)]
+	assert.ok(Math.max(...dims) <= 482 && Math.max(...dims) >= 440, `screenshot --max 480 is about 480 wide: ${dims}`)
+	// What a person sees at a glance, built by hand.
+	await toucan('new', 'eye')
+	await open('eye')
+	const kindsOf = (within) => page.evaluate((w) => [...new Set(window.toucan.measure(w ? { within: w } : undefined).findings.map((f) => f.kind))], within)
+	const put = (tg) => page.evaluate((g) => window.toucan.applyGraph(g, { move: true }), { tg: 1, groups: [], nodes: [], edges: [], ...tg })
+	const box = (key, x, y, w, h, text = key, extra = {}) => ({ key, text, box: { x, y, w, h }, style: { color: 'black', fill: 'none', dash: 'solid', geo: 'rectangle', size: 's' }, ...extra })
+	await put({ groups: [{ key: 'narrow', label: 'a frame name much longer than the frame', box: { x: 0, y: 0, w: 160, h: 140 } }], nodes: [box('n1', 20, 60, 100, 60, 'one', { group: 'narrow' })] })
+	assert.ok((await kindsOf()).includes('frame name cut off'), 'a frame name wider than its frame is found')
+	await put({ nodes: [box('wide', 0, 400, 100, 60, 'typed_no_body_machine_state')] })
+	assert.ok((await kindsOf()).includes('word broken inside a box'), 'a word longer than its box is found')
+	await put({ nodes: [box('ra', 0, 600, 100, 60), box('rb', 0, 800, 100, 60), box('rc', 700, 700, 100, 60)], edges: [0, 1].map((i) => ({ key: `edge:r${'ab'[i]}->rc`, from: `r${'ab'[i]}`, to: 'rc', style: { color: 'grey', dash: 'solid', route: 'elbow', anchors: { from: { x: 1, y: 0.5 }, to: { x: 0, y: 0.5 } } } })) })
+	assert.ok((await kindsOf()).includes('arrows share a run'), 'two arrows on one run are found')
+	await put({ groups: [{ key: 'sparse', label: 'sparse', box: { x: 2000, y: 0, w: 2400, h: 1800 } }], nodes: Array.from({ length: 12 }, (_, i) => box(`s${i}`, 2040 + (i % 4) * 600, 60 + Math.floor(i / 4) * 560, 120, 70, `s${i}`, { group: 'sparse' })) })
+	assert.ok((await kindsOf()).includes('frame mostly empty'), 'a mostly empty frame is found')
+	// ...and each is found where it is, and not in a tidy frame beside it.
+	await put({ groups: [{ key: 'fine', label: 'fine', box: { x: 5000, y: 0, w: 400, h: 200 } }], nodes: [box('f1', 5040, 70, 140, 70, 'one', { group: 'fine' }), box('f2', 5220, 70, 140, 70, 'two', { group: 'fine' })] })
+	assert.deepEqual(await kindsOf('fine'), [], 'a tidy frame is clean')
+	console.log('ok  measure sees a cut-off frame name, a shared run, a broken word and an empty frame, and scopes to a frame')
+}
+
 try {
 	for (const t of onTldraw ? TEMPLATES : []) {
 		if (only && !only.includes(t.id)) continue
@@ -470,6 +545,7 @@ try {
 		console.log('ok  clean-up leaves a timeline\'s dates alone')
 	}
 	if (!args.includes('--no-routines') && onTldraw) await evalRoutines()
+	if (onTldraw && (!only || only.includes('redesign'))) await evalRedesign()
 	if (onExcalidraw) await evalExcalidraw()
 	if (onExcalidraw && !args.includes('--no-routines')) await evalRoutinesExcalidraw()
 } finally {

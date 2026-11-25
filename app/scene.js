@@ -678,3 +678,33 @@ export function excalidrawScene(api, ex) {
 	}
 	return scene
 }
+
+/**
+ * The scene, narrowed to one frame: what is in it (the frame itself, everything inside it, and the arrows that join them), and the
+ * bounds of just that. Measuring and tidying read the scene, so a scoped one judges and arranges a section of a canvas without
+ * looking at, or moving, the rest. Works on either engine.
+ */
+export function scopeScene(scene, frameId) {
+	if (!scene.get(frameId)) throw new Error(`no frame to scope to: ${frameId}`)
+	const members = () => {
+		const items = scene.items()
+		const ids = new Set(items.filter((i) => i.kind !== 'arrow' && (i.id === frameId || scene.ancestors(i.id).includes(frameId))).map((i) => i.id))
+		for (const a of items) if (a.kind === 'arrow' && scene.ancestors(a.id).includes(frameId)) ids.add(a.id)
+		for (const a of scene.arrows()) if (ids.has(a.from) || ids.has(a.to)) ids.add(a.id)
+		return { items: items.filter((i) => ids.has(i.id)), ids }
+	}
+	return {
+		...scene,
+		items: () => members().items,
+		arrows: () => {
+			const { ids } = members()
+			return scene.arrows().filter((a) => ids.has(a.id))
+		},
+		bounds: () => {
+			const boxes = members().items.filter((i) => i.kind !== 'arrow')
+			if (!boxes.length) return null
+			const x = Math.min(...boxes.map((b) => b.x)), y = Math.min(...boxes.map((b) => b.y)), maxX = Math.max(...boxes.map((b) => b.maxX)), maxY = Math.max(...boxes.map((b) => b.maxY))
+			return { x, y, w: maxX - x, h: maxY - y, maxX, maxY, minX: x, minY: y }
+		},
+	}
+}
