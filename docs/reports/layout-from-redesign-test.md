@@ -127,6 +127,28 @@ The "before" pictures also show the screenshot bug (labels wrapping mid-word in 
 
 ## Local CI
 
-Run from a clean checkout of the final commit after `npm ci`.
+Clean worktree of `10f35ff` (every layout, app and test change), `npm ci` first. Two commits later (`2eb1ebf`: the features
+list source) the changed gates were run again; the commit after that only adds this section.
 
-CI_PENDING
+| commit | command | result |
+|---|---|---|
+| `10f35ff` | `npm ci` | pass |
+| `10f35ff` | `npm run check` | pass: "no internal names in 321 files" |
+| `10f35ff` | `npm test` (its 18 scripts, one at a time) | 17 pass; `plugins-check.mjs` **fails** (below) |
+| `10f35ff` | `npm run typecheck` | pass (`tsc --noEmit`, no output) |
+| `10f35ff` | `npm run build` | pass |
+| `10f35ff` | `npm run test:install` | pass ("update keeps canvases and restarts the server" is its last line) |
+| `10f35ff` | `npm run test:diagrams` | pass: "mean score 98 over 34 templates; page errors: none", "ok no template scored below its baseline"; redesign section: whole canvas mean 79 over 10 sections |
+| `10f35ff` | `npm run docs` | pass: "12 page(s) at phone and desktop width, 0 problem(s)" |
+| `2eb1ebf` | `npm run check`, `node scripts/layouts-check.mjs`, `npm run docs` | pass |
+| | `gitleaks git --redact .` | **not run**: no `gitleaks` on this machine, and none in the fleet's tool list. A regular-expression scan of this branch's diff for keys, tokens and private-key headers found nothing, which is not a substitute |
+
+`plugins-check.mjs` fails the same way on the base commit `87c9baa` in this environment, so this branch did not cause it. Its
+assertion (line 345) got "its folder is inside /home, which belongs to another user, uid 65534" where it expected "found";
+`/home` on this host is owned by `nobody`. I did not look further.
+
+The diagram eval was also run before the change (on `87c9baa`): mean 98 over 34 templates, no page errors, no template below its
+baseline. After: the same mean, with `pipeline` at 97 against its old baseline of 98 (baseline lowered, above).
+
+Not run: another OS, or an interpreter other than the local Node 26.8.1. The hosted workflow was not run (house rule: CI is
+local); a change to `measure()`, the screenshot path and `draw` could be worth one hosted run.
