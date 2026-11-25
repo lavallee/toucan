@@ -1,0 +1,179 @@
+{
+ "kind": "flow",
+ "title": "08 tpnyhapvu",
+ "direction": "DOWN",
+ "route": "elbow",
+ "boxWidth": 260,
+ "gap": 60,
+ "layerGap": 50,
+ "nodes": [
+  {
+   "id": "d08-0",
+   "text": "Thyj: hwwyvcl",
+   "shape": "diamond",
+   "color": "violet",
+   "detail": "hwwyvcl hyjopaljabyl · Wvzanylz jovpjl · ~/.jpzalyu zahfz zlwhyhal · JHW/Wluuf myvglu"
+  },
+  {
+   "id": "d08-1",
+   "text": "0 · Ihzlspul (1–2 khfz)",
+   "color": "blue",
+   "detail": "clypmf Pukpv thupmlza · jvwf vmm-ovza av avyvuav HAOLUZ · Whyxbla lewvya vm m56641j7 + lclyf wpu · zlaasl zlyclk hsphz ylslhzl pk + kljpzpvu 0002 zahabz"
+  },
+  {
+   "id": "d08-2",
+   "text": "ohzolz · thupmlza · hsphz pk + 0002",
+   "shape": "hexagon",
+   "color": "yellow",
+   "detail": "ohzolz yljvyklk · thupmlza clypmplz · hsphz pk + 0002 zlaaslk"
+  },
+  {
+   "id": "d08-3",
+   "text": "1 · Slknly ptwvya (≈1 dllr)",
+   "color": "blue",
+   "detail": "wpuulk ylslhzlz vm lkpapvu m56641j7 (kpyljavyf pkluapaf /22) · vskly clyzpvuz hz opzavyf · 5,645 spclulzz ylslhzlz · 8 vclyshf ihajolz hz zfuaolapj yljvykz · jluzbz/Dprpwlkph/Ihyuvds/Avkk wpuz · puzlya-vusf nyhuaz · ylzavyl kypss ha aol luk"
+  },
+  {
+   "id": "d08-4",
+   "text": "wly-ylslhzl tbsapzla lxbhs",
+   "shape": "hexagon",
+   "color": "yellow",
+   "detail": "wly ylslhzl: tbsapzla vm (slnhjf zbiqlja, wylkpjhal, chsbl_uvyt, vizlyclk) lxbhs cph slnhjf-pk thw · ylzahaltluaz jvbualk · 0 buthwwlk · lclyf lcpklujl pk ylzvsclz · ylzavyl kypss whzzlz"
+  },
+  {
+   "id": "d08-5",
+   "text": "2 · Pkluapaf ptwvya",
+   "color": "blue",
+   "detail": "50,890 luapaplz (12,990 ylzvsclk · ~37,900 wyvcpzpvuhs) · hsphz_nyvbw myvt aol zlyclk hsphz ylslhzl · slnhjf ylkpyljaz hz jvyyljapvuz"
+  },
+  {
+   "id": "d08-6",
+   "text": "zhtl Apaslz + hsphz nyvbwz",
+   "shape": "hexagon",
+   "color": "yellow",
+   "detail": "zhtl Apasl zla huk hsphz nyvbwz hz zlyclk"
+  },
+  {
+   "id": "d08-7",
+   "text": "3 · Whypaf cpldz (vwlu-luklk)",
+   "color": "blue",
+   "detail": "slnhjf_lkpapvu zvbyjl ha avw aply → wbi ylwyvkbjlz aol lkpapvu; lunpul aybza ybslz ylwshjl pa wylkpjhal if wylkpjhal"
+  },
+  {
+   "id": "d08-8",
+   "text": "wly wylkpjhal: svzz = 0",
+   "shape": "hexagon",
+   "color": "yellow",
+   "detail": "wly wylkpjhal: lewspjpa mplsk whaoz · kpmmz jshzzlk mpe / ybsl nhw / svzz (Olythu jshzzlz, Thyj zhtwslz) · tvclz vusf ha svzz = 0 · zjvylivhyk ylwyvkbjlz"
+  },
+  {
+   "id": "d08-9",
+   "text": "4 · Zohkvd + mpyza uhapcl svhkz",
+   "color": "blue",
+   "detail": "JJT /23 (+62 aoyvbno aol lepzalujl nhal) · jlpspun /2 · jvuapubpaf · Hashz ylhkz wbi ilopuk h mshn"
+  },
+  {
+   "id": "d08-10",
+   "text": "khpsf kpmm jshzzpmplk",
+   "shape": "hexagon",
+   "color": "yellow",
+   "detail": "khpsf kpmm dpaopu jshzzpmplk kpmmlylujlz"
+  },
+  {
+   "id": "d08-11",
+   "text": "Thyj: ylapyl vsk nhalz?",
+   "shape": "diamond",
+   "color": "violet",
+   "detail": "ylapyl lkpapvu wyvtvapvu, wly-mhtpsf hktpzzpvu jlyltvuf, aypwsl JP?"
+  },
+  {
+   "id": "d08-12",
+   "text": "5 · Jba-vcly",
+   "color": "blue",
+   "detail": "Hashz + HWP vu wbi (Hashz khah shfly wvyalk) · lkpapvu ibpsk zavwz · Ylnnpl/Jspmm/Avkk/Upuly hyjopclk"
+  },
+  {
+   "id": "d08-13",
+   "text": "lewvyalk jba yl-thalyphspzlz",
+   "shape": "hexagon",
+   "color": "yellow",
+   "detail": "vul lewvyalk jba yl-thalyphspzlz pkluapjhssf"
+  },
+  {
+   "id": "d08-14",
+   "text": "6 · Jhwhipspaf",
+   "color": "blue",
+   "detail": "lhjo ilopuk paz vdu nhal: uhapcl hkhwalyz ylwshjl iypknlz · slhkz · Zwspur · alea shfly · tvkls shul"
+  }
+ ],
+ "edges": [
+  {
+   "from": "d08-0",
+   "to": "d08-1"
+  },
+  {
+   "from": "d08-1",
+   "to": "d08-2"
+  },
+  {
+   "from": "d08-2",
+   "to": "d08-3"
+  },
+  {
+   "from": "d08-3",
+   "to": "d08-4"
+  },
+  {
+   "from": "d08-4",
+   "to": "d08-5"
+  },
+  {
+   "from": "d08-5",
+   "to": "d08-6"
+  },
+  {
+   "from": "d08-6",
+   "to": "d08-7"
+  },
+  {
+   "from": "d08-7",
+   "to": "d08-8"
+  },
+  {
+   "from": "d08-8",
+   "to": "d08-9"
+  },
+  {
+   "from": "d08-9",
+   "to": "d08-10"
+  },
+  {
+   "from": "d08-10",
+   "to": "d08-11"
+  },
+  {
+   "from": "d08-11",
+   "to": "d08-12"
+  },
+  {
+   "from": "d08-12",
+   "to": "d08-13"
+  },
+  {
+   "from": "d08-13",
+   "to": "d08-14"
+  },
+  {
+   "from": "d08-4",
+   "to": "d08-3",
+   "dash": "dashed",
+   "label": "mhps → mpe svhkly"
+  },
+  {
+   "from": "d08-8",
+   "to": "d08-7",
+   "dash": "dashed",
+   "label": "svzz > 0 → wylkpjhal zahfz vu slnhjf_lkpapvu"
+  }
+ ]
+}

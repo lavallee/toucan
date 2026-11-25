@@ -6,6 +6,7 @@ import { LAYOUTS } from '../lib/layouts.mjs'
 import { flowSides } from '../lib/boxes.mjs'
 import { MIDS, chooseLabelAt, chooseRoute, runsThrough, straysThrough } from '../lib/route.mjs'
 import { getFormat } from './formats'
+import { scopeScene } from './scene'
 
 export function makeTidy(scene) {
 	const GRID = 10
@@ -471,4 +472,21 @@ export function makeTidy(scene) {
 		align: batched(align), distribute: batched(distribute), matchSizes: batched(matchSizes), fixOverlaps: batched(fixOverlaps), fitFrames: batched(fitFrames),
 		neatArrows: batched(neatArrows), rerouteBlocked: batched(rerouteBlocked), clearLabels: batched(clearLabels), colourByFrame: batched(colourByFrame), all: batched(all), layOut, mainDirection,
 	}
+}
+
+/**
+ * `makeTidy`, with every pass taking `{ within: frameKey }`: it then looks at that frame and what is in it, and moves nothing outside.
+ * Without `within` it is the whole canvas, as before.
+ */
+export function scopedTidy(scene, resolve) {
+	const whole = makeTidy(scene)
+	const scoped = new Map()
+	return Object.fromEntries(Object.entries(whole).map(([name, pass]) => [name, (...args) => {
+		const opts = args[0]
+		if (!opts || typeof opts !== 'object' || !opts.within) return pass(...args)
+		const { within, ...rest } = opts
+		const id = resolve(within)
+		if (!scoped.has(id)) scoped.set(id, makeTidy(scopeScene(scene, id)))
+		return scoped.get(id)[name](rest, ...args.slice(1))
+	}]))
 }

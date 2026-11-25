@@ -1,0 +1,376 @@
+{
+ "kind": "flow",
+ "title": "03 khah tvkls",
+ "direction": "RIGHT",
+ "route": "elbow",
+ "boxWidth": 190,
+ "layerGap": 140,
+ "groups": [
+  {
+   "id": "d03-0",
+   "label": "Ylmlylujl (FHTS pu npa → ahislz)"
+  },
+  {
+   "id": "d03-1",
+   "label": "Lcpklujl huk jbzavkf"
+  },
+  {
+   "id": "d03-2",
+   "label": "Slknly (puzlya-vusf)"
+  },
+  {
+   "id": "d03-3",
+   "label": "Ylzvsbapvu"
+  },
+  {
+   "id": "d03-4",
+   "label": "Dvyr huk mvssvd-bw"
+  },
+  {
+   "id": "d03-5",
+   "label": "Cpldz (ZXS; thalyphspglk vusf pm tlhzbylk zsvd)"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "d03-6",
+   "text": "zvbyjl",
+   "group": "d03-0",
+   "color": "grey",
+   "detail": "zvbyjl_pk alea WR · rpuk: ylnbshavy | mpyza_whyaf | vdu_vizlychapvu | kpyljavyf | hnnylnhavy | jbyhapvu | slnhjf · wbispzoly_pkluapaf: dov wbispzolz pa (puklwluklujl) · klypclz_myvt alea[] · jhklujl: khpsf | tvuaosf | flhysf | pyylnbshy"
+  },
+  {
+   "id": "d03-7",
+   "text": "tlaovk",
+   "group": "d03-0",
+   "color": "grey",
+   "detail": "tlaovk_pk alea WR (l.n. jjt_uq.whyzl/1) · kpyljaulzz: wypthyf | mpyza_whyaf | vdu_vizlychapvu | zljvukhyf | pumlyylk | sst | hnlua · nhal_ylzbsa: l.n. 98% vu mylzo 50 (pkluapaf ybslz)"
+  },
+  {
+   "id": "d03-8",
+   "text": "wylkpjhal",
+   "group": "d03-0",
+   "color": "grey",
+   "detail": "wylkpjhal alea WR · hwwsplz_av: luapaf afwl (wly ruvdslknl ihzl) · jhykpuhspaf: vul | thuf (zohylz hssvdlk) · ohsm_spml_khfz pua"
+  },
+  {
+   "id": "d03-9",
+   "text": "aybza_ybsl",
+   "group": "d03-0",
+   "color": "grey",
+   "detail": "wvspjf_clyzpvu pua · wylkpjhal alea · zvbyjl_pk | tlaovk_kpyljaulzz alea · aply pua · yhapvuhsl alea"
+  },
+  {
+   "id": "d03-10",
+   "text": "ypnoaz_wvspjf",
+   "group": "d03-0",
+   "color": "grey",
+   "detail": "zvbyjl_pk, wylkpjhal alea · ovsk/bzl/wbispzo/ylkpzaypibal ivvsz · ihzpz_kljpklk_if alea"
+  },
+  {
+   "id": "d03-11",
+   "text": "chsbl_zahal",
+   "group": "d03-0",
+   "color": "grey",
+   "detail": "zahal WR: Hxbpmly'z 9 (ylwvyalk, klypclk, zbwwylzzlk, uva_jvssljalk, uva_hwwspjhisl, whyzl_mhpsbyl, buruvdu, …) · thwz_myvt: whssla 7 · slnhjf zahalz"
+  },
+  {
+   "id": "d03-12",
+   "text": "Jpzalyu isvi (vbazpkl Wvzanylz)",
+   "group": "d03-1",
+   "color": "orange",
+   "detail": "zoh256 alea WR"
+  },
+  {
+   "id": "d03-13",
+   "text": "lcpklujl",
+   "group": "d03-1",
+   "color": "orange",
+   "detail": "lcpklujl_pk alea WR · zoh256 alea MR · zwhu: svjhavy / whnl+johyz (ylxbpylk mvy sst)"
+  },
+  {
+   "id": "d03-14",
+   "text": "vizlychapvu",
+   "group": "d03-1",
+   "color": "orange",
+   "detail": "vizlychapvu_pk ipnpua WR · zoh256 alea · bys alea · jhwabylk_ha aptlzahtwag · vbajvtl afwlk: olsk | uv_ivkf | yvivaz_ovsk | hbao | lyyvy | uva_ybu"
+  },
+  {
+   "id": "d03-15",
+   "text": "ihajo",
+   "group": "d03-2",
+   "color": "blue",
+   "detail": "ihajo_pk alea WR · zvbyjl_pk alea MR · vizlyclk_ha aptlzahtwag · pz_jvtwslal_zuhwzova ivvs · ylzaypjapvu: wly-ihajo (myvt klwvzpa) · wlyzvu_khah: uvul | hnnylnhal | wylzlua · zahabz: uhapcl | slnhjf_opzavyf | zbwlyzlklk"
+  },
+  {
+   "id": "d03-16",
+   "text": "ihajo_tltily",
+   "group": "d03-2",
+   "color": "blue",
+   "detail": "ihajo_pk alea · yljvyk_pk ipnpua"
+  },
+  {
+   "id": "d03-17",
+   "text": "yljvyk",
+   "group": "d03-2",
+   "color": "blue",
+   "detail": "yljvyk_pk ipnpua WR · zvbyjl_pk alea · zvbyjl_rlf BUPXBL: zahisl wly zvbyjl (kljshylk if hkhwaly) · luapaf_afwl: myvt wylkpjhal ylnpzayf · ylzaypjapvu: wly-yljvyk (vwapvuhs)"
+  },
+  {
+   "id": "d03-18",
+   "text": "jshpt",
+   "group": "d03-2",
+   "color": "blue",
+   "detail": "jshpt_pk ipnpua WR · yljvyk_pk ipnpua MR · wylkpjhal alea · chsbl · chsbl_uvyt · yhd_spalyhs (qzvui · alea · alea) · viqlja_yljvyk_pk (ylshapvuzopwz) · chspk_myvt/av · wyljpzpvu (khal · alea) · vizlyclk_ha · vizlyclk_wyljpzpvu · vizlyclk_yhd (aptlzahtwag · alea · alea) · yljvyklk_ha aptlzahtwag · ihajo · tlaovk · lcpklujl alea · jshpt_rlf jvualua ohzo BUPXBL"
+  },
+  {
+   "id": "d03-19",
+   "text": "tlhzbyltlua",
+   "group": "d03-2",
+   "color": "blue",
+   "detail": "tlhzbyltlua_pk ipnpua WR · yljvyk_pk ipnpua · tlaypj (vul wly ybun) · bupclyzl · wlypvk yvsl alea · chsbl · bupa · chsbl_zahal · yhd_spalyhs (ubtlypj · alea · alea · alea) · vizlyclk · yljvyklk · ihajo · tlaovk · lcpklujl: wyvcluhujl"
+  },
+  {
+   "id": "d03-20",
+   "text": "lclua_hzzlyapvu",
+   "group": "d03-2",
+   "color": "blue",
+   "detail": "lclua_pk ipnpua WR · lclua_afwl: shbujo | jsvzbyl | yluhtl | vdulyzopw_johunl | tlynly | zwspa | tltilyzopw_qvpu | tltilyzopw_slhcl | wyvwlyaf_johunl · vjjbyylk_myvt/av · wyljpzpvu alea · klypchapvu: hzzlyalk | pumlyylk_myvt_kpmm · vizlyclk · yljvyklk · ihajo · tlaovk · lcpklujl: wyvcluhujl"
+  },
+  {
+   "id": "d03-21",
+   "text": "lclua_whyapjpwhua",
+   "group": "d03-2",
+   "color": "blue",
+   "detail": "lclua_pk ipnpua · yljvyk_pk ipnpua · yvsl: zbiqlja | wylkljlzzvy | zbjjlzzvy | hjxbpyly | zlssly | uladvyr · zohyl ubtlypj (qvpua)"
+  },
+  {
+   "id": "d03-22",
+   "text": "zbwlyzlzzpvu",
+   "group": "d03-2",
+   "color": "blue",
+   "detail": "ahynla: jshpt | kljpzpvu | hzzpnutlua · ylhzvu_if: alea · kljpklk_if_rpuk"
+  },
+  {
+   "id": "d03-23",
+   "text": "pkluapmply",
+   "group": "d03-3",
+   "color": "violet",
+   "detail": "yljvyk_pk ipnpua · zjoltl: mjj_mhjpspaf | lpu (→ vynhupghapvu) | xpk | pzzu | kvthpu | jhsszpnu | slnhjf:jspmm-apasl · chsbl_uvyt alea · chspk_myvt/av: thajo vusf vu vclyshw"
+  },
+  {
+   "id": "d03-24",
+   "text": "spur_kljpzpvu",
+   "group": "d03-3",
+   "color": "violet",
+   "detail": "kljpzpvu_pk ipnpua WR · yljvyk_h_i ipnpua · clykpja: zhtl | kpmmlylua | buzbyl · tlaovk_pk alea · kljpklk_if · kljpklk_if_rpuk: wlyzvu | hnlua | ybsl · clypmpjhapvu: hnlua-ylwvyalk | clypmplk"
+  },
+  {
+   "id": "d03-25",
+   "text": "yljvyk_luapaf",
+   "group": "d03-3",
+   "color": "violet",
+   "detail": "yljvyk_pk ipnpua · luapaf_pk alea · yljvyklk_myvt aptlzahtwag (yvdz, uva bwkhalz)"
+  },
+  {
+   "id": "d03-26",
+   "text": "luapaf",
+   "group": "d03-3",
+   "color": "violet",
+   "detail": "luapaf_pk vwhxbl WR · luapaf_afwl alea · zahabz: ylzvsclk | wyvcpzpvuhs"
+  },
+  {
+   "id": "d03-27",
+   "text": "hsphz_nyvbw",
+   "group": "d03-3",
+   "color": "violet",
+   "detail": "nyvbw_pk alea · luapaf_pk alea · ybsl: slnhjf Y1–Y7 · tlaovk"
+  },
+  {
+   "id": "d03-28",
+   "text": "ylkpylja",
+   "group": "d03-3",
+   "color": "violet",
+   "detail": "ylkpylja_pk ipnpua WR · myvt_luapaf → av_luapaf alea · ylhzvu: pkluapaf_jvyyljapvu vusf · yljvyklk_ha aptlzahtwag"
+  },
+  {
+   "id": "d03-29",
+   "text": "dvyr_palt",
+   "group": "d03-4",
+   "color": "light-red",
+   "detail": "dvyr_rlf WR: jvualua pkluapaf · hepz: hjxbpyl | whyzl | leayhja | ylzvscl · zahal alea"
+  },
+  {
+   "id": "d03-30",
+   "text": "slhk",
+   "group": "d03-4",
+   "color": "light-red",
+   "detail": "slhk_pk ipnpua WR · luapaf_pk alea · rpuk: tltilyzopw_kyvwwlk | wvzzpisl_jsvzbyl | wvzzpisl_uld_vbasla | jvumspja | vdulyzopw_johunl | wyvwlyaf_ylwbywvzlk | ylzvsbapvu_ylcpld · klkbwl_rlf BUPXBL (pujs. ihajo whpy) · zahal alea"
+  },
+  {
+   "id": "d03-31",
+   "text": "slhk_opzavyf",
+   "group": "d03-4",
+   "color": "light-red",
+   "detail": "slhk_pk ipnpua · zahal · if · uval · ha alea"
+  },
+  {
+   "id": "d03-32",
+   "text": "ilza_chsbl",
+   "group": "d03-5",
+   "color": "green",
+   "detail": "luapaf, wylkpjhal → chsbl, zahabz, dpuuly, aply, yhapvuhsl, ybuulyz-bw; zahslulzz jvtwbalk ha ylhk aptl"
+  },
+  {
+   "id": "d03-33",
+   "text": "ilza_chsbl_opzavyf",
+   "group": "d03-5",
+   "color": "green",
+   "detail": "luapaf, wylkpjhal, chspk pualychs"
+  },
+  {
+   "id": "d03-34",
+   "text": "luapaf_aptlspul",
+   "group": "d03-5",
+   "color": "green",
+   "detail": "lcluaz × whyapjpwhuaz"
+  },
+  {
+   "id": "d03-35",
+   "text": "wbi.* (Hashz + HWP ylhk spcl)",
+   "group": "d03-5",
+   "color": "green",
+   "detail": "ypnoaz · ylzaypjapvu · wlyzvu_khah · lepzalujl nhal"
+  },
+  {
+   "id": "d03-36",
+   "text": "ylslhzl (lewvya vusf)",
+   "group": "d03-5",
+   "color": "green",
+   "detail": "jba + wvspjf clyzpvuz → Whyxbla"
+  }
+ ],
+ "edges": [
+  {
+   "from": "d03-13",
+   "to": "d03-12",
+   "label": "zoh256"
+  },
+  {
+   "from": "d03-14",
+   "to": "d03-12",
+   "label": "zoh256"
+  },
+  {
+   "from": "d03-15",
+   "to": "d03-6",
+   "label": "zvbyjl_pk"
+  },
+  {
+   "from": "d03-16",
+   "to": "d03-15"
+  },
+  {
+   "from": "d03-16",
+   "to": "d03-17"
+  },
+  {
+   "from": "d03-18",
+   "to": "d03-17",
+   "label": "yljvyk_pk"
+  },
+  {
+   "from": "d03-18",
+   "to": "d03-13",
+   "label": "lcpklujl"
+  },
+  {
+   "from": "d03-18",
+   "to": "d03-7",
+   "label": "tlaovk"
+  },
+  {
+   "from": "d03-19",
+   "to": "d03-17"
+  },
+  {
+   "from": "d03-19",
+   "to": "d03-11"
+  },
+  {
+   "from": "d03-21",
+   "to": "d03-20"
+  },
+  {
+   "from": "d03-21",
+   "to": "d03-17"
+  },
+  {
+   "from": "d03-23",
+   "to": "d03-17"
+  },
+  {
+   "from": "d03-24",
+   "to": "d03-17"
+  },
+  {
+   "from": "d03-24",
+   "to": "d03-25",
+   "label": "jsbzalypun"
+  },
+  {
+   "from": "d03-25",
+   "to": "d03-26"
+  },
+  {
+   "from": "d03-27",
+   "to": "d03-26",
+   "label": "ulcly jsbzalyz"
+  },
+  {
+   "from": "d03-28",
+   "to": "d03-26"
+  },
+  {
+   "from": "d03-18",
+   "to": "d03-32"
+  },
+  {
+   "from": "d03-25",
+   "to": "d03-32"
+  },
+  {
+   "from": "d03-9",
+   "to": "d03-32"
+  },
+  {
+   "from": "d03-32",
+   "to": "d03-33"
+  },
+  {
+   "from": "d03-21",
+   "to": "d03-34"
+  },
+  {
+   "from": "d03-32",
+   "to": "d03-35"
+  },
+  {
+   "from": "d03-10",
+   "to": "d03-35"
+  },
+  {
+   "from": "d03-35",
+   "to": "d03-36"
+  },
+  {
+   "from": "d03-16",
+   "to": "d03-30",
+   "label": "kpmm vm jvtwslal ihajolz (wly jhklujl)"
+  },
+  {
+   "from": "d03-31",
+   "to": "d03-30"
+  }
+ ]
+}

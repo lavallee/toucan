@@ -239,3 +239,134 @@ console.log(`ok  layouts: ${TEMPLATES.length} templates`)
 	}
 	console.log(`ok  layouts: ${STARTERS.length} starters, parts kept apart`)
 }
+
+// ---- the redesign test: ten architecture diagrams laid out by Toucan and by D2, and what the comparison found ------------------
+// scripts/fixtures/redesign/ holds each diagram's structure and word lengths, with the words scrambled.
+{
+	const { readFileSync } = await import('node:fs')
+	const { routePath, crossingsBetween } = await import('../lib/route.mjs')
+	const { layOut, placeBeside, placeDrawing, frameDrawing, authoredKeys } = await import('../lib/layouts.mjs')
+	const { sizedNode, textHeight: height, wordWidth } = await import('../lib/boxes.mjs')
+	const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/redesign/${name}.json`, import.meta.url), 'utf8'))
+	const boxesOf = (tg) => new Map([...tg.nodes, ...tg.groups].map((n) => [n.key, n.box]))
+	const crossings = (tg) => {
+		const box = boxesOf(tg), nodes = new Map(tg.nodes.map((n) => [n.key, n]))
+		const paths = tg.edges.map((e) => ({ e, p: routePath({ ...box.get(e.from), geo: nodes.get(e.from)?.style?.geo }, { ...box.get(e.to), geo: nodes.get(e.to)?.style?.geo }, { kind: e.style.route === 'elbow' ? 'elbow' : 'arc', anchors: e.style.anchors, elbowMid: e.style.elbowMid }).points }))
+		let n = 0
+		for (let i = 0; i < paths.length; i++) for (let j = i + 1; j < paths.length; j++) if (![paths[i].e.from, paths[i].e.to].some((k) => k === paths[j].e.from || k === paths[j].e.to)) n += crossingsBetween(paths[i].p, paths[j].p)
+		return n
+	}
+
+	// 1. A cycle between groups breaks on the arrow written last, so groups stay in the order they were written.
+	const d01 = await layOut(fixture('d01'))
+	const order = d01.groups.map((g) => g.key)
+	const xs = order.map((k) => boxesOf(d01).get(k).x)
+	assert.deepEqual(xs, [...xs].sort((a, b) => a - b), 'd01: groups run left to right in the order they were written, though the last one feeds the second')
+	assert.ok(crossings(d01) <= 2, `d01: at most 2 crossings, got ${crossings(d01)}`)
+
+	// 2. Six groups with no arrows between them come out as rows of a grid, in the order written, not one long row.
+	const one = fixture('d04-one')
+	const six = await layOut(one)
+	const group = (k) => six.groups.find((g) => g.key === k).box
+	const keys = one.groups.map((g) => g.id)
+	const rows = [...new Set(keys.map((k) => group(k).y))].sort((a, b) => a - b)
+	assert.equal(rows.length, 2, 'd04-one: two rows')
+	keys.forEach((k, i) => assert.equal(group(k).y, rows[Math.floor(i / 3)], `d04-one: ${k} is in row ${Math.floor(i / 3) + 1}`))
+	for (const row of [keys.slice(0, 3), keys.slice(3)]) assert.deepEqual(row.map((k) => group(k).x), [...row.map((k) => group(k).x)].sort((a, b) => a - b), 'd04-one: left to right in the order written')
+	const width = Math.max(...six.groups.map((g) => g.box.x + g.box.w))
+	assert.ok(width < 3600, `d04-one is ${width} wide, not the 6890 of one row`)
+	assert.equal(new Set(six.groups.map((g) => g.box.x)).size, 3, 'd04-one: three columns')
+	for (const g of six.groups) for (const o of six.groups) if (g !== o) assert.ok(!overlaps(g.box, o.box), `d04-one: ${g.key} overlaps ${o.key}`)
+	// ...and a flow whose boxes are joined stays one picture; `columns` chooses the grid.
+	const chain = await layOut({ kind: 'flow', direction: 'RIGHT', nodes: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }, { id: 'c', text: 'C' }], edges: [{ from: 'a', to: 'b' }, { from: 'b', to: 'c' }] })
+	assert.equal(new Set(chain.nodes.map((n) => n.box.y)).size, 1, 'a chain is one row')
+	const loose = (columns) => layOut({ kind: 'flow', columns, nodes: ['a', 'b', 'c', 'd'].map((id) => ({ id, text: id.toUpperCase() })), edges: [] })
+	assert.deepEqual([...new Set((await loose(2)).nodes.map((n) => n.box.x))].length, 2, 'columns: 2 gives two columns')
+	assert.equal(new Set((await loose(4)).nodes.map((n) => n.box.y)).size, 1, 'columns: 4 gives one row')
+	// A frame is as wide as its name: no title is cut off.
+	for (const g of six.groups) assert.ok(g.box.w >= g.label.length * 8 + 32, `${g.key}: its frame is wide enough for its name`)
+
+	// 3. Map panels have room for their own arrows, and a dashed link isn't "planned".
+	const d02 = fixture('d02')
+	const links = d02.links.filter((l) => l.color === 'blue')
+	assert.ok(links.length >= 3, 'd02 has configuration links')
+	d02.links.forEach((l) => l.color === 'blue' && (l.dash = 'dashed'))
+	const map = await layOut(d02)
+	for (const e of map.edges.filter((e) => e.style.dash === 'dashed')) assert.ok(links.some((l) => `edge:${l.from}->${l.to}` === e.key), `${e.key} is dashed because it was asked to be`)
+	assert.equal(map.edges.filter((e) => e.style.dash === 'dashed').length, links.length, 'every dashed link is dashed, not dotted')
+	assert.ok(!map.nodes.some((n) => n.text === 'Dotted arrow: still to build') || d02.links.some((l) => l.kind === 'planned' || l.dash === 'dotted'), 'a dashed link does not put "planned" in the key')
+	assert.equal(map.edges.filter((e) => e.style.dash === 'dotted').length, d02.links.filter((l) => l.kind === 'planned').length, 'planned links stay dotted')
+	{
+		const box = boxesOf(map), tileOf = new Map(map.nodes.map((n) => [n.key, n.group]))
+		for (const e of map.edges) {
+			const a = box.get(e.from), b = box.get(e.to)
+			if (!tileOf.get(e.from) || tileOf.get(e.from) !== tileOf.get(e.to) || !a || !b) continue
+			// Arrows between tiles of one panel run their gap: long enough to read, and long enough for a label beside them.
+			const run = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w), b.y - (a.y + a.h), a.y - (b.y + b.h))
+			assert.ok(run >= 40, `${e.key}: inside its panel, an arrow has room (${run}px)`)
+			if (e.label && (b.x >= a.x + a.w || a.x >= b.x + b.w)) assert.ok(run >= e.label.length * 8.5, `${e.key}: its label (${e.label.length} characters) fits along it (${run}px)`)
+		}
+	}
+
+	// 4. draw: a prefix, only made-up keys renamed on a clash, an update that stays put, and a titled frame.
+	const grid = async () => layOut(fixture('d05'))
+	const first = await placeDrawing(await grid(), { spec: fixture('d05'), prefix: 'a-' })
+	const taken = [...first.tg.nodes, ...first.tg.groups].map((n) => ({ key: n.key, box: n.box }))
+	const second = placeDrawing(await grid(), { spec: fixture('d05'), existing: taken, prefix: 'b-' })
+	const all = [...second.tg.nodes, ...second.tg.groups].map((n) => n.key)
+	assert.ok(all.every((k) => k.startsWith('b-')), 'prefix: every key, generated ones included')
+	assert.ok(![...all, ...taken.map((t) => t.key)].some((k) => k.startsWith('d2-')), 'two prefixed grids never fall back to d2-')
+	assert.ok(first.tg.nodes.every((n) => n.key.startsWith('a-')) && first.tg.nodes.some((n) => n.key === 'a-col-0'), 'prefix a-')
+	const mapSpec = (id) => ({ kind: 'map', heading: 'H', columns: [[{ id, title: 'P', tiles: [{ id: `${id}-t`, text: 'T' }] }]], links: [{ from: `${id}-t`, to: id, kind: 'planned' }] })
+	const m1 = await layOut(mapSpec('one')), m2 = await layOut(mapSpec('two'))
+	const mine = [...m1.nodes, ...m1.groups].map((n) => ({ key: n.key, box: n.box }))
+	const placed = placeDrawing(m2, { spec: mapSpec('two'), existing: mine })
+	const keys2 = [...m2.nodes, ...m2.groups].map((n) => n.key)
+	assert.ok(keys2.includes('two') && keys2.includes('two-t'), 'a clash leaves the keys the author gave')
+	assert.ok(keys2.includes('d2-map-title') && !keys2.includes('map-title'), 'a clash renames the generated keys: map-title')
+	assert.equal(placed.prefix, 'd2-')
+	assert.ok(m2.edges.every((e) => keys2.includes(e.from) && keys2.includes(e.to)), 'and the arrows follow')
+	assert.ok(authoredKeys(mapSpec('two')).has('two-t') && !authoredKeys(mapSpec('two')).has('map-title'))
+	// A key the author wrote clashing too means the whole drawing moves aside, as it always did.
+	const again = placeDrawing(await layOut(mapSpec('one')), { spec: mapSpec('one'), existing: mine })
+	assert.ok([...again.tg.nodes, ...again.tg.groups].every((n) => n.key.startsWith('d2-')), 'the same section drawn twice without --update does not overwrite it')
+	// --update: where the section is now, not the origin.
+	const moved = mine.map((n) => ({ ...n, box: { ...n.box, x: n.box.x + 700, y: n.box.y + 300 } }))
+	const topLeft = (items) => ({ x: Math.min(...items.map((n) => n.box.x)), y: Math.min(...items.map((n) => n.box.y)) })
+	const redrawn = placeDrawing(await layOut(mapSpec('one')), { spec: mapSpec('one'), existing: moved, update: true })
+	assert.deepEqual(topLeft([...redrawn.tg.nodes, ...redrawn.tg.groups]), topLeft(moved), 'update: the redrawn section stays where it was moved to')
+	// --frame / --title.
+	const framed = placeDrawing(await layOut(mapSpec('one')), { spec: mapSpec('one'), frame: { key: 'sec-1', title: 'One' } })
+	const frame = framed.tg.groups.find((g) => g.key === 'sec-1')
+	assert.equal(frame.label, 'One')
+	for (const n of [...framed.tg.nodes.filter((n) => !n.group), ...framed.tg.groups.filter((g) => g.key !== 'sec-1' && !g.parent)]) assert.fail(`${n.key} is outside the frame`)
+	for (const n of [...framed.tg.nodes, ...framed.tg.groups].filter((n) => n.key !== 'sec-1')) assert.ok(n.box.x >= frame.box.x && n.box.y >= frame.box.y && n.box.x + n.box.w <= frame.box.x + frame.box.w && n.box.y + n.box.h <= frame.box.y + frame.box.h, `${n.key} is inside the frame`)
+	assert.throws(() => placeDrawing(framed.tg, { existing: [{ key: 'sec-1', box: frame.box }], frame: { key: 'sec-1' } }), /already on the canvas/)
+	const inFrame = placeDrawing(await layOut(mapSpec('one')), { spec: mapSpec('one'), existing: [{ key: 'sec-1', box: { x: 1000, y: 2000, w: 900, h: 900 } }], update: true, frame: { key: 'sec-1', title: 'One' } })
+	assert.deepEqual(topLeft([...inFrame.tg.nodes, ...inFrame.tg.groups].filter((n) => n.key !== 'sec-1' && !n.group)).x >= 1000, true, 'update into a frame lands in it')
+
+	// 5. A box is as wide as its longest word, so no word breaks mid-way; a sequence's columns and rows fit what is in them.
+	for (const [shape, room] of [['oval', 1.2], ['rectangle', 1], ['diamond', 1.75], ['hexagon', 1.25]]) {
+		const text = 'typed_no_body'
+		const size = sizedNode({ id: 'x', text, shape }, 150)
+		assert.ok(size.w / Math.sqrt(room) >= wordWidth(text) - 10, `${shape}: ${size.w} wide holds "${text}"`)
+		assert.equal(height(text, Math.round(size.w / Math.sqrt(room))), height('x', 200), `${shape}: "${text}" is one line at the width chosen`)
+	}
+	assert.equal(sizedNode({ id: 'x', text: 'typed_no_body', w: 120 }, 150).w, 120, 'a width the author gave is kept')
+	const fl = await layOut({ kind: 'flow', direction: 'DOWN', boxWidth: 150, nodes: [{ id: 'a', text: 'typed_no_body', shape: 'oval' }, { id: 'b', text: 'ok', shape: 'oval' }], edges: [{ from: 'a', to: 'b' }] })
+	assert.ok(fl.nodes.find((n) => n.key === 'a').box.h === fl.nodes.find((n) => n.key === 'b').box.h && fl.nodes.find((n) => n.key === 'a').box.w >= 190, 'a flow of ovals: the long state name has room')
+	const d09 = fixture('d09'), seq = await layOut(d09)
+	const part = d09.participants.map((p) => seq.nodes.find((n) => n.key === p.id))
+	part.forEach((n, i) => assert.ok(n.box.w >= wordWidth(d09.participants[i].text) - 1, `sequence: ${n.key} holds its longest word`))
+	for (let i = 1; i < part.length; i++) assert.ok(part[i].box.x >= part[i - 1].box.x + part[i - 1].box.w + 10, 'sequence: participants do not touch')
+	const dots = (r) => seq.nodes.find((n) => n.key === `m${r}-a`).box
+	d09.messages.forEach((m, r) => {
+		if (m.from !== m.to) return
+		const note = seq.nodes.find((n) => n.key === `m${r}-note`).box
+		assert.ok(note.h >= textHeight(m.text, 220) - 20, `sequence: the note on row ${r} is as tall as its text`)
+		d09.messages.forEach((o, q) => q !== r && assert.ok(dots(q).y < note.y || dots(q).y > note.y + note.h, `sequence: the note on row ${r} sits on message ${q}'s arrow`))
+	})
+	const ys = d09.messages.map((_, r) => dots(r).y)
+	assert.deepEqual(ys, [...ys].sort((a, b) => a - b), 'sequence: messages stay in order down the page')
+	console.log('ok  layouts: the redesign test (cycles keep authored order, pieces pack in a grid, map panels have room, draw keeps keys and places, boxes hold their words)')
+}
