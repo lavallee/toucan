@@ -162,6 +162,23 @@ try {
 	const { tools, ttlMs } = (await ask('tools/list', {})).result
 	assert.ok(ttlMs > 0)
 	for (const t of ['toucan_guide', 'toucan_project_canvas', 'toucan_open', 'toucan_summary', 'toucan_exec', 'toucan_draw', 'toucan_import', 'toucan_screenshot', 'toucan_cli']) assert.ok(tools.some((x) => x.name === t), t)
+	// MCP Apps: toucan_open and toucan_draw carry the canvas view; its own picture tool is offered only to a client that shows apps.
+	const VIEW = 'ui://toucan/canvas.html', APPS = { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html;profile=mcp-app'] } } }
+	for (const t of ['toucan_open', 'toucan_draw']) assert.equal(tools.find((x) => x.name === t)._meta.ui.resourceUri, VIEW, t)
+	assert.ok(!tools.some((x) => x.name === 'toucan_canvas_picture'), 'a client without apps is not offered the view’s tool')
+	assert.ok(legacy.result.capabilities.extensions['io.modelcontextprotocol/ui'] && legacy.result.capabilities.resources, 'the server says it has apps')
+	const modern = (await ask('tools/list', { _meta: { 'io.modelcontextprotocol/clientCapabilities': APPS } })).result.tools
+	assert.deepEqual(modern.find((x) => x.name === 'toucan_canvas_picture')?._meta.ui.visibility, ['app'], 'a client that says it shows apps, per request, gets it, for the view only')
+	await ask('initialize', { protocolVersion: '2025-11-25', capabilities: APPS })
+	assert.ok((await ask('tools/list', {})).result.tools.some((x) => x.name === 'toucan_canvas_picture'), 'and one that said so when it started')
+	await ask('initialize', { protocolVersion: '2025-11-25', capabilities: {} })
+	assert.deepEqual((await ask('resources/list')).result.resources.map((r) => r.uri), [VIEW])
+	const viewRead = (await ask('resources/read', { uri: VIEW })).result.contents[0]
+	assert.equal(viewRead.mimeType, 'text/html;profile=mcp-app')
+	assert.match(viewRead.text, /^<!doctype html>/i)
+	assert.ok(!/https?:\/\/(?!www\.w3\.org)/.test(viewRead.text.replace(/<!--[\s\S]*?-->/g, '')), 'the view reaches for nothing on the network')
+	assert.equal((await ask('resources/read', { uri: 'ui://toucan/other' })).error.code, -32002)
+	assert.equal((await ask('tools/call', { name: 'toucan_canvas_picture', arguments: { canvas: '--x/evil' } })).result?.isError, true, 'the picture tool checks its canvas name')
 	assert.equal((await ask('nope')).error.code, -32601)
 	assert.equal((await ask('tools/call', { name: 'toucan_guide', arguments: null })).result?.isError, undefined, 'null arguments are no arguments')
 	assert.equal(await handle({ jsonrpc: '2.0', method: 'notifications/initialized' }, () => assert.fail('a notification gets no reply')), undefined)

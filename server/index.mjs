@@ -114,7 +114,8 @@ function exec(canvas, code, timeoutMs, label, who = {}) {
 	return run(canvas, code, timeoutMs, label, agent, who.internal).finally(end)
 }
 
-function run(canvas, code, timeoutMs = 30000, label, agent, internal = false) {
+// `read`: code that only looks (a picture for a view elsewhere): the tab runs it outside its edit tracking, so it adds no undo step.
+function run(canvas, code, timeoutMs = 30000, label, agent, internal = false, read = false) {
 	// So the person's edits and the agent's stay separate steps, note the unsaved state before a run; it's
 	// saved only if the run turns out to change something, so reads (summary, notes) cost nothing.
 	// (A previous run still reaching the server's copy waits its turn: quick runs share one version.)
@@ -138,7 +139,7 @@ function run(canvas, code, timeoutMs = 30000, label, agent, internal = false) {
 				p.timer = setTimeout(() => (pending.delete(id), p.reject(new Error('exec timed out'))), timeoutMs)
 			}
 			pending.set(id, p)
-			ws.send(JSON.stringify({ type: 'exec', id, code, agent }))
+			ws.send(JSON.stringify({ type: 'exec', id, code, agent, ...(read && { read: true }) }))
 		}
 		const tryTab = (i) => {
 			if (i < candidates.length) return send(candidates[i], () => tryTab(i + 1))
@@ -646,6 +647,21 @@ const server = createServer(async (req, res) => {
 		}
 
 		if (sub === 'info' && req.method === 'GET') return json(res, 200, canvasNames().includes(canvas) ? describe(canvas, readIndex()) : { name: canvas, engine: 'tldraw', new: true })
+		// The canvas as a picture, for a view of it somewhere else (the MCP App in lib/mcp.mjs): drawn only when it changed
+		// since `since`, and drawn quietly, as nobody's edit, so a view that keeps looking doesn't show as an agent at work.
+		if (sub === 'picture' && req.method === 'GET') {
+			if (!canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` })
+			const info = describe(canvas, readIndex())
+			const head = { canvas, title: info.title, engine: info.engine, shapes: info.shapes, updated: info.updated, url: publicUrl(canvas) }
+			if (String(info.updated) === url.searchParams.get('since')) return json(res, 200, { ...head, same: true })
+			// The tab draws it, and is ahead of the count here for a moment after an edit, so only it can say the canvas is empty.
+			try {
+				const r = await run(canvas, 'return toucan.svg({ padding: 24 })', 20000, undefined, 'toucan', true, true)
+				return json(res, 200, { ...head, svg: r?.svg ?? null, width: r?.width ?? 0, height: r?.height ?? 0 })
+			} catch (e) {
+				return json(res, 200, { ...head, svg: null, ...(info.shapes && { error: String(e.message ?? e) }) })
+			}
+		}
 		if (sub === 'graph' && req.method === 'GET') {
 			const format = url.searchParams.get('format') ?? 'tg'
 			if (!FORMATS[format]?.export) return json(res, 400, { error: `format: one of ${Object.keys(FORMATS).join(', ')}` })
