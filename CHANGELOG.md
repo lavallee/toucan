@@ -5,7 +5,10 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
-## [0.22.0] — 2026-11-26
+## [0.22.1] — 2026-11-26
+
+0.22.0 was tagged but never released: its release job stopped at `npm ci`, because the lockfile had been rebuilt by a newer npm
+than the workflows use. 0.22.1 is the same release with the lockfile fixed.
 
 ### Added
 
