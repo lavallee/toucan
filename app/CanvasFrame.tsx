@@ -22,6 +22,7 @@ import { PlanMenu } from './PlanMenu'
 import { PlanNotice } from './PlanNotice'
 import { ExportMenu } from './ExportMenu'
 import { ReviewButton } from './Review'
+import { UpdateNotice } from './UpdateNotice'
 import { close as closeReferences, openReference, toggle as toggleReferences, useReferences } from './references-store'
 
 document.title = `${canvasName} · toucan`
@@ -81,7 +82,7 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 	}, [])
 	return (
 		<div className="flex h-full flex-col">
-			<AppBar product="toucan" productHref="/" productTitle="All canvases" title={title} titleHint={canvasName} live={live} tag={engine !== 'tldraw' ? engine : null} status={!headless && <AwayNotice />}>
+			<AppBar product="toucan" productHref="/" productTitle="All canvases" title={title} titleHint={canvasName} live={live} tag={engine !== 'tldraw' ? engine : null} status={<>{!headless && <AwayNotice />}<UpdateNotice /></>}>
 				<Popover>
 					<PopoverTrigger asChild>
 						<AppBarButton icon={LayoutTemplateIcon} label={format?.label ?? 'Format'} aria-label={`Format: ${format?.label ?? 'none'}`} title="Format: how this canvas behaves" />
