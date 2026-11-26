@@ -70,6 +70,21 @@ After installing another agent, run `toucan agents install`. Add `--mcp` for MCP
 { "mcpServers": { "toucan": { "command": "toucan", "args": ["mcp"] } } }
 ```
 
+### The canvas in the chat
+
+`toucan mcp` is also an [MCP App](https://modelcontextprotocol.io/docs/extensions/apps). In a host that shows them, such
+as Claude, the canvas appears in the conversation when an agent calls `toucan_open` or `toucan_draw`. The view is live. When
+you edit the canvas in toucan, the picture in the chat updates within a couple of seconds, and the agent hears what you
+changed with its next tool call. Drag to pan and scroll to zoom. **Edit in toucan** opens the canvas, signed in, in your
+browser.
+
+::: html
+<figure><video data-demo loop muted playsinline preload="none" width="1600" height="900" poster="assets/demos/mcp-app.poster.png" src="assets/demos/mcp-app.mp4" aria-label="An agent draws a release pipeline with toucan_draw and the canvas appears in the chat; a person renames a step in toucan, the view in the chat updates, and the agent builds on the rename"></video><noscript><a href="assets/demos/mcp-app.mp4">Play demo</a></noscript><figcaption>Every tool call in this demo is real <code>toucan mcp</code>, in a host built on the official MCP Apps SDK. The agent's lines are scripted. <code>npm run test:mcp-app</code> runs it.</figcaption></figure>
+:::
+
+The view needs no network access. It gets pictures of the canvas from `toucan mcp` through the host, so it works with the
+stdio server and never sees the server's token. In clients without MCP Apps, the same tools answer in text.
+
 An agent with no connection can read the guide: `toucan guide`. It's also the [agent guide](agents.html) here.
 
 ## Work with your own agent

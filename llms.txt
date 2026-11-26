@@ -10,7 +10,7 @@ Requires Node 22+. Ask the person before installing. Do not `npm install toucan`
 
     curl -fsSL https://github.com/lavallee/toucan/releases/latest/download/install.sh | sh
 
-In a project, use `toucan init --open`. Read `toucan guide index` for the topic map. Agents without a shell can use the MCP server (`toucan mcp`) and call `toucan_guide` with topic `index`.
+In a project, use `toucan init --open`. Read `toucan guide index` for the topic map. Agents without a shell can use the MCP server (`toucan mcp`) and call `toucan_guide` with topic `index`. In a host that shows MCP Apps, `toucan_open` and `toucan_draw` also put the live canvas in the conversation.
 
 ## Docs
 

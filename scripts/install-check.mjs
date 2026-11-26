@@ -119,7 +119,9 @@ try {
 	assert.equal((await text('toucan_guide', { topic: 'index' })).text, guideIndex)
 	assert.equal(JSON.parse((await text('toucan_project_canvas', {})).text).canvas, 'my-app', "the harness's directory finds the project's canvas")
 	assert.match((await text('toucan_templates', {})).text, /flowchart/)
-	ok('mcp over stdio: discover, initialize, tools')
+	// The canvas view for MCP Apps hosts ships in the package.
+	assert.match((await ask('resources/read', { uri: 'ui://toucan/canvas.html' })).result.contents[0].text, /toucan_canvas_picture/)
+	ok('mcp over stdio: discover, initialize, tools, the app view')
 
 	// With a browser here, the whole path: an agent builds on a canvas nobody has open, using whatever Chromium the machine has.
 	const doc = await toucan(['doctor']).catch((e) => e.stdout)
@@ -128,6 +130,8 @@ try {
 		assert.match(id, /shape:/)
 		assert.match((await text('toucan_summary', {})).text, /Hello/)
 		assert.match((await text('toucan_import', { content: 'graph LR\n  hello --> added[Added]\n' })).text, /created/)
+		const pic = (await ask('tools/call', { name: 'toucan_canvas_picture', arguments: {} })).result
+		assert.match(pic.structuredContent?.svg ?? pic.content[0].text, /<svg[\s\S]*Added/, 'the app view gets a picture')
 		const shot = await text('toucan_screenshot', {})
 		assert.equal(shot.type, 'image')
 		assert.ok(shot.data.length > 1000)

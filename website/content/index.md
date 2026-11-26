@@ -19,7 +19,7 @@ image_alt: An illustrated broadcast rundown for Sounds from the river.
   <div class="opening-copy">
     <p>Give your agent a job. Watch it draw in your browser. Pick up any piece and keep working together.</p>
     <a class="install" href="quickstart.html">Install Toucan <span aria-hidden="true">↗</span></a>
-    <p class="platform"><a data-release href="https://github.com/lavallee/toucan/releases/tag/v0.21.0">Toucan v0.21.0</a> · Runs on your machine</p>
+    <p class="platform"><a data-release href="https://github.com/lavallee/toucan/releases/tag/v0.22.0">Toucan v0.22.0</a> · Runs on your machine</p>
   </div>
   <figure class="opening-film" id="rundown">
     <video data-demo loop muted playsinline preload="none" width="1280" height="800" poster="assets/use-cases/river-rundown.png" aria-label="The ferry interview gets a shorter cut and the episode fits its broadcast slot" src="assets/use-cases/river-rundown.mp4"></video><noscript><a href="assets/use-cases/river-rundown.mp4">Play demo</a></noscript>
@@ -27,7 +27,7 @@ image_alt: An illustrated broadcast rundown for Sounds from the river.
   </figure>
   <div class="walkthrough">
     <nav class="story-nav" aria-label="Demo chapters">
-      <a href="#rundown">Rundown</a><a href="#edit">Co-edit</a><a href="#agents">Parallel agents</a><a href="#review">Review</a><a href="#plan">Move a task</a><a href="#history">History</a><a href="#routines">Routines</a><a href="#illustrate">Illustrate</a><a href="#episode">Forging Ahead</a>
+      <a href="#rundown">Rundown</a><a href="#edit">Co-edit</a><a href="#agents">Parallel agents</a><a href="#chat">In the chat</a><a href="#review">Review</a><a href="#plan">Move a task</a><a href="#history">History</a><a href="#routines">Routines</a><a href="#illustrate">Illustrate</a><a href="#episode">Forging Ahead</a>
     </nav>
     <section id="edit" class="spread edit">
       <div class="copy">
@@ -44,6 +44,14 @@ image_alt: An illustrated broadcast rundown for Sounds from the river.
         <a href="tour.html#start-parallel-comment-threads">Start a thread on a shape or region ↗</a>
       </div>
       <figure><video data-demo loop muted playsinline preload="none" width="1600" height="900" poster="assets/demos/threads.poster.png" src="assets/demos/threads.mp4" aria-label="Two questions enter separate threads on a booking system canvas and two agents reply"></video><noscript><a href="assets/demos/threads.mp4">Play demo</a></noscript><figcaption>The wait for the replies plays at 6× speed.</figcaption></figure>
+    </section>
+    <section id="chat" class="spread chat">
+      <div class="copy">
+        <h2>See the canvas in your chat.</h2>
+        <p>An agent draws a release pipeline over MCP, and the canvas appears in the conversation. Rename a step in toucan, and the picture in the chat updates. The agent's next call hears what you did, and it builds on your wording.</p>
+        <a href="quickstart.html#the-canvas-in-the-chat">Put the canvas in your chat ↗</a>
+      </div>
+      <figure><video data-demo loop muted playsinline preload="none" width="1600" height="900" poster="assets/demos/mcp-app.poster.png" src="assets/demos/mcp-app.mp4" aria-label="An agent draws a release pipeline and the canvas appears in the chat; a person renames a step in toucan and the chat's view keeps up"></video><noscript><a href="assets/demos/mcp-app.mp4">Play demo</a></noscript><figcaption>Real <code>toucan mcp</code> calls in a host built on the MCP Apps SDK. The agent's lines are scripted.</figcaption></figure>
     </section>
     <section id="review" class="spread review">
       <div class="copy">
