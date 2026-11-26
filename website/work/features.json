@@ -647,7 +647,7 @@
    "name": "Canvas in the chat",
    "summary": "In an MCP Apps host such as Claude, toucan_open and toucan_draw show the live canvas in the conversation. It keeps up with every edit and opens in toucan with one click.",
    "cli": "mcp",
-   "since": "0.22.0",
+   "since": "0.22.1",
    "docs": "quickstart.html#the-canvas-in-the-chat",
    "engines": "both",
    "who": "agent"
