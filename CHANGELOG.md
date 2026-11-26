@@ -5,6 +5,8 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-11-26
+
 ### Added
 
 - **Tabs know when toucan was upgraded.** A tab open across an upgrade shows **toucan was updated · Reload**, and an agent's run that fails in it says the tab is running an older page. `toucan reload` reloads a canvas's open tabs, and `toucan reload --all` every open tab, so they run the new version; `toucan update` says so when it restarts the server.

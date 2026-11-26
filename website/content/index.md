@@ -19,7 +19,7 @@ image_alt: An illustrated broadcast rundown for Sounds from the river.
   <div class="opening-copy">
     <p>Give your agent a job. Watch it draw in your browser. Pick up any piece and keep working together.</p>
     <a class="install" href="quickstart.html">Install Toucan <span aria-hidden="true">↗</span></a>
-    <p class="platform"><a data-release href="https://github.com/lavallee/toucan/releases/tag/v0.22.1">Toucan v0.22.1</a> · Runs on your machine</p>
+    <p class="platform"><a data-release href="https://github.com/lavallee/toucan/releases/tag/v0.23.0">Toucan v0.23.0</a> · Runs on your machine</p>
   </div>
   <figure class="opening-film" id="rundown">
     <video data-demo loop muted playsinline preload="none" width="1280" height="800" poster="assets/use-cases/river-rundown.png" aria-label="The ferry interview gets a shorter cut and the episode fits its broadcast slot" src="assets/use-cases/river-rundown.mp4"></video><noscript><a href="assets/use-cases/river-rundown.mp4">Play demo</a></noscript>
