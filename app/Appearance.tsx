@@ -1,10 +1,10 @@
 import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@lyra-forge/leyline/ui/popover'
 import { cn } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
+import { Input } from '@lyra-forge/leyline/ui/input'
 import { myName, setMyName } from './threads-store'
-import { setLettering, setTheme, useAppearance, type Lettering, type Theme } from './theme'
+import { setLettering, setPalette, setTheme, useAppearance, type Lettering, type Theme } from './theme'
 
 const THEMES: { value: Theme; label: string; Icon: typeof SunIcon }[] = [
 	{ value: 'system', label: 'System', Icon: MonitorIcon },
@@ -37,8 +37,8 @@ function Segmented<T extends string>({ label, value, options, onChange }: { labe
 }
 
 /** The theme override (and the lettering choice), in the app bar and on the index. */
-export function AppearanceMenu() {
-	const { theme, dark, lettering } = useAppearance()
+export function AppearanceMenu({ tldraw = true }: { tldraw?: boolean }) {
+	const { theme, dark, lettering, palette } = useAppearance()
 	const Icon = theme === 'system' ? MonitorIcon : dark ? MoonIcon : SunIcon
 	const onLettering = (next: Lettering) => {
 		if (next === lettering) return
@@ -63,6 +63,10 @@ export function AppearanceMenu() {
 					<Segmented label="Theme" value={theme} options={THEMES} onChange={setTheme} />
 				</div>
 				<div className="space-y-1.5">
+					{tldraw && <>
+						<p className="text-xs font-medium">Canvas palette</p>
+						<Segmented label="Canvas palette" value={palette} options={[{ value: 'default', label: 'Original' }, { value: 'press', label: 'Letterpress' }, { value: 'admiralty', label: 'Admiralty' }]} onChange={setPalette} />
+					</>}
 					<p className="text-xs font-medium">Canvas lettering</p>
 					<Segmented label="Canvas lettering" value={lettering} options={LETTERINGS} onChange={onLettering} />
 					<p className="text-xs text-muted-foreground">

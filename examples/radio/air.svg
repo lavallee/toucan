@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+<title>A radio tower transmitting across hills</title>
+<rect width="320" height="180" fill="#dfbd9e"/><circle cx="208" cy="67" r="43" fill="#f6dcaa"/><path d="m0 125 53-27 55 16 62-34 62 24 47-29 41 8v97H0" fill="#91a797"/><path d="m0 147 85-35 65 15 61-14 109 25v42H0" fill="#627e70"/><path d="m0 162 95-15 76 7 72-16 77 12v30H0" fill="#37584f"/>
+<g fill="none" stroke="#293e39" stroke-width="4" stroke-linejoin="round"><path d="m130 157 23-100 23 100m-39-31 31 0-23-24h17l-13-16m-12 40 35 24h-40l35-24"/><path d="M153 65V40"/><circle cx="153" cy="41" r="3" fill="#293e39"/></g>
+<g fill="none" stroke="#96583a" stroke-width="2.5"><path d="M142 29q-12 12 0 24m22-24q12 12 0 24m-29-31q-19 19 0 38m36-38q19 19 0 38m-43-45q-26 26 0 52m50-52q26 26 0 52"/></g></svg>

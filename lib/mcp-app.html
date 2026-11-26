@@ -1,0 +1,310 @@
+<!doctype html>
+<!--
+  toucan's MCP App view (lib/mcp.mjs serves it as ui://toucan/canvas.html). A host such as Claude shows it in the conversation
+  when an agent calls toucan_open or toucan_draw. It needs no network: it asks the host for pictures of the canvas through the
+  app-only tool toucan_canvas_picture, every second and a half while it's on screen, and redraws when the canvas changed.
+  The protocol is MCP Apps (JSON-RPC over postMessage with the host): ui/initialize, then tool-input and tool-result from the
+  host, tools/call and ui/open-link to it. Written by hand, with no dependencies, so it stays small.
+  toucan %VERSION%
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>toucan canvas</title>
+<style>
+	:root {
+		color-scheme: light dark;
+		--bg: var(--color-background-primary, #fff);
+		--bg2: var(--color-background-secondary, #f4f4f5);
+		--fg: var(--color-text-primary, #18181b);
+		--fg2: var(--color-text-secondary, #71717a);
+		--line: var(--color-border-primary, #e4e4e7);
+		--accent: #e8590c;
+		--font: var(--font-sans, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif);
+	}
+	[data-theme="dark"] {
+		--bg: var(--color-background-primary, #18181b);
+		--bg2: var(--color-background-secondary, #27272a);
+		--fg: var(--color-text-primary, #fafafa);
+		--fg2: var(--color-text-secondary, #a1a1aa);
+		--line: var(--color-border-primary, #3f3f46);
+	}
+	* { box-sizing: border-box; }
+	html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px/1.4 var(--font); }
+	body { display: flex; flex-direction: column; }
+	header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); min-height: 40px; }
+	.mark { width: 18px; height: 18px; border-radius: 5px; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 11px; flex: none; }
+	h1 { font-size: 13px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.meta { color: var(--fg2); white-space: nowrap; }
+	.live { width: 7px; height: 7px; border-radius: 50%; background: var(--fg2); flex: none; transition: background .3s; }
+	.live.on { background: #2f9e44; }
+	.live.flash { background: var(--accent); }
+	.spacer { flex: 1; }
+	button { font: inherit; color: var(--fg); background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; cursor: pointer; white-space: nowrap; }
+	button:hover { border-color: var(--fg2); }
+	main { position: relative; flex: 1; min-height: 0; overflow: hidden; background: var(--bg2); cursor: grab; touch-action: none; }
+	main.dragging { cursor: grabbing; }
+	#pic { position: absolute; left: 0; top: 0; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; background: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+	.empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--fg2); padding: 24px; }
+	.empty p { max-width: 34em; margin: 0 0 10px; }
+	footer { color: var(--fg2); padding: 4px 10px; border-top: 1px solid var(--line); font-size: 11px; display: flex; gap: 10px; }
+	[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+	<div class="mark" aria-hidden="true">t</div>
+	<h1 id="title">toucan</h1>
+	<span class="live" id="live" title="Live"></span>
+	<span class="meta" id="meta"></span>
+	<span class="spacer"></span>
+	<button id="fit" title="Fit the whole canvas (or double-click)">Fit</button>
+	<button id="full" hidden>Full screen</button>
+	<button id="open" title="Open the canvas in toucan, in your browser, to edit it">Edit in toucan</button>
+</header>
+<main id="stage">
+	<img id="pic" alt="" hidden draggable="false">
+	<div class="empty" id="empty"><div><p id="emptyText">Loading the canvas…</p><button id="emptyOpen" hidden>Open it in toucan</button></div></div>
+</main>
+<footer><span id="status">Drag to move, scroll or pinch to zoom.</span><span class="spacer"></span><span id="ago"></span></footer>
+<script>
+(() => {
+	'use strict'
+	const $ = (id) => document.getElementById(id)
+	const host = window.parent
+	let nextId = 1
+	const waiting = new Map()
+	const send = (msg) => host.postMessage({ jsonrpc: '2.0', ...msg }, '*')
+	const request = (method, params) => new Promise((resolve, reject) => {
+		const id = nextId++
+		waiting.set(id, { resolve, reject })
+		send({ id, method, params })
+	})
+	const notify = (method, params) => send({ method, params })
+
+	// ---- what the view knows ----
+	let canvas = null        // pinned once known, so a later project canvas doesn't take over this view
+	let since = null         // `updated` of the picture on screen
+	let timer = null
+	let stopped = false
+	let lastChange = 0
+	let failures = 0
+	let pic = { w: 0, h: 0 }
+	let view = { x: 0, y: 0, k: 1, fitted: true }
+	let mode = 'inline'
+
+	window.addEventListener('message', (e) => {
+		if (e.source !== host) return
+		const m = e.data
+		if (!m || m.jsonrpc !== '2.0') return
+		if (m.id !== undefined && !m.method) {
+			const w = waiting.get(m.id)
+			if (!w) return
+			waiting.delete(m.id)
+			return m.error ? w.reject(new Error(m.error.message || 'error')) : w.resolve(m.result)
+		}
+		switch (m.method) {
+			case 'ui/notifications/tool-input':
+				if (!canvas && typeof m.params?.arguments?.canvas === 'string') canvas = m.params.arguments.canvas
+				return poll(true)
+			case 'ui/notifications/tool-result':
+				// The tool's answer for the model; the picture tells us the rest. A draw has changed the canvas: look now.
+				return poll(true)
+			case 'ui/notifications/tool-cancelled':
+				return status('The tool call was cancelled.')
+			case 'ui/notifications/host-context-changed':
+				return context(m.params)
+			case 'ui/resource-teardown':
+				stopped = true
+				clearTimeout(timer)
+				return send({ id: m.id, result: {} })
+			case 'ping':
+				return send({ id: m.id, result: {} })
+			default:
+				if (m.id !== undefined) send({ id: m.id, error: { code: -32601, message: `no method ${m.method}` } })
+		}
+	})
+
+	function context(c = {}) {
+		if (c.theme) document.documentElement.dataset.theme = c.theme
+		const vars = c.styles?.variables
+		if (vars) for (const [k, v] of Object.entries(vars)) if (v) document.documentElement.style.setProperty(k, v)
+		if (c.displayMode) {
+			mode = c.displayMode
+			$('full').textContent = mode === 'fullscreen' ? 'Exit full screen' : 'Full screen'
+			size()
+		}
+		if (c.availableDisplayModes) $('full').hidden = !c.availableDisplayModes.includes('fullscreen')
+		requestAnimationFrame(() => view.fitted && fit())
+	}
+
+	// ---- pictures ----
+	let inflight = false, again = false
+	async function poll(now = false) {
+		if (inflight) return void (again = true)
+		clearTimeout(timer)
+		if (stopped) return
+		if (!now && document.hidden) return schedule()
+		inflight = true
+		try {
+			const r = await request('tools/call', { name: 'toucan_canvas_picture', arguments: { ...(canvas && { canvas }), ...(since && { since: String(since) }) } })
+			if (r?.isError) throw new Error(r.content?.[0]?.text || 'the picture failed')
+			show(r?.structuredContent ?? {})
+			failures = 0
+		} catch (e) {
+			failures++
+			$('live').className = 'live'
+			status(String(e.message || e))
+		}
+		inflight = false
+		if (again) return (again = false), poll(true)
+		schedule()
+	}
+	const schedule = () => { if (!stopped) timer = setTimeout(poll, failures ? Math.min(15000, 1500 * 2 ** failures) : 1500) }
+	document.addEventListener('visibilitychange', () => !document.hidden && poll(true))
+
+	function show(p) {
+		canvas ??= p.canvas
+		$('title').textContent = p.title || p.canvas || 'toucan'
+		document.title = `${p.title || p.canvas} · toucan`
+		$('meta').textContent = `${p.shapes ?? 0} shape${p.shapes === 1 ? '' : 's'}`
+		$('live').className = 'live on'
+		if (p.same) return
+		const wasEmpty = !since
+		since = p.updated ?? null
+		if (!p.svg) {
+			$('pic').hidden = true
+			$('empty').hidden = false
+			const nobody = /no browser tab|no open tab/.test(p.error || '')
+			$('emptyText').textContent = nobody ? 'Nobody has this canvas open, so it can’t be drawn here yet. Open it in toucan and it will appear.' : p.error ? `No picture: ${p.error}` : 'The canvas is empty. It will appear here as it is drawn.'
+			$('emptyOpen').hidden = !nobody
+			if (nobody) since = null // look again until it can be drawn
+			return
+		}
+		const img = $('pic')
+		img.onload = () => {
+			pic = { w: p.width || img.naturalWidth, h: p.height || img.naturalHeight }
+			img.style.width = pic.w + 'px'
+			img.style.height = pic.h + 'px'
+			img.hidden = false
+			$('empty').hidden = true
+			if (wasEmpty || view.fitted) fit()
+			size()
+		}
+		img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(p.svg)
+		img.alt = `The canvas ${p.title || p.canvas}`
+		lastChange = Date.now()
+		$('live').className = 'live flash'
+		setTimeout(() => $('live').className = 'live on', 600)
+		status('Drag to move, scroll or pinch to zoom.')
+	}
+
+	const status = (t) => { $('status').textContent = t }
+	setInterval(() => {
+		if (!lastChange) return
+		const s = Math.round((Date.now() - lastChange) / 1000)
+		$('ago').textContent = s < 5 ? 'changed just now' : s < 90 ? `changed ${s}s ago` : `changed ${Math.round(s / 60)} min ago`
+	}, 1000)
+
+	// ---- height: inline, ask for room in proportion to the canvas ----
+	function size() {
+		if (mode === 'fullscreen') return
+		const w = document.documentElement.clientWidth || 600
+		const h = pic.w ? Math.round(Math.max(280, Math.min(620, (w * pic.h) / pic.w + 80))) : 360
+		document.body.style.height = h + 'px'
+		notify('ui/notifications/size-changed', { width: w, height: h })
+	}
+
+	// ---- pan and zoom ----
+	const stage = $('stage')
+	const apply = () => { $('pic').style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.k})` }
+	function fit() {
+		if (!pic.w) return
+		const W = stage.clientWidth, H = stage.clientHeight, pad = 16
+		const k = Math.min(1.5, (W - pad * 2) / pic.w, (H - pad * 2) / pic.h)
+		view = { k, x: (W - pic.w * k) / 2, y: (H - pic.h * k) / 2, fitted: true }
+		apply()
+	}
+	function zoomAt(f, cx, cy) {
+		const k = Math.max(0.05, Math.min(8, view.k * f))
+		view = { x: cx - ((cx - view.x) * k) / view.k, y: cy - ((cy - view.y) * k) / view.k, k, fitted: false }
+		apply()
+	}
+	stage.addEventListener('wheel', (e) => {
+		e.preventDefault()
+		const r = stage.getBoundingClientRect()
+		if (e.ctrlKey || e.metaKey || Math.abs(e.deltaY) > Math.abs(e.deltaX) * 2) zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.002)), e.clientX - r.left, e.clientY - r.top)
+		else { view.x -= e.deltaX; view.y -= e.deltaY; view.fitted = false; apply() }
+	}, { passive: false })
+	const pointers = new Map()
+	let pinch = null
+	stage.addEventListener('pointerdown', (e) => {
+		if (e.target.closest('button')) return
+		stage.setPointerCapture(e.pointerId)
+		pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+		stage.classList.add('dragging')
+		if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y) }
+	})
+	stage.addEventListener('pointermove', (e) => {
+		const last = pointers.get(e.pointerId)
+		if (!last) return
+		pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+		if (pointers.size === 2 && pinch) {
+			const [a, b] = [...pointers.values()]
+			const d = Math.hypot(a.x - b.x, a.y - b.y)
+			const r = stage.getBoundingClientRect()
+			zoomAt(d / pinch, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top)
+			pinch = d
+			return
+		}
+		view.x += e.clientX - last.x
+		view.y += e.clientY - last.y
+		view.fitted = false
+		apply()
+	})
+	const up = (e) => { pointers.delete(e.pointerId); pinch = null; if (!pointers.size) stage.classList.remove('dragging') }
+	stage.addEventListener('pointerup', up)
+	stage.addEventListener('pointercancel', up)
+	stage.addEventListener('dblclick', fit)
+	$('fit').addEventListener('click', fit)
+	new ResizeObserver(() => view.fitted && fit()).observe(stage)
+
+	// ---- buttons ----
+	// toucan_open opens the canvas in the person's browser on the machine toucan runs on, signed in; the link itself never
+	// passes through the conversation, since it carries the server's token.
+	async function openInToucan() {
+		status('Opening the canvas in your browser…')
+		try {
+			const r = await request('tools/call', { name: 'toucan_open', arguments: canvas ? { canvas } : {} })
+			const text = r?.content?.[0]?.text || ''
+			status(r?.isError ? text : /^opened/.test(text) ? 'Opened in your browser. Edits there appear here.' : text)
+			poll(true)
+		} catch (e) {
+			status(String(e.message || e))
+		}
+	}
+	$('open').addEventListener('click', openInToucan)
+	$('emptyOpen').addEventListener('click', openInToucan)
+	$('full').addEventListener('click', async () => {
+		try {
+			const r = await request('ui/request-display-mode', { mode: mode === 'fullscreen' ? 'inline' : 'fullscreen' })
+			context({ displayMode: r?.mode })
+		} catch (e) {
+			status(String(e.message || e))
+		}
+	})
+
+	// ---- start ----
+	request('ui/initialize', { appInfo: { name: 'toucan-canvas', version: '%VERSION%' }, appCapabilities: { availableDisplayModes: ['inline', 'fullscreen'] }, protocolVersion: '2026-01-26' })
+		.then((r) => {
+			context(r?.hostContext)
+			notify('ui/notifications/initialized', {})
+			size()
+			poll(true)
+		})
+		.catch((e) => status(`This host didn't start the view: ${e.message || e}`))
+})()
+</script>
+</body>
+</html>

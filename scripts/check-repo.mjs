@@ -1,5 +1,6 @@
 // Release hygiene: versions agree everywhere, and no internal names reach the public repo or site.
 //   node scripts/check-repo.mjs [DIR...]   (default: the tracked files; pass website/site to check a build)
+import './docs-version.mjs'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync, statSync } from 'node:fs'

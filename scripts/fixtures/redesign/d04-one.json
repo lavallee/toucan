@@ -1,0 +1,535 @@
+{
+ "kind": "flow",
+ "title": "04 zahal thjopulz",
+ "direction": "DOWN",
+ "boxWidth": 150,
+ "gap": 60,
+ "layerGap": 70,
+ "groups": [
+  {
+   "id": "d04one-0",
+   "label": "H · Hjxbpzpapvu (wly ahynla wly jvssljapvu)"
+  },
+  {
+   "id": "d04one-1",
+   "label": "I · Whyzl (wly jvualua ohzo × whyzly jvuayhja)"
+  },
+  {
+   "id": "d04one-2",
+   "label": "J · Leayhja (wly alea puwba × mplsk jvuayhja × leayhjavy clyzpvu)"
+  },
+  {
+   "id": "d04one-3",
+   "label": "K · Ylzvsbapvu (wly yljvyk whpy → hzzpnutlua)"
+  },
+  {
+   "id": "d04one-4",
+   "label": "L · Slhk (mvssvd-bw)"
+  },
+  {
+   "id": "d04one-5",
+   "label": "M · Ylslhzl (h jpahisl lewvya; ulcly nhalz zlycpun)"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "d04one-6",
+   "text": "wshuulk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-0"
+  },
+  {
+   "id": "d04one-7",
+   "text": "mlajolk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-0"
+  },
+  {
+   "id": "d04one-8",
+   "text": "yvivaz_ovsk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-0"
+  },
+  {
+   "id": "d04one-9",
+   "text": "uva_ybu",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-0"
+  },
+  {
+   "id": "d04one-10",
+   "text": "ivkf_olsk",
+   "shape": "oval",
+   "color": "green",
+   "group": "d04one-0"
+  },
+  {
+   "id": "d04one-11",
+   "text": "afwlk_uv_ivkf",
+   "shape": "oval",
+   "color": "yellow",
+   "group": "d04one-0"
+  },
+  {
+   "id": "d04one-12",
+   "text": "ayhuzwvya_lyyvy",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-0"
+  },
+  {
+   "id": "d04one-13",
+   "text": "buwhyzlk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-1"
+  },
+  {
+   "id": "d04one-14",
+   "text": "whyzlk",
+   "shape": "oval",
+   "color": "green",
+   "group": "d04one-1"
+  },
+  {
+   "id": "d04one-15",
+   "text": "vjy_xblblk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-1"
+  },
+  {
+   "id": "d04one-16",
+   "text": "whyzly_lyyvy",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-1"
+  },
+  {
+   "id": "d04one-17",
+   "text": "wlukpun",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-2"
+  },
+  {
+   "id": "d04one-18",
+   "text": "jhukpkhal",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-2"
+  },
+  {
+   "id": "d04one-19",
+   "text": "zwhu_mhpslk",
+   "shape": "oval",
+   "color": "red",
+   "group": "d04one-2"
+  },
+  {
+   "id": "d04one-20",
+   "text": "hbav_hjjlwalk",
+   "shape": "oval",
+   "color": "green",
+   "group": "d04one-2"
+  },
+  {
+   "id": "d04one-21",
+   "text": "ylcpld_wlukpun",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-2"
+  },
+  {
+   "id": "d04one-22",
+   "text": "hjjlwalk",
+   "shape": "oval",
+   "color": "green",
+   "group": "d04one-2"
+  },
+  {
+   "id": "d04one-23",
+   "text": "ylqljalk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-2"
+  },
+  {
+   "id": "d04one-24",
+   "text": "ylapylk",
+   "shape": "oval",
+   "color": "grey",
+   "detail": "leayhjavy clyzpvu ylapylk (alytpuhs mvy ylayf huk wyvtvapvu)",
+   "group": "d04one-2"
+  },
+  {
+   "id": "d04one-25",
+   "text": "buthajolk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-26",
+   "text": "ybsl_zhtl",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-27",
+   "text": "zjvylk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-28",
+   "text": "hbav_zhtl",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-29",
+   "text": "ylcpld",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-30",
+   "text": "kpzapuja",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-31",
+   "text": "wyvcpzpvuhs",
+   "shape": "oval",
+   "color": "yellow",
+   "detail": "vdu luapaf, cpzpisl av cpldz huk slhkz; zovdu vusf pm aol lepzalujl nhal whzzlz",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-32",
+   "text": "zhtl",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-33",
+   "text": "kpmmlylua",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-34",
+   "text": "hzzpnulk",
+   "shape": "oval",
+   "color": "green",
+   "detail": "yljvyk_luapaf yvd; ylkpyljaz vu tlynl; bukv = zbwlyzlkl kljpzpvu",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-35",
+   "text": "olsk_jsbzaly",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-3"
+  },
+  {
+   "id": "d04one-36",
+   "text": "klaljalk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-4"
+  },
+  {
+   "id": "d04one-37",
+   "text": "vwlu",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-4"
+  },
+  {
+   "id": "d04one-38",
+   "text": "zbwwylzzlk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-4"
+  },
+  {
+   "id": "d04one-39",
+   "text": "ayphnlk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-4"
+  },
+  {
+   "id": "d04one-40",
+   "text": "puclzapnhapun",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-4"
+  },
+  {
+   "id": "d04one-41",
+   "text": "jvumpytlk",
+   "shape": "oval",
+   "color": "green",
+   "group": "d04one-4"
+  },
+  {
+   "id": "d04one-42",
+   "text": "kpztpzzlk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-4"
+  },
+  {
+   "id": "d04one-43",
+   "text": "lewpylk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-4"
+  },
+  {
+   "id": "d04one-44",
+   "text": "jba",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-5"
+  },
+  {
+   "id": "d04one-45",
+   "text": "lewvyalk",
+   "shape": "oval",
+   "color": "blue",
+   "group": "d04one-5"
+  },
+  {
+   "id": "d04one-46",
+   "text": "clypmplk",
+   "shape": "oval",
+   "color": "green",
+   "group": "d04one-5"
+  }
+ ],
+ "edges": [
+  {
+   "from": "d04one-6",
+   "to": "d04one-7",
+   "label": "mlajo (whjlk, yvivaz)"
+  },
+  {
+   "from": "d04one-6",
+   "to": "d04one-8",
+   "label": "jyhds-klshf / kpzhssvd wvspjf"
+  },
+  {
+   "from": "d04one-6",
+   "to": "d04one-9",
+   "label": "ibknla vy dpukvd jsvzlk"
+  },
+  {
+   "from": "d04one-7",
+   "to": "d04one-10",
+   "label": "ifalz puav Jpzalyu + mpepaf"
+  },
+  {
+   "from": "d04one-7",
+   "to": "d04one-11",
+   "label": "404 · 410 · hbao · whfdhss · johsslunl"
+  },
+  {
+   "from": "d04one-7",
+   "to": "d04one-12"
+  },
+  {
+   "from": "d04one-12",
+   "to": "d04one-6",
+   "label": "ylayf (ihjrvmm, the 3)"
+  },
+  {
+   "from": "d04one-8",
+   "to": "d04one-6",
+   "label": "ulea dpukvd"
+  },
+  {
+   "from": "d04one-13",
+   "to": "d04one-14",
+   "label": "klalytpupzapj whyzly / wkmavalea"
+  },
+  {
+   "from": "d04one-13",
+   "to": "d04one-15",
+   "label": "uv alea shfly"
+  },
+  {
+   "from": "d04one-15",
+   "to": "d04one-14",
+   "label": "alzzlyhja (avyvuav)"
+  },
+  {
+   "from": "d04one-13",
+   "to": "d04one-16"
+  },
+  {
+   "from": "d04one-16",
+   "to": "d04one-13",
+   "label": "uld whyzly jvuayhja"
+  },
+  {
+   "from": "d04one-17",
+   "to": "d04one-18",
+   "label": "leayhjavy ltpaz jshpt + zwhu"
+  },
+  {
+   "from": "d04one-18",
+   "to": "d04one-19",
+   "label": "zwhu uva mvbuk pu zavylk alea (tljohupjhs joljr)"
+  },
+  {
+   "from": "d04one-18",
+   "to": "d04one-20",
+   "label": "tlaovk hjjlwalk if nhal HUK aply hssvdz"
+  },
+  {
+   "from": "d04one-18",
+   "to": "d04one-21",
+   "label": "vaolydpzl"
+  },
+  {
+   "from": "d04one-21",
+   "to": "d04one-22",
+   "label": "ylcpldly (ispuk av tvkls)"
+  },
+  {
+   "from": "d04one-21",
+   "to": "d04one-23"
+  },
+  {
+   "from": "d04one-18",
+   "to": "d04one-24",
+   "label": "clyzpvu ylqljalk"
+  },
+  {
+   "from": "d04one-25",
+   "to": "d04one-26",
+   "label": "zohylk zayvun pkluapmply"
+  },
+  {
+   "from": "d04one-25",
+   "to": "d04one-27",
+   "label": "Zwspur (isvjrlk whpyz vusf)"
+  },
+  {
+   "from": "d04one-27",
+   "to": "d04one-28",
+   "label": "≥ hjjlwalk aoylzovsk"
+  },
+  {
+   "from": "d04one-27",
+   "to": "d04one-29",
+   "label": "tpkksl ihuk"
+  },
+  {
+   "from": "d04one-27",
+   "to": "d04one-30",
+   "label": "ilsvd ihuk"
+  },
+  {
+   "from": "d04one-30",
+   "to": "d04one-31",
+   "label": "uv luapaf thajolk"
+  },
+  {
+   "from": "d04one-25",
+   "to": "d04one-31",
+   "label": "uv ybsl hwwsplz"
+  },
+  {
+   "from": "d04one-29",
+   "to": "d04one-32",
+   "label": "kljpzpvu (tbza-spur)"
+  },
+  {
+   "from": "d04one-29",
+   "to": "d04one-33",
+   "label": "kljpzpvu (jhuuva-spur)"
+  },
+  {
+   "from": "d04one-26",
+   "to": "d04one-34"
+  },
+  {
+   "from": "d04one-28",
+   "to": "d04one-34"
+  },
+  {
+   "from": "d04one-32",
+   "to": "d04one-34"
+  },
+  {
+   "from": "d04one-34",
+   "to": "d04one-35",
+   "label": "jvtwvulua vcly zpgl jhw"
+  },
+  {
+   "from": "d04one-35",
+   "to": "d04one-29"
+  },
+  {
+   "from": "d04one-36",
+   "to": "d04one-37",
+   "label": "klkbwl_rlf uld"
+  },
+  {
+   "from": "d04one-36",
+   "to": "d04one-38",
+   "label": "klkbwl_rlf zllu · vy pujvtwslal zuhwzova"
+  },
+  {
+   "from": "d04one-37",
+   "to": "d04one-39"
+  },
+  {
+   "from": "d04one-39",
+   "to": "d04one-40",
+   "label": "hzzpnulk av h wlyzvu vy hnlua"
+  },
+  {
+   "from": "d04one-40",
+   "to": "d04one-41",
+   "label": "uld jshptz / lcluaz jpal aol slhk"
+  },
+  {
+   "from": "d04one-40",
+   "to": "d04one-42",
+   "label": "dpao ylhzvu"
+  },
+  {
+   "from": "d04one-37",
+   "to": "d04one-43",
+   "label": "uv svunly aybl ha ulea jvtwslal zuhwzova"
+  },
+  {
+   "from": "d04one-44",
+   "to": "d04one-45",
+   "label": "Whyxbla vm wbi.* ha h yljvyklk-aptl jba + wvspjf clyzpvuz"
+  },
+  {
+   "from": "d04one-45",
+   "to": "d04one-46",
+   "label": "yl-thalyphspzl myvt aol slknly = pkluapjhs"
+  }
+ ]
+}

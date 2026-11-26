@@ -23,9 +23,10 @@ const port = await new Promise((r) => {
 })
 const ok = (msg) => console.log(`ok  ${msg}`)
 
+const licenceCanary = 'toucan-install-check-licence-canary'
 let tarball = process.argv[2] && resolve(process.argv[2])
 if (!tarball) {
-	const r = spawnSync('npm', ['pack', '--json', '--pack-destination', base], { cwd: ROOT, encoding: 'utf8' })
+	const r = spawnSync('npm', ['pack', '--json', '--pack-destination', base], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, VITE_TLDRAW_LICENSE_KEY: licenceCanary } })
 	assert.equal(r.status, 0, r.stderr)
 	// The pack step prints the build log first; the JSON starts a line on its own: an array up to npm 11, an object
 	// keyed by package name from npm 12.
@@ -46,7 +47,7 @@ const served = await new Promise((r) => {
 	s.listen(0, '127.0.0.1', () => r(s))
 })
 const tarballUrl = `http://127.0.0.1:${served.address().port}/toucan.tgz`
-const env = { PATH: `${bin}:${dirname(process.execPath)}:/usr/bin:/bin`, HOME: home, TOUCAN_PORT: String(port), npm_config_prefix: prefix, TOUCAN_TARBALL: tarballUrl, ...(browsers && { PLAYWRIGHT_BROWSERS_PATH: browsers }) }
+const env = { PATH: `${bin}:${dirname(process.execPath)}:/usr/bin:/bin`, HOME: home, TOUCAN_PORT: String(port), npm_config_prefix: prefix, TOUCAN_TARBALL: tarballUrl, TLDRAW_LICENSE_KEY: licenceCanary, ...(browsers && { PLAYWRIGHT_BROWSERS_PATH: browsers }) }
 const run = promisify(execFile)
 const toucan = (args, opts = {}) => run(join(bin, 'toucan'), args, { env, maxBuffer: 64 << 20, ...opts }).then((r) => r.stdout.trim())
 
@@ -65,6 +66,16 @@ try {
 	assert.ok(!existsSync(join(modules, 'tldraw')) && !existsSync(join(modules, 'shadcn')) && !existsSync(join(modules, 'vite')), 'build-time dependencies stay behind too')
 	ok(`install is lean: ${readdirSync(modules).length} top-level modules`)
 
+	const guide = await toucan(['guide'], { cwd: project })
+	const guideIndex = await toucan(['guide', 'index'], { cwd: project })
+	assert.equal(guideIndex, readFileSync(join(pkg, 'AGENTS.md'), 'utf8').trim())
+	for (const [, topic] of guideIndex.matchAll(/docs\/agents\/([a-z]+)\.md/g)) {
+		const reference = await toucan(['guide', topic], { cwd: project })
+		assert.ok(guide.includes(reference), `the installed guide includes ${topic}`)
+	}
+	assert.match(await toucan(['guide', 'plans'], { cwd: project }), /^# Plan-backed canvases/)
+	ok('the full guide and its topic files ship with the CLI')
+
 	const status = JSON.parse(await toucan(['status']))
 	assert.equal(status.running, true)
 	assert.ok(status.data.startsWith(home), `canvases in the home directory, not the install: ${status.data}`)
@@ -72,6 +83,15 @@ try {
 	const canvases = JSON.parse(await toucan(['canvases']))
 	assert.deepEqual(canvases.map((c) => c.name), ['welcome'], 'setup made the first canvas')
 	const cfg = JSON.parse((await run('cat', [join(home, '.config/toucan/server.json')])).stdout)
+	const licenceUrl = `${cfg.url}/api/tldraw-license`
+	assert.equal((await fetch(licenceUrl)).status, 401)
+	const licence = await fetch(licenceUrl, { headers: { authorization: `Bearer ${cfg.token}` } })
+	assert.equal(licence.headers.get('cache-control'), 'no-store')
+	assert.deepEqual(await licence.json(), { licenseKey: licenceCanary })
+	for (const file of readdirSync(join(pkg, 'dist/assets')).filter((name) => name.endsWith('.js'))) {
+		assert.ok(!readFileSync(join(pkg, 'dist/assets', file), 'utf8').includes(licenceCanary), 'no deployment key in the packaged client')
+	}
+	ok('tldraw licence loads at runtime and stays out of the package')
 	const page = await fetch(`${cfg.url}/`)
 	assert.match(await page.text(), /<div id="root"|<!doctype html/i, 'the app is served')
 	ok('server runs from the install, canvases in the data home, a welcome canvas waits')
@@ -96,9 +116,12 @@ try {
 		return r.content[0]
 	}
 	assert.match((await text('toucan_canvases', {})).text, /my-app/)
+	assert.equal((await text('toucan_guide', { topic: 'index' })).text, guideIndex)
 	assert.equal(JSON.parse((await text('toucan_project_canvas', {})).text).canvas, 'my-app', "the harness's directory finds the project's canvas")
 	assert.match((await text('toucan_templates', {})).text, /flowchart/)
-	ok('mcp over stdio: discover, initialize, tools')
+	// The canvas view for MCP Apps hosts ships in the package.
+	assert.match((await ask('resources/read', { uri: 'ui://toucan/canvas.html' })).result.contents[0].text, /toucan_canvas_picture/)
+	ok('mcp over stdio: discover, initialize, tools, the app view')
 
 	// With a browser here, the whole path: an agent builds on a canvas nobody has open, using whatever Chromium the machine has.
 	const doc = await toucan(['doctor']).catch((e) => e.stdout)
@@ -107,6 +130,8 @@ try {
 		assert.match(id, /shape:/)
 		assert.match((await text('toucan_summary', {})).text, /Hello/)
 		assert.match((await text('toucan_import', { content: 'graph LR\n  hello --> added[Added]\n' })).text, /created/)
+		const pic = (await ask('tools/call', { name: 'toucan_canvas_picture', arguments: {} })).result
+		assert.match(pic.structuredContent?.svg ?? pic.content[0].text, /<svg[\s\S]*Added/, 'the app view gets a picture')
 		const shot = await text('toucan_screenshot', {})
 		assert.equal(shot.type, 'image')
 		assert.ok(shot.data.length > 1000)

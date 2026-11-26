@@ -12,6 +12,7 @@
 //   approval / approved          -> approval-requested / approval-responded on the tool part
 //   plan (turn/plan/updated)     -> data-plan part, replaced in place per turn
 //   turn failed / error          -> data-error part; turn interrupted -> data-notice part
+//   noticed (people's edits told mid-turn) -> data-notice part
 
 export type ServerEvent = { type: string; [k: string]: any }
 
@@ -50,7 +51,7 @@ export type ToolCallPart = { type: 'tool-call'; toolCallId: string; state: ToolS
 export type PlanStep = { title: string; status: 'done' | 'running' | 'pending' }
 export type PlanPart = { type: 'data-plan'; id: string; data: { title: string; explanation?: string | null; steps: PlanStep[] } }
 export type ErrorPart = { type: 'data-error'; id: string; data: { message: string } }
-export type NoticePart = { type: 'data-notice'; id: string; data: { message: string } }
+export type NoticePart = { type: 'data-notice'; id: string; data: { message: string; kind?: 'seen' } }
 
 export type ToolPart = RunCommandPart | EditFilesPart | ToolCallPart
 export type ChatPart = TextPart | ReasoningPart | ToolPart | PlanPart | ErrorPart | NoticePart
@@ -112,6 +113,12 @@ export class CodexTranscript {
 				if (e.status === 'interrupted') this.add(`n${++this.seq}`, { type: 'data-notice', id: `n${this.seq}`, data: { message: 'Stopped' } })
 				if (!this.busy) this.settle()
 				return
+			case 'noticed': {
+				// The agent was told mid-turn what people did on the canvas (server/activity.mjs): say so, briefly.
+				const n = String(e.text ?? '').split('\n').filter((l) => l.startsWith('- ')).length
+				this.add(`n${++this.seq}`, { type: 'data-notice', id: `n${this.seq}`, data: { message: `Saw ${n === 1 ? 'a change' : `${n} changes`} on the canvas`, kind: 'seen' } })
+				return
+			}
 			case 'error':
 				this.add(`err${++this.seq}`, { type: 'data-error', id: `err${this.seq}`, data: { message: e.message } })
 				return

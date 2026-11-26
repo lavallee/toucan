@@ -1,10 +1,16 @@
-# Explore
+---
+kicker: Examples
+description: Walk through finished drawings in your browser.
+---
+# Sample canvases
 
-There's no public toucan server to try, since it's built for your own machine or a trusted network. These are the next best thing: real canvases, copied out of toucan so you can move around them in your browser. Nothing is installed and nothing is sent anywhere.
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
 
-Each one opens full-page. Drag to move, scroll to zoom, and select a box to read what's behind it. ← and → walk along the canvas the way that canvas's format says to.
-
-You're looking at a static copy, so you can't edit it, comment on it or ask an agent to change it. [See it work](tour.html) shows those.
+Open a read-only canvas in your browser. Drag to pan, scroll to zoom, and select a box to read its details. Use the arrow keys to follow the drawing. To make an editable canvas of your own, [choose a diagram template](gallery.html).
 
 ## The Odyssey: a story map
 

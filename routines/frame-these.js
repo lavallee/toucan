@@ -9,7 +9,8 @@ const scene = toucan.scene
 const items = scene.items()
 const byKey = new Map(items.map((i) => [i.key, i]))
 const keys = args.keys ?? toucan.selection().here.map((r) => r.key)
-const picked = keys.map((k) => byKey.get(k)).filter((i) => i && i.kind !== 'frame' && i.kind !== 'arrow')
+// A plan's shapes stay in the plan's own frames.
+const picked = keys.map((k) => byKey.get(k)).filter((i) => i && i.kind !== 'frame' && i.kind !== 'arrow' && !scene.skipPlan(i.id))
 if (!picked.length) return { summary: 'Select the shapes to frame first.', changed: 0 }
 const pad = args.pad ?? 40
 const x = Math.min(...picked.map((b) => b.x)) - pad, y = Math.min(...picked.map((b) => b.y)) - pad
@@ -19,7 +20,7 @@ let key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') |
 for (let i = 2; byKey.has(key); i++) key = `${key.replace(/-\d+$/, '')}-${i}`
 // Arrows between the framed shapes go with them; ones that leave the frame stay on the page.
 const inside = new Set(picked.map((i) => i.id))
-const arrows = scene.arrows().filter((a) => a.from && a.to && inside.has(a.from) && inside.has(a.to)).map((a) => a.id)
+const arrows = scene.arrows().filter((a) => a.from && a.to && inside.has(a.from) && inside.has(a.to) && !scene.skipPlan(a.id)).map((a) => a.id)
 if (scene.engine === 'tldraw') {
 	toucan.frame(key, { x, y, w, h, name })
 	editor.reparentShapes([...inside, ...arrows], toucan.idFor(key))

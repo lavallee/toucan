@@ -1,171 +1,128 @@
-# See it work
+---
+description: Make a change with an agent, review a screenshot, clean up a drawing, or recover an earlier version.
+kicker: Working on a canvas
+---
+# Canvas guide
 
-Every picture here is a screenshot of toucan running, made by a script against a real server. Where it says an agent did something, that is a real turn of the chat agent on Codex, unedited. There is no public server to try, because toucan is built for your own machine or a trusted network, but the [Explore](explore.html) page lets you click through some of these canvases.
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
 
-## Ask, and it draws
+::: html
+<span id="ask-and-it-draws"></span>
+:::
 
-The chat panel sits beside the canvas. Asked for "A sequence diagram of a user resetting their password by email.", the agent drew this and checked its own work.
+## Draw with an agent
 
-![The canvas with the chat panel open. The agent has drawn a sequence diagram of a password reset, with four participants and a column of messages between them.](assets/tour/chat.png "Measured at 98 of 100 by the same check the agent runs.")
+Open a canvas and its chat panel. Try “Draw the steps from requesting a password reset to signing in again.” While the agent draws, select a box and edit its label. The agent sees your change as it works. If you need help connecting your first agent, follow the [quick start](quickstart.html#install).
 
-Agents don't place boxes by hand. They describe the diagram and a layout engine places it, which is why this takes seconds. Here are four more requests, from the set toucan is tested against: across 8 requests the average score is 95 of 100, in about 18 seconds each.
+![The chat panel alongside a password-reset diagram with four participants and a sequence of messages.](assets/tour/chat.png)
 
-**"Diagram a web app's architecture with a CDN, load balancer, two app servers, a database and a cache."**
+::: html
+<span id="comment-and-have-it-answered"></span>
+:::
 
-![What the agent drew for: Diagram a web app's architecture with a CDN, load balancer, two app servers, a database and a cache.](assets/tour/ask-web-stack.png "Scored 95 of 100, in 18.6 seconds.")
+## Start parallel comment threads
 
-**"Make an org chart: a CEO, with VPs of sales, product and engineering, each with two teams under them."**
+Select the shapes you want to discuss and start a comment. Choose **Agent** and ask a question about those shapes. Start a second thread on a different part of the drawing while the first is running. Each agent replies beside the shapes it was asked about.
 
-![What the agent drew for: Make an org chart: a CEO, with VPs of sales, product and engineering, each with two teams under them.](assets/tour/ask-org.png "Scored 97 of 100, in 15.8 seconds.")
+Choose **People** for a teammate or **Main chat** to steer the conversation already open in the chat panel. Close the thread when its question is settled.
 
-**"A mind map of things to think about when moving house."**
+![A thread attached to Show the error, discussing whether the system should retry payment.](assets/tour/thread.png)
 
-![What the agent drew for: A mind map of things to think about when moving house.](assets/tour/ask-moving.png "Scored 89 of 100, in 20.9 seconds.")
+## Review a screenshot
 
-**"The states a support ticket moves through, and what moves it between them."**
+A listener sees “Listen” on the episode page. Can they tell what will play or how long it lasts? Follow the editor’s pin through a recorded review, then try the same steps on your canvas.
 
-![What the agent drew for: The states a support ticket moves through, and what moves it between them.](assets/tour/ask-ticket.png "Scored 98 of 100, in 15.6 seconds.")
+::: html
+<div class="review-sequence">
+<img src="assets/use-cases/episode-before.png" width="720" height="420" loading="lazy" alt="Original Fieldnote Radio page with a button labelled Listen and no running time.">
+<details><summary>Read the feedback pinned to “Listen”</summary>
+<blockquote>Give the button a clearer label and show the episode length.</blockquote>
+<details><summary>See the producer’s revision</summary><img src="assets/use-cases/episode-after.png" width="720" height="420" loading="lazy" alt="Revised page with a Play the episode button and an 18-minute duration."><p>The producer linked this revision in the reply. The pin stays on the original image.</p></details>
+</details>
+</div>
+:::
 
-## Describe it as data
+### Try it on your canvas
 
-Any agent, or any script of yours, can do the same from a terminal. A diagram is a small description, in the same form as the [templates](gallery.html), and `toucan draw` places it. This one is shortened; the full version has seven boxes.
+[Install Toucan](quickstart.html#install) and download both sample screenshots to the same directory.
 
-```json
-{
-  "kind": "flow",
-  "direction": "RIGHT",
-  "nodes": [
-    {"id":"cart","text":"Review cart","shape":"oval"},
-    {"id":"address","text":"Enter address"},
-    {"id":"pay","text":"Take payment"},
-    {"id":"ok","text":"Approved?","shape":"diamond"}
-  ],
-  "edges": [
-    {"from":"cart","to":"address"},
-    {"from":"address","to":"pay"},
-    {"from":"pay","to":"ok"}
-  ]
-}
-```
+::: html
+<p><a href="assets/use-cases/episode-before.png" download>Download the original screenshot</a> · <a href="assets/use-cases/episode-after.png" download>Download the revised screenshot</a></p>
+:::
+
+From that directory, create a canvas and post the original image.
 
 ```sh
-toucan --canvas checkout draw checkout.json
+toucan new radio-review-demo
+toucan --canvas radio-review-demo review post episode episode-before.png --title "Episode page" --producer radio-editor
+toucan open radio-review-demo
 ```
 
-![A left-to-right checkout flow: review cart, enter address, take payment, a decision on whether it was approved, then confirm order and ship, or show the error and go back to payment.](assets/tour/draw.png)
+1. In the editor, open **Review**, click the listening button in the screenshot, type your feedback, and choose **Post feedback**.
+2. In your terminal, run `toucan --canvas radio-review-demo review inbox radio-editor`. The producer sees the note and the exact revision you reviewed.
+3. In the commands below, replace `FIRST_REV` with the original post’s `revision.id` and `NOTE` with the inbox entry’s `note.id`. Run the first command, then use the new `revision.id` for `AFTER_REV` in the reply.
 
-A second drawing lands beside the first and never over it. `--update` changes an earlier one.
-
-## Or as Mermaid
-
-Mermaid works as an edit language too. On a blank canvas it comes out looking like a template, and it merges by key on a full one, so importing it again changes only what differs.
-
-```
-flowchart LR
-  idea[Idea] --> draft[Draft]
-  draft --> review{Reviewed?}
-  review -->|yes| publish[Publish]
-  review -->|no| draft
+```sh
+toucan --canvas radio-review-demo review post episode episode-after.png --title "Episode page" --producer radio-editor --previous FIRST_REV
+toucan --canvas radio-review-demo review reply NOTE "Added the play label and running time." --producer radio-editor --replacement AFTER_REV
 ```
 
-![The Mermaid flowchart as boxes on a canvas: idea, draft, a reviewed decision, publish, with a loop back to draft.](assets/tour/mermaid.png)
+Back in **Review**, open the note and choose **View revised screenshot**. Compare the two versions and close the note when the change answers it.
 
-What goes in comes back out. The same canvas as DOT:
+::: html
+<span id="tidy-it-up"></span>
+:::
 
-```
-digraph toucan {
-  rankdir=LR;
-  node [shape=box, style="rounded,filled", fillcolor="#ffffff", fontname="Helvetica", fontsize=10];
-  "draft" [label="Draft", color="#1d1d1d"];
-  "idea" [label="Idea", color="#1d1d1d"];
-  "review" [label="Reviewed?", color="#1d1d1d", shape=diamond];
-  "publish" [label="Publish", color="#1d1d1d"];
-  "review" -> "publish" [label="yes", color="#9fa8b2"];
-  "draft" -> "review" [color="#9fa8b2"];
-  "review" -> "draft" [label="no", color="#9fa8b2"];
-  "idea" -> "draft" [color="#9fa8b2"];
-}
-```
+## Run a cleanup routine
 
-It also exports JSON Canvas (for Obsidian), `.excalidraw` and toucan's own graph format.
+Open **Routines** on a diagram and choose **Clean up**. Compare the spacing and alignment. A single undo returns the drawing to its previous arrangement. **Check this diagram** reports remaining layout problems. If a chore keeps recurring, look for suggestions in the Routines menu. **Bank it** asks an agent to turn the suggestion into a reusable routine.
 
-## Tldraw or Excalidraw
+![The open Routines menu lists Clean up, Lay it out again and Check this diagram.](assets/tour/routines-menu.png)
 
-A canvas runs on either engine, and converts between them with its keys, text, frames and arrows intact. Some styling is approximated: Excalidraw draws these arrows straight, for one.
+::: html
+<span id="go-back"></span>
+:::
 
-![A layered architecture diagram on tldraw, with clients, edge, services and data in four frames.](assets/tour/engine-tldraw.png "On tldraw.")
+## Save and revisit a version
 
-![The same architecture diagram on Excalidraw, with the same boxes and frames in Excalidraw's style.](assets/tour/engine-excalidraw.png "The same canvas, converted to Excalidraw.")
+Before a major edit, give the current version a name with `toucan --canvas NAME versions save "First sketch"`. Replace `NAME` with the name of your canvas. In **History**, select that version to inspect the earlier drawing. Leave the preview to continue editing the live canvas. Choose **Restore** when everyone should return to the saved drawing. Toucan saves the current state before restoring.
 
-## Tidy it up
+![History showing the read-only First sketch revision beside the checkout diagram.](assets/tour/history.png)
 
-Diagrams get knocked about. **Routines** are chores banked once and run from a menu or the CLI, each one undoable in a single step, and they keep your arrangement rather than starting over. Here a service map scored 99 when clean and 58 after being knocked about.
+## More canvas tasks
 
-![A service map with boxes out of line, different sizes, and two dropped on top of their neighbours.](assets/tour/cleanup-before.png "Before: 58 of 100.")
+### Leave a sticky note
 
-![The same service map with the boxes lined up, matching in size and clear of each other.](assets/tour/cleanup-after.png "After Clean up: 98 of 100.")
+Put a note beside the step that needs attention. Ask the agent to address it. A resolved note stays on the canvas with its reply, so you can see what changed.
 
-![The Routines menu open over a canvas, listing Clean up, Lay it out again, Check this diagram and other chores, each with a description.](assets/tour/routines-menu.png "The routines menu. Ask an agent to bank a new one and it appears here.")
+### Take it or leave it
 
-**Check this diagram** scores what's drawn and names the shapes at fault, so an agent can fix what it finds instead of squinting at a screenshot.
+Ask “What’s missing from this flow? Show your suggestions as a proposal.” The agent draws its proposed additions with dashed outlines. Review the changes on the canvas, then accept or reject them.
 
-## Short boxes, with the rest a click away
+### Short boxes, with the rest a click away
 
-A box holds a name. What's behind it opens in a card when you select it, and on a canvas with a **format**, ← and → walk you through. This is the Odyssey as a story map.
+Keep the visible label short and put a quotation or explanation in the box’s details. Click the box to open its reading card. [Try the Odyssey sample](explorer.html?map=odyssey) and use the arrow keys to follow the stops.
 
-![The Odyssey as a story map: a long path of short titled stops with branches.](assets/tour/story-whole.png "The whole map.")
+### Air out a dense diagram
 
-![One stop selected, with a card beside it holding a quotation from the poem and buttons to walk to the previous and next stops.](assets/tour/story-card.png "Select a stop, and the quotation opens beside it.")
+Run **Air out** from **Routines** to move long text out of diagram boxes and into their details. Select a shortened box to read the original text.
 
-![The canvas has moved to the next stop along the path, with its own card open.](assets/tour/story-walk.png "Press → and the canvas moves along the path.")
+### Zoom out on a system
 
-[Try this one yourself](explorer.html?map=odyssey), no install needed.
+On a layered system map, zoom out until the frames show component counts and the links between groups. Zoom back in to inspect a component. [Explore the shop map](explorer.html?map=shop).
 
-## Zoom out on a system
+### Describe it as data
 
-On a system diagram, zooming out swaps the details for what matters at that height: the frames, how many parts each holds, and how many connections run between them. It only changes what you see; agents and exports still get every shape.
+If the drawing starts as structured data, use the [graph and import reference](agents.html#graphs-the-engine-neutral-path) for input formats and stable keys. To start from a prepared layout, [choose a template](gallery.html).
 
-![A layered architecture diagram with every box and arrow visible.](assets/tour/system-close.png "Up close.")
+### Or as Mermaid
 
-![The same diagram zoomed out: four labelled frames with part counts, joined by arrows with connection counts.](assets/tour/system-overview.png "Zoomed out.")
+Save a Mermaid flowchart as `flow.mmd`, then run `toucan --canvas NAME import flow.mmd`. The boxes and arrows are editable. Use `toucan --canvas NAME export revised.mmd` to take the edited flow back to text.
 
-## Air out a dense diagram
+### Tldraw or Excalidraw
 
-Long text in boxes makes a canvas hard to read and hard to talk about. The **Air out** routine moves it into the details, makes the names larger, and spreads things a little.
-
-![Four boxes crowded with paragraphs of text, joined by arrows.](assets/tour/airout-before.png "Before.")
-
-![The same four boxes with short names only.](assets/tour/airout-after.png "After. The text is one click away, in the card.")
-
-## Comment, and have it answered
-
-A comment on a box or a region is a **thread**: a back-and-forth that someone eventually closes. Send a message to the agent and it works that thread on its own, so several can run at once.
-
-![A thread open on the Show the error box. A person asks whether to retry the card automatically, and the agent answers in the thread.](assets/tour/thread.png "Asked: “Should we retry the card automatically before showing an error?” The answer is the agent's, unedited.")
-
-## Leave a sticky note
-
-Pin a note where the problem is instead of describing it in chat. Its position is part of the message. Asked to handle the notes, the agent acts on each one, and the note turns green with a one-line reply.
-
-![The checkout flow with a yellow sticky note above the Take payment box: missing, what if an item went out of stock?](assets/tour/notes-before.png "A note left on the canvas.")
-
-![The flow now has a step for the out-of-stock case, and the note has turned green with the agent's reply.](assets/tour/notes-after.png "The agent's reply: “Added stock check before payment. Out-of-stock items lead to showing unavailable items and updating the cart.”")
-
-## Take it or leave it
-
-Ask for an opinion and the answer arrives as a **proposal**: drawn dashed, with Accept and Reject above the canvas. Nothing is final until you say so.
-
-![The checkout flow with new dashed boxes and arrows the agent proposes, and a bar above the canvas with Accept and Reject.](assets/tour/proposal.png "Asked: “What is missing from this flow? Answer on the canvas as a proposal.”")
-
-## Go back
-
-Every canvas keeps its history, whoever made the change. Step through versions read-only, with the live canvas still running underneath, and restore one if you want it. A restore can itself be undone.
-
-![The History panel open beside the checkout flow, with a version named First sketch selected and shown read-only.](assets/tour/history.png "An earlier version, named First sketch, shown over the live canvas.")
-
-## Where to go next
-
-- [Explore](explore.html): click through real canvases in your browser.
-- [Gallery](gallery.html): every diagram toucan starts from.
-- [Quick start](quickstart.html): run it yourself.
-- [Agent guide](agents.html): what agents can do, in full.
+To make an Excalidraw canvas, run `toucan new sketch --engine excalidraw`. New canvases use tldraw by default. The [feature index](features.html) identifies tools specific to tldraw.

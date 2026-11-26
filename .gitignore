@@ -10,3 +10,9 @@ __pycache__/
 website/site/*.html
 !website/site/explorer.html
 evals/out/
+
+/website/work/thanksgiving-capture.mp4
+/website/work/thanksgiving-social/
+/website/work/thanksgiving-preview/
+/website/work/agents-notice/
+.somm/

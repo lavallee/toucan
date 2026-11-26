@@ -19,70 +19,28 @@
 // reach the server, the chat agent included, and must not be a way to widen its own sandbox.
 // Anything a source says is checked here, and a missing file is reported rather than skipped silently.
 
-import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { accessSync, constants, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { delimiter, isAbsolute, join, relative, resolve, sep } from 'node:path'
-import { promisify } from 'node:util'
+import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { KINDS as PLUGIN_KINDS, ask as askPlugin, scan } from './plugins.mjs'
 
-const run = promisify(execFile)
 const ID = /^[a-z0-9][a-z0-9_-]{0,63}$/i
-const PREFIX = 'toucan-profiles-'
+const PREFIX = PLUGIN_KINDS.profiles.prefix
 const DEFAULT_BUDGET = 24000, MAX_BUDGET = 80000, MAX_FILE = 4 << 20
 
 export class ProfileError extends Error {}
 
-/** The sources on this machine: local files, and every toucan-profiles-NAME program on PATH. */
+/** The sources on this machine: local files, and every toucan-profiles-NAME plugin on PATH (found as server/plugins.mjs finds any plugin). */
 export function findSources({ data, path = process.env.PATH ?? '', exclude = [] }) {
-	const sources = [{ id: 'local', kind: 'files', dir: join(data, '_profiles') }]
-	const seen = new Set(['local'])
-	// The server runs a source outside any sandbox, so it only looks where an agent can't put one: not a relative folder,
-	// not inside toucan or its data (where agents write, and where npm puts node_modules/.bin on PATH), and nothing
-	// anyone else can write to.
-	const fenced = [data, ...exclude].filter(Boolean).map((d) => (existsSync(d) ? realpathSync(d) : resolve(d)))
-	const inside = (p) => fenced.some((f) => p === f || p.startsWith(f + sep))
-	const openToOthers = (p) => (statSync(p).mode & 0o022) !== 0
-	for (const dir of path.split(delimiter).filter((d) => d && isAbsolute(d))) {
-		let real
-		try {
-			real = realpathSync(dir)
-			if (inside(real) || openToOthers(real)) continue
-		} catch {
-			continue
-		}
-		let names
-		try {
-			names = readdirSync(dir)
-		} catch {
-			continue
-		}
-		for (const file of names) {
-			if (!file.startsWith(PREFIX)) continue
-			const id = file.slice(PREFIX.length).replace(/\.(m?js|py|sh|exe|cmd)$/i, '')
-			if (!ID.test(id) || seen.has(id)) continue
-			const full = join(dir, file)
-			try {
-				accessSync(full, constants.X_OK)
-				const target = realpathSync(full)
-				if (!statSync(target).isFile() || inside(target) || openToOthers(target)) continue
-			} catch {
-				continue
-			}
-			seen.add(id)
-			sources.push({ id, kind: 'command', command: full })
-		}
-	}
-	return sources
+	return [{ id: 'local', kind: 'files', dir: join(data, '_profiles') }, ...scan({ data, path, exclude, kinds: ['profiles'] }).found.map((p) => ({ id: p.id, kind: 'command', command: p.command }))]
 }
 
 async function ask(source, args, timeout = 15000) {
 	try {
-		const { stdout } = await run(source.command, args, { timeout, maxBuffer: 4 << 20, env: { ...process.env, TOUCAN_PROFILES_PROTOCOL: '1' } })
-		return JSON.parse(stdout)
+		return await askPlugin(source.command, args, { timeout, maxBuffer: 4 << 20, env: PLUGIN_KINDS.profiles.env })
 	} catch (e) {
-		const why = e.killed ? 'took too long' : e instanceof SyntaxError ? "didn't answer with JSON" : String(e.stderr || e.message).trim().split('\n')[0]
-		throw new ProfileError(`${PREFIX}${source.id} ${args.join(' ')}: ${why}`)
+		throw new ProfileError(`${PREFIX}${source.id} ${args.join(' ')}: ${e.why ?? e.message}`)
 	}
 }
 

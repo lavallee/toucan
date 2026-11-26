@@ -17,7 +17,8 @@ const labelBox = (arrow) => {
 const SPOTS = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.12, 0.88]
 let moved = 0
 const stuck = []
-for (const arrow of editor.getCurrentPageShapes().filter((s) => s.type === 'arrow' && toucan.text(s).trim())) {
+// A plan's arrows are left as the plan drew them.
+for (const arrow of editor.getCurrentPageShapes().filter((s) => s.type === 'arrow' && toucan.text(s).trim() && !toucan.scene.skipPlan(s.id))) {
 	const ends = new Set(editor.getBindingsFromShape(arrow, 'arrow').map((b) => b.toId))
 	const others = boxes.filter((b) => !ends.has(b.id)).map(bounds)
 	const clear = () => {

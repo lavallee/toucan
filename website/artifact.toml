@@ -1,16 +1,16 @@
 [artifact]
 slug = "toucan-site"
-title = "toucan — a canvas you and your agents share"
-description = "An infinite canvas in the browser that you edit by hand while agents edit it beside you."
+title = "toucan"
+description = "Draw, review, and plan on a live canvas you share with your agents."
 kind = "explainer"
 form = "collection"
 status = "live"
 created = "2026-10-27"
-updated = "2026-11-08"
+updated = "2026-11-26"
 
 [content]
 pages = "content"
-order = ["index.md", "tour.md", "features.md", "explore.md", "gallery.md", "quickstart.md", "agents.md", "how-it-works.md", "extending.md", "habits.md"]
+order = ["index.md", "quickstart.md", "tour.md", "use-cases.md", "explore.md", "gallery.md", "features.md", "agents.md", "extending.md", "how-it-works.md", "habits.md"]
 
 [deploy]
 target = "github-pages"

@@ -23,6 +23,12 @@ if (!pick.length && !args.keys) {
 }
 // Proposals are for a person to decide on; and an arrow needs two boxes to link.
 pick = pick.filter((e) => !e.meta?.proposed && nodes.has(e.from) && nodes.has(e.to))
+// A plan's arrows are the plan's to draw, and its boxes can't be given links: those arrows stay.
+const ofPlan = (key) => {
+	const s = toucan.get(key)
+	return !!s && toucan.scene.skipPlan(s.id)
+}
+pick = pick.filter((e) => ![e.key, e.from, e.to].some(ofPlan))
 if (!pick.length) return { summary: 'No arrows to turn into links: select some, or none is much longer than the rest.', changed: 0 }
 
 const name = (k) => (nodes.get(k).text || k).split('\n')[0]

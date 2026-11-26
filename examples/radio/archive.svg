@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+<title>Two reels on an archive tape deck</title>
+<defs><g id="reel"><circle r="31" fill="#eadfbf"/><g fill="#375153"><ellipse cy="-16" rx="6" ry="9"/><ellipse cy="-16" rx="6" ry="9" transform="rotate(120)"/><ellipse cy="-16" rx="6" ry="9" transform="rotate(240)"/></g><circle r="4" fill="#375153"/></g></defs>
+<rect width="320" height="180" fill="#b9d1ca"/><path d="M0 130 320 55v125H0" fill="#9cbab0"/>
+<rect x="64" y="23" width="192" height="137" rx="8" fill="#314947"/><rect x="71" y="31" width="178" height="87" rx="4" fill="#6e8276"/>
+<path d="m98 52 129 8-17 47-95 0z" fill="#523e33"/>
+<use href="#reel" x="114" y="70"/><use href="#reel" x="207" y="70"/>
+<path d="M81 132h47m-47 5h47m-47 5h47" stroke="#b2bb9d" stroke-width="2"/><g fill="#e8dab6"><rect x="171" y="129" width="14" height="14"/><rect x="189" y="129" width="14" height="14"/><rect x="207" y="129" width="14" height="14"/></g></svg>

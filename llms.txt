@@ -10,14 +10,23 @@ Requires Node 22+. Ask the person before installing. Do not `npm install toucan`
 
     curl -fsSL https://github.com/lavallee/toucan/releases/latest/download/install.sh | sh
 
-Then, in a project: `toucan init --open`, and `toucan guide` for the rest. Agents that can't run a CLI: `toucan mcp` is an MCP server on stdio.
+In a project, use `toucan init --open`. Read `toucan guide index` for the topic map. Agents without a shell can use the MCP server (`toucan mcp`) and call `toucan_guide` with topic `index`. In a host that shows MCP Apps, `toucan_open` and `toucan_draw` also put the live canvas in the conversation.
 
 ## Docs
 
-- [Agent guide](https://github.com/lavallee/toucan/blob/main/AGENTS.md): CLI, `toucan.*` helpers, the graph format, engines, canvas scripts
+- [Agent guide index](https://github.com/lavallee/toucan/blob/main/AGENTS.md): everyday editing rules and links to the topic guides
 - [Quick start](https://lavallee.github.io/toucan/quickstart.html): install, connect your agent, first canvas
 - [How it works](https://lavallee.github.io/toucan/how-it-works.html): sync, exec relay, headless mode and the trail, chat, security model
-- [Extending](https://lavallee.github.io/toucan/extending.html): extension commands, deployment notes, configuration, licences
+- [Extending](https://lavallee.github.io/toucan/extending.html): plugins (extension commands, agent profile sources, plan sources and their protocol), deployment notes, configuration, licences
+
+- [Screenshot review](https://lavallee.github.io/toucan/extending.html#screenshot-review): publish revisions, pin feedback, compare screenshots, and reply through a producer inbox.
+
+## What it does that a drawing tool doesn't
+
+- Agents edit the same canvas people do, through keyed, idempotent helpers and graph imports (Mermaid, JSON Canvas, Excalidraw).
+- It runs both ways at once: while an agent works, it hears what people edit, select and comment on, between its steps or with its next command, and builds on it rather than over it.
+- A canvas has reflexes: rules that fix what happens to it (text outgrowing a box, a frame cutting off its contents) without calling a model, and ask the agent about what they can't, which it can answer by teaching the canvas a new one (`toucan reflexes`).
+- A canvas can show a plan: board, gantt, timeline, dependency-graph and table views of a project kept in a JSON file or another system (through a `toucan-source-NAME` plugin), redrawn when it changes upstream, with a person's drags and edits written back. Agents compose views as small specs (`toucan plan catalog`).
 
 ## Source
 

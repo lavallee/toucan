@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { LoaderCircleIcon, PlusIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { Input } from '@lyra-forge/leyline/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@lyra-forge/leyline/ui/popover'
 import { cn } from '@/lib/utils'
+import { AppBarButton } from '@lyra-forge/leyline/app-bar'
 import { api, canvasName } from './net'
 
 type Template = { id: string; type: 'block' | 'starter'; title: string; use: string; group?: string; parts?: string[] }
@@ -43,10 +44,7 @@ export function AddMenu() {
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button variant="ghost" size="sm" aria-label="Add a diagram" title="Add a diagram: a block or a starter, beside what's here">
-					<PlusIcon />
-					<span className="max-lg:hidden">Add</span>
-				</Button>
+				<AppBarButton icon={PlusIcon} label="Add" aria-label="Add a diagram" title="Add a diagram: a block or a starter, beside what's here" />
 			</PopoverTrigger>
 			<PopoverContent className="w-96 p-0" align="end">
 				<header className="border-b px-3 py-2">

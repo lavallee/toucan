@@ -9,9 +9,9 @@
 //     open [NAME]                 open a canvas (or the index) in your browser, signed in
 //     agents [install [ID...] [--mcp] [--force] | remove [ID...]]   connect the agents on this machine (skill; MCP where it's needed)
 //     mcp                         run as an MCP server on stdio, for agents that can't run the CLI
-//     guide                       the full guide for agents
+//     guide [TOPIC]               the full agent guide or one topic
 //     status                      is the server running, and where
-//     start [--port P] [--host H] [--data DIR] [--no-headless] [--take-over] | stop | restart   the background server (commands start it when needed)
+//     start [--port P] [--host H] [--data DIR] [--plugin-path DIRS] [--no-headless] [--take-over] | stop | restart   the background server (commands start it when needed)
 //     doctor                      check this install, and say what to do about anything wrong
 //     update                      install the latest release
 //     --version
@@ -20,6 +20,7 @@
 //     url                         sign-in link for the browser (opens the index of canvases)
 //     canvases                    list canvases: title, shapes, scripts, open tabs
 //     new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE | --template ID] [--title T] [--description D] [--canvas-format F]
+//     new NAME --plan SOURCE REF [--views board,gantt]   a canvas over a plan, with views of it (a file plan given by path is copied in)
 //     templates [show ID]         starters (whole canvases) and blocks (one diagram each) to start from or add (show: one in full, as an example)
 //     add TEMPLATE                put a block or a starter on --canvas, beside what's there
 //     draw FILE|- [--update] [--move] [--label T]   lay out a diagram described as data (same form as a template) onto --canvas
@@ -38,6 +39,11 @@
 //     screenshot [OUT.png]        PNG of the page (or --keys a,b; --max px, default 1800)
 //     animate [OUT.gif]           GIF of the page building up, box by box along the arrows (--step ms, --hold ms, --max px)
 //     reload [--all]              make open tabs reload the page (this canvas's, or every one): after an upgrade
+//     export OUT [--format F]     write the canvas as a file, by OUT's ending: .svg .png .gif .mmd .canvas .dot .excalidraw .json .txt
+//     describe                    what the diagram says, in plain words: frames, boxes, states and arrows (no tab needed)
+//     rendition set NAME [--keys a,b | --frame KEY | --all] [--format svg|png] [--alt TEXT] [--title TEXT]   name a picture of part of --canvas
+//     rendition publish NAME [--no-catalogue]   draw it now, beside the canvas, with a manifest; and list it in the include catalogue
+//     rendition list [--json] | remove NAME [--no-catalogue]   each with whether it is current or behind the canvas, and its picture
 //     script list | put NAME FILE | rm NAME     canvas scripts (persistent behaviour)
 //     proposals [accept|reject [KEY...]]   dashed = proposed: list, or accept (solid) / reject (remove)
 //     selection                   what people have selected (to resolve "this"), in the tab you run in and others
@@ -45,6 +51,9 @@
 //     notes resolve KEY --reply TEXT   mark a note handled: green, plus a one-line reply (never deleted)
 //     log [--since T]             edits agents made with no tab open (T: ISO time, or 30m, 2h, 7d ago)
 //     versions [save LABEL | show N [--format F] | restore N]   the canvas's history: step back, name a point, restore one
+//     review                      screenshot revisions and pinned feedback (JSON)
+//     review post KEY IMAGE --producer ID --title T [--previous REV] [--caption T] [--mutation ID]
+//     review inbox PRODUCER | image REV OUT | reply NOTE TEXT --producer ID [--replacement REV] [--mutation ID]
 //     threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes
 //                                 comment threads on shapes and regions (--as NAME: speak as a person; default: as the agent)
 //     files                       where this canvas keeps what agents write for it, and what's there
@@ -54,6 +63,23 @@
 //     routine learn --codex [DIR] [--since 30d]  bring the chat agent's past Codex sessions into the work log, so suggest sees them
 //                                 chores banked once and run on any canvas (no --canvas needed to list, show, save or rm)
 //     say TEXT [--at KEY,KEY]     tell people what you're about to do; --at moves your cursor to those shapes
+//     reflexes [--json]           what --canvas does by itself when something happens to it: its tree, and what each node has done
+//     reflexes add NAME --when CODE (--routine R [--args JSON] | --do CODE | --tell) [--under NODE] [--before NODE] [--about TEXT] [--answers ASK] [--on]
+//                                 a node (CODE: a function body, or a file holding one); it starts watching unless --on
+//     reflexes add --starter NAME [--on]   one of the starters (`reflexes starters`), with the node it hangs under
+//     reflexes on|watch|off NAME | rm NAME | try NAME [--stage CODE] | starters | suggest
+//     reflexes asks [--all] | asks dismiss ID | wake on|off   what the tree couldn't answer; whether it may wake the agent for it
+//     plugins                     every plugin on PATH by kind (profiles, plan sources), with any found but refused and why; and extension commands
+//     sources                     where plans can come from: the built-in file source, and toucan-source-* adapters with what each lists
+//     plan                        the plan --canvas shows: source, state, views, problems
+//     plan bind SOURCE REF [--views board,gantt] [--copy] | unbind | sync | dismiss
+//     plan catalog                the kinds of view and their options, as an agent needs them
+//     plan views | view add KIND [options] | view set ID [options] | view put FILE|- | view rm ID [--keep]
+//                                 options: --id --title --group-by F --lanes F --rollup count,done,sum:F --filter EXPR|JSON --sort F,-G --fields a,b --color F
+//                                 --scale day|week|month|auto --from DATE --to DATE --[no-]dependencies --[no-]hide-empty --date F --per-row N --direction RIGHT|DOWN
+//     plan items [--json]         the plan's fields and items
+//     plan set ITEM field=value... [--after ID | --first]   change an item upstream (an option by id or label; empty clears)
+//     plan add --title T [field=value...] [--after ID | --first]   make an item upstream
 //     references                  what people can read beside this canvas: its files, its project's, links on it
 //     show REF|PATH|URL           open it for people, in the References panel beside the canvas
 //
@@ -62,7 +88,7 @@
 //   Any other command runs `toucan-<command>` from PATH with the same arguments and
 //   TOUCAN_CANVAS set, so extensions live in their own repos (see README, "Extending").
 
-import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync, mkdtempSync, accessSync, constants } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync, mkdtempSync, accessSync, constants, copyFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -103,7 +129,7 @@ function die(msg) {
 }
 
 // Needs a server to talk to, and starts one if there's none.
-const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'reload']
+const BUILTIN = ['url', 'canvases', 'summary', 'exec', 'screenshot', 'script', 'new', 'meta', 'graph', 'import', 'archive', 'notes', 'selection', 'proposals', 'log', 'versions', 'routine', 'threads', 'files', 'templates', 'draw', 'init', 'open', 'say', 'references', 'show', 'profiles', 'profile', 'add', 'animate', 'export', 'describe', 'plan', 'sources', 'plugins', 'reflexes', 'review', 'rendition', 'reload']
 // Works without one, or manages it.
 const LOCAL = ['setup', 'doctor', 'agents', 'mcp', 'guide', 'status', 'start', 'stop', 'restart', 'update', 'version', '--version', '-v', 'help', '--help', '-h']
 let client
@@ -116,7 +142,9 @@ if (cmd && !BUILTIN.includes(cmd) && !LOCAL.includes(cmd)) {
 } else if (BUILTIN.includes(cmd)) {
 	try {
 		if (!server) await control.ensure()
-		client = connect({ canvas, server, agent })
+		// What people did on the canvas since this agent's last command comes with this one's answer, on stderr so it
+		// stays out of output meant for a pipe (server/activity.mjs).
+		client = connect({ canvas, server, agent, onActivity: process.env.TOUCAN_ACTIVITY === 'off' ? undefined : (text) => process.stderr.write(`${text}\n`) })
 	} catch (e) {
 		die(e.message)
 	}
@@ -154,6 +182,67 @@ function screenshotDir() {
 }
 
 const print = (v) => console.log(typeof v === 'string' ? v : JSON.stringify(v, null, 2))
+
+/** Binds a canvas to a plan. A file plan may be named by a path on this machine: sent as it is, or copied into the canvas's files. */
+async function bindPlan(name, source, ref, { views = [], copy = false } = {}) {
+	const at = `/api/canvases/${encodeURIComponent(name)}`
+	const body = { name: source, views }
+	if (source === 'file' && !/^(files|project(-\d+)?)\//.test(ref) && existsSync(ref) && statSync(ref).isFile()) {
+		if (copy) {
+			const { dir } = await call(`${at}/files`)
+			// Never over a file that's already there: it may be another canvas's plan, with edits in it.
+			const base = basename(ref).replace(/(\.plan)?\.json$/, '')
+			let file = `${base}.plan.json`
+			for (let i = 2; existsSync(join(dir, file)); i++) file = `${base}-${i}.plan.json`
+			mkdirSync(dir, { recursive: true })
+			copyFileSync(ref, join(dir, file), constants.COPYFILE_EXCL)
+			body.ref = `files/${file}`
+			console.error(`toucan: copied ${ref} to ${join(dir, file)}; that copy is the plan now, and edits on the canvas are written to it`)
+		} else body.path = resolve(ref)
+	} else body.ref = ref
+	return call(`${at}/plan/bind`, { method: 'POST', body: JSON.stringify(body) })
+}
+const viewKinds = (list) => (typeof list === 'string' ? list.split(',').map((k) => k.trim()).filter(Boolean).map((kind) => ({ kind })) : [])
+/** A view's options from the command line. `none` (or an empty value) takes an option away, except where "none" is a value. */
+function viewFlags() {
+	const out = {}
+	const take = (name, key, { keepNone = false, number = false } = {}) => {
+		const v = flag(name)
+		if (v === undefined) return
+		if (v === true) die(`--${name} needs a value`)
+		out[key] = !keepNone && (v === 'none' || v === '') ? null : number ? Number(v) : v
+	}
+	take('id', 'id')
+	take('title', 'title')
+	take('group-by', 'groupBy', { keepNone: true })
+	take('lanes', 'lanes', { keepNone: true })
+	take('rollup', 'rollup')
+	take('color', 'color', { keepNone: true })
+	take('filter', 'filter')
+	take('sort', 'sort')
+	take('fields', 'fields')
+	take('scale', 'scale')
+	take('from', 'from')
+	take('to', 'to')
+	take('date', 'date')
+	take('direction', 'direction')
+	take('per-row', 'perRow', { number: true })
+	for (const [name, key] of [['dependencies', 'dependencies'], ['hide-empty', 'hideEmpty']]) {
+		if (flag(name)) out[key] = true
+		if (flag(`no-${name}`)) out[key] = false
+	}
+	return out
+}
+/** field=value arguments as a `set`. Values go as typed: the server reads an option by id or label, and an empty value clears. */
+function fieldArgs(args) {
+	const set = {}
+	for (const a of args) {
+		const i = a.indexOf('=')
+		if (i < 1) die(`"${a}": write a change as field=value`)
+		set[a.slice(0, i)] = a.slice(i + 1) === '' ? null : a.slice(i + 1)
+	}
+	return set
+}
 
 switch (cmd) {
 	case 'url': {
@@ -242,6 +331,81 @@ switch (cmd) {
 		print(`${out}  (${r.frames} frames, ${r.width}x${r.height})`)
 		break
 	}
+	case 'describe':
+		// What the diagram says, in words: to check it against what was asked without a picture. Read from the server's copy.
+		process.stdout.write(await call(cpath('/graph?format=text'), {}, { text: true }))
+		break
+	case 'export': {
+		// One way out for every kind of file. A picture (svg, png, gif) is drawn in a tab; the rest is the graph, from the server.
+		const out = positional()[0]
+		const KINDS = { svg: 'svg', png: 'png', gif: 'gif', mmd: 'mermaid', mermaid: 'mermaid', canvas: 'jsoncanvas', dot: 'dot', excalidraw: 'excalidraw', json: 'tg', txt: 'text' }
+		const named = flag('format')
+		const kind = typeof named === 'string' ? ({ ...KINDS, jsoncanvas: 'jsoncanvas', tg: 'tg', text: 'text' })[named] : KINDS[String(out ?? '').split('.').pop().toLowerCase()]
+		if (!out || !kind) die(`usage: export OUT [--format F] [--keys a,b]   OUT ends in one of ${Object.keys(KINDS).map((k) => '.' + k).join(' ')}, or name the format: svg, png, gif, mermaid, jsoncanvas, dot, excalidraw, tg, text`)
+		const keys = flag('keys') ? String(flag('keys')).split(',') : null
+		if (kind === 'svg') {
+			// The picture carries its title and what it says in words, as its <title> and <desc>.
+			const [info, desc] = await Promise.all([call(cpath('/info')), call(cpath('/graph?format=text'), {}, { text: true })])
+			const r = await exec(`return toucan.svg(${JSON.stringify({ keys, title: info.title ?? canvas, desc })})`, 120000, undefined, 'exporting an SVG')
+			if (!r) die('canvas is empty')
+			writeFileSync(out, r.svg)
+			print(`${out}  (${r.width}x${r.height})`)
+		} else if (kind === 'png') {
+			const b64 = await exec(`return toucan.screenshot(${JSON.stringify({ keys, max: Number(flag('max', 1800)) })})`, undefined, undefined, 'exporting a PNG')
+			if (!b64) die('canvas is empty')
+			writeFileSync(out, Buffer.from(b64, 'base64'))
+			print(out)
+		} else if (kind === 'gif') {
+			const r = await exec(`return toucan.animate(${JSON.stringify({ max: Number(flag('max', 1200)), step: Number(flag('step', 700)), hold: Number(flag('hold', 2500)) })})`, 180000, undefined, 'making an animated GIF')
+			if (!r) die('canvas is empty')
+			writeFileSync(out, Buffer.from(r.gif, 'base64'))
+			print(`${out}  (${r.frames} frames, ${r.width}x${r.height})`)
+		} else {
+			const got = await call(cpath(`/graph?format=${kind}`), {}, { text: kind !== 'tg' })
+			writeFileSync(out, typeof got === 'string' ? got : JSON.stringify(got, null, 2) + '\n')
+			print(out)
+		}
+		break
+	}
+	case 'rendition': {
+		// A named, published picture of part of the canvas (server/renditions.mjs). Drawn only when asked: never on a save.
+		const keys = flag('keys'), frame = flag('frame'), all = flag('all'), format = flag('format'), alt = flag('alt'), title = flag('title')
+		const noCatalogue = !!flag('no-catalogue'), asJson = !!flag('json')
+		const [, sub, name, extra] = argv
+		const at = (n = '') => cpath(`/renditions${n ? `/${encodeURIComponent(n)}` : ''}`)
+		const usage = 'usage: rendition set NAME [--keys a,b | --frame KEY | --all] [--format svg|png] [--alt TEXT] [--title TEXT] | publish NAME [--no-catalogue] | list [--json] | remove NAME [--no-catalogue]'
+		const catalogueSaid = (c) => {
+			if (c?.error) die(`the picture is done, but the include catalogue wasn't changed: ${c.error}`)
+		}
+		if (extra !== undefined) die(usage)
+		if (sub === 'set' && name) {
+			for (const [k, v] of [['keys', keys], ['frame', frame], ['format', format], ['alt', alt], ['title', title]]) if (v === true) die(`--${k} needs a value`)
+			if ([keys, frame, all].filter((v) => v !== undefined).length > 1) die('one of --keys, --frame or --all')
+			if (format !== undefined && !['svg', 'png'].includes(format)) die('--format: svg or png')
+			const select = keys !== undefined ? { keys: String(keys).split(',') } : frame !== undefined ? { frame } : all ? { all: true } : undefined
+			const r = await call(at(name), { method: 'PUT', body: JSON.stringify({ select, format, alt, title }) })
+			print(asJson ? r : `${r.created ? 'defined' : 'changed'} ${r.name}: ${r.select.all ? 'the whole canvas' : r.select.frame ? `frame ${r.select.frame}` : `keys ${r.select.keys.join(', ')}`}, as ${r.format.toUpperCase()}. \`toucan rendition publish ${r.name}\` draws it.`)
+			if (!r.alt) console.error(`toucan: ${r.name} has no --alt: a document that includes it would have no words for people who can't see it`)
+		} else if (sub === 'publish' && name) {
+			const r = await call(`${at(name)}/publish`, { method: 'POST', body: JSON.stringify({ catalogue: !noCatalogue, agent }) })
+			if (asJson) print(r)
+			else {
+				print(`${r.unchanged ? 'unchanged' : 'published'} ${r.rendition.name}: ${r.picture}${r.rendition.version?.n ? ` (from version ${r.rendition.version.n})` : ''}`)
+				if (r.catalogue?.name) console.error(`toucan: in the include catalogue as ${r.catalogue.name} (${r.catalogue.file}); a document includes it with <!-- include: ${r.catalogue.name} -->`)
+			}
+			catalogueSaid(r.catalogue)
+		} else if (sub === 'remove' && name) {
+			const r = await call(`${at(name)}${noCatalogue ? '?catalogue=0' : ''}`, { method: 'DELETE' })
+			print(asJson ? r : `removed ${r.removed}${r.catalogue?.removed ? `, and ${r.catalogue.name} from the include catalogue` : ''}`)
+			catalogueSaid(r.catalogue)
+		} else if ((sub === 'list' || !sub) && !name) {
+			const r = await call(at())
+			if (asJson) print(r.renditions)
+			else if (!r.renditions.length) print(`no renditions on ${canvas} yet: \`toucan rendition set NAME\` defines one`)
+			else print(r.renditions.map((x) => `${x.name}  ${x.state}${x.why ? ` (${x.why})` : ''}  ${x.format}  ${x.select.all ? 'all' : x.select.frame ? `frame ${x.select.frame}` : `keys ${x.select.keys.join(',')}`}  ${x.picture ?? '(not drawn yet)'}`).join('\n'))
+		} else die(usage)
+		break
+	}
 	case 'script': {
 		const [sub, name, file] = rest
 		if (sub === 'list') print((await call(cpath(`/scripts`))).scripts.map((s) => s.name))
@@ -259,7 +423,14 @@ switch (cmd) {
 		const [name] = positional()
 		if (!name) die('usage: new NAME [--engine tldraw|excalidraw] [--from CANVAS|FILE] [--title T] [--description D]')
 		const seed = from && existsSync(from) && statSync(from).isFile() ? { graph: readGraph(from, flag('format')) } : from ? { from } : {}
+		const planSource = flag('plan'), planViews = flag('views')
+		const planRef = positional()[1]
+		if (planSource !== undefined && (planSource === true || !planRef)) die('usage: new NAME --plan SOURCE REF [--views board,gantt]   (see `toucan sources`)')
 		await call('/api/canvases', { method: 'POST', body: JSON.stringify({ name, title, description, engine, ...seed, ...(canvasFormat && { format: canvasFormat }), ...(typeof template === 'string' && { template }) }) })
+		if (planSource) {
+			const bound = await bindPlan(name, planSource, planRef, { views: viewKinds(planViews === undefined ? 'board' : planViews), copy: true })
+			console.error(`toucan: ${name} shows "${bound.source.title}" (${bound.items} items) as ${bound.views.map((v) => v.id).join(', ') || 'no views yet'}${bound.state === 'waiting' ? '; the views are drawn when the canvas is opened' : ''}`)
+		}
 		print(`made ${name} — open ${client.url(name)}`)
 		break
 	}
@@ -286,6 +457,62 @@ switch (cmd) {
 	case 'profile':
 		print((await call(cpath('/profile'))).profile)
 		break
+	case 'plugins': {
+		// What the server found, and, from this shell's own PATH, the extension commands `toucan NAME` would run.
+		const { scanCommands } = await import('../server/plugins.mjs')
+		print({ ...(await call('/api/plugins')), commands: scanCommands() })
+		break
+	}
+	case 'sources':
+		print((await call(`/api/sources${canvas ? `?canvas=${encodeURIComponent(canvas)}` : ''}`)).sources)
+		break
+	case 'plan': {
+		const [, sub] = argv
+		const post = (path, body) => call(cpath(`/plan${path}`), { method: 'POST', body: JSON.stringify(body ?? {}) })
+		// What a write came to: the items as they now stand, or the refusal, as the reason this command failed.
+		const written = (r) => {
+			const bad = r.results.filter((x) => !x.ok)
+			if (bad.length) die(bad.map((x) => `${x.error}: ${x.message ?? 'refused'}`).join('\n'))
+			print(r.results.map((x) => x.item))
+		}
+		if (!sub) print(await call(cpath('/plan')))
+		else if (sub === 'catalog') print((await call('/api/plan/catalog')).text)
+		else if (sub === 'bind') {
+			const views = flag('views'), copy = !!flag('copy')
+			const [, , source, ref] = argv
+			if (!source || !ref) die('usage: plan bind SOURCE REF [--views board,gantt] [--copy]   (see `toucan sources`; a file plan is files/PATH or project/PATH)')
+			print(await bindPlan(canvas ?? die('which canvas? Pass --canvas NAME'), source, ref, { views: viewKinds(views), copy }))
+		} else if (sub === 'unbind') print(await call(cpath('/plan'), { method: 'DELETE' }))
+		else if (sub === 'sync') print(await post('/sync'))
+		else if (sub === 'dismiss') print(await call(cpath('/plan/problems'), { method: 'DELETE' }))
+		else if (sub === 'views') print((await call(cpath('/plan/views'))).views)
+		else if (sub === 'view') {
+			const keep = !!flag('keep')
+			const opts = viewFlags()
+			const [, , verb, what] = argv
+			if (verb === 'add' && what) print((await post('/views', { ...opts, kind: what })).view)
+			else if (verb === 'set' && what) print((await call(cpath(`/plan/views/${encodeURIComponent(what)}`), { method: 'PATCH', body: JSON.stringify(opts) })).view)
+			else if (verb === 'put' && what) print((await post('/views', JSON.parse(readFileSync(what === '-' ? 0 : what, 'utf8')))).view)
+			else if (verb === 'rm' && what) print((await call(cpath(`/plan/views/${encodeURIComponent(what)}${keep ? '?keep' : ''}`), { method: 'DELETE' })).views)
+			else die('usage: plan view add KIND [options] | set ID [options] | put FILE|- | rm ID [--keep]   (`plan catalog` lists kinds and options)')
+		} else if (sub === 'items') {
+			if (flag('json')) print(await call(cpath('/plan/items')))
+			else print((await call(cpath('/plan/items?text'))).text)
+		} else if (sub === 'set' || sub === 'add') {
+			const after = flag('after'), first = !!flag('first'), title = flag('title')
+			const place = first ? { after: null } : typeof after === 'string' ? { after } : undefined
+			const args = argv.slice(2)
+			if (sub === 'set') {
+				const [id, ...fields] = args
+				if (!id || (!fields.length && !place && typeof title !== 'string')) die('usage: plan set ITEM field=value... [--after ID | --first]')
+				written(await post('/write', { changes: [{ op: 'update', id, set: { ...fieldArgs(fields), ...(typeof title === 'string' && { title }) }, ...(place && { place }) }] }))
+			} else {
+				if (typeof title !== 'string') die('usage: plan add --title T [field=value...] [--after ID | --first]')
+				written(await post('/write', { changes: [{ op: 'create', set: { ...fieldArgs(args), title }, ...(place && { place }) }] }))
+			}
+		} else die('usage: plan [bind SOURCE REF | unbind | sync | catalog | views | view add|set|put|rm | items | set ITEM f=v | add --title T | dismiss]')
+		break
+	}
 	case 'graph': {
 		const format = flag('format', 'tg')
 		if (!FORMATS[format]?.export) die(`--format: one of ${Object.keys(FORMATS).filter((f) => FORMATS[f].export).join(', ')}`)
@@ -326,6 +553,44 @@ switch (cmd) {
 		if (sub === 'resolve' && key && typeof reply === 'string') print(await exec(`${tldrawOnly}return toucan.resolveNote(${JSON.stringify(key)}, ${JSON.stringify(reply)})`, undefined, undefined, 'answering a note'))
 		else if (!sub) print(await exec(`${tldrawOnly}return toucan.notes(${JSON.stringify({ all })})`, undefined, undefined, 'reading the notes'))
 		else die('usage: notes [--all] | notes resolve KEY --reply TEXT')
+		break
+	}
+	case 'reflexes': {
+		const asJson = flag('json')
+		const when = flag('when'), routine = flag('routine'), does = flag('do'), tell = flag('tell'), under = flag('under'), before = flag('before'), about = flag('about'), answers = flag('answers'), on = flag('on'), stage = flag('stage'), all = flag('all'), starterName = flag('starter'), args = flag('args')
+		const [, sub, name, extra] = argv
+		const base = (rest = '') => cpath(`/reflexes${rest}`)
+		// Code given inline, or the name of a file that holds it.
+		const code = (v, what) => {
+			if (v === undefined) return undefined
+			if (typeof v !== 'string') die(`--${what} needs a value: code, or a file holding it`)
+			return existsSync(v) && statSync(v).isFile() ? readFileSync(v, 'utf8') : v === '-' ? readFileSync(0, 'utf8') : v
+		}
+		const tree = (r) => {
+			const lines = [...(r.tree.length ? r.tree : ['No reflexes yet. `toucan reflexes starters` lists some to begin with.'])]
+			if (r.resting) lines.push(`Resting until ${r.resting}: they acted too often in a short time.`)
+			for (const a of r.asks) lines.push(`ask #${a.id} from ${a.node} (${a.why})${a.on?.length ? ` on ${a.on.join(', ')}` : ''}${a.text ? `: ${a.text}` : ''}`)
+			if (r.wake) lines.push('The agent may be woken for an ask (wake on).')
+			return lines.join('\n')
+		}
+		if (!sub) print(asJson ? await call(base()) : tree(await call(base())))
+		else if (sub === 'starters') print((await call(base())).starters)
+		else if (sub === 'suggest') print((await call(base('/suggest'))).suggestions)
+		else if (sub === 'add' && typeof starterName === 'string') print(await call(base(), { method: 'POST', body: JSON.stringify({ starter: starterName, status: on ? 'on' : 'watching', agent }) }))
+		else if (sub === 'add' && name) {
+			const node = { name, when: code(when, 'when'), about: typeof about === 'string' ? about : undefined, under: typeof under === 'string' ? under : undefined, status: on ? 'on' : 'watching', ...(typeof answers === 'string' && { answers: Number(answers) }) }
+			if ([routine, does, tell].filter(Boolean).length > 1) die('one of --routine, --do or --tell')
+			if (typeof routine === 'string') node.do = { routine, ...(typeof args === 'string' && { args: JSON.parse(args) }) }
+			else if (does !== undefined) node.do = { code: code(does, 'do') }
+			else if (tell) node.do = { tell: true }
+			print(await call(base(), { method: 'POST', body: JSON.stringify({ node, before: typeof before === 'string' ? before : undefined, agent }) }))
+		} else if (['on', 'watch', 'off'].includes(sub) && name) print(await call(base(`/${name}`), { method: 'PATCH', body: JSON.stringify({ status: sub === 'watch' ? 'watching' : sub }) }))
+		else if (sub === 'rm' && name) print(await call(base(`/${name}`), { method: 'DELETE' }))
+		else if (sub === 'try' && name) print(await call(base(`/${name}/try`), { method: 'POST', body: JSON.stringify({ stage: code(stage, 'stage') }) }))
+		else if (sub === 'asks' && name === 'dismiss' && extra) print(await call(base(`/asks/${extra}/dismiss`), { method: 'POST' }))
+		else if (sub === 'asks' && !name) print((await call(base(`/asks${all ? '?all' : ''}`))).asks)
+		else if (sub === 'wake' && ['on', 'off'].includes(name)) print(await call(base('/wake'), { method: 'POST', body: JSON.stringify({ on: name === 'on' }) }))
+		else die('usage: reflexes | add NAME --when CODE (--routine R [--args JSON] | --do CODE | --tell) [--under NODE] [--before NODE] [--about TEXT] [--answers ASK] [--on] | add --starter NAME [--on] | on|watch|off NAME | rm NAME | try NAME [--stage CODE] | starters | suggest | asks [--all] | asks dismiss ID | wake on|off')
 		break
 	}
 	case 'say': {
@@ -389,13 +654,22 @@ switch (cmd) {
 	}
 	case 'draw': {
 		const label = flag('label'), move = !!flag('move'), update = move || !!flag('update')
+		const prefix = flag('prefix'), frameKey = flag('frame'), title = flag('title')
+		for (const [name, value] of [['prefix', prefix], ['frame', frameKey], ['title', title]]) if (value === true) die(`--${name} needs a value`)
 		const [, file] = argv
-		if (!file) die('usage: draw FILE|- [--update] [--move] [--label T]')
-		const { layOut, placeBeside } = await import('../lib/layouts.mjs')
+		if (!file) die('usage: draw FILE|- [--update] [--move] [--prefix P] [--frame KEY] [--title T] [--label T]')
+		const { layOut, placeDrawing } = await import('../lib/layouts.mjs')
 		const spec = JSON.parse(readFileSync(file === '-' ? 0 : file, 'utf8'))
 		const tg = await layOut(spec).catch((e) => die(e.message))
-		// A new drawing goes beside what's there, and never over it. --update means this is a new version of what's there.
-		const placed = update ? { prefix: null } : placeBeside(tg, await exec('const g = toucan.graph(); return { keys: [...g.nodes, ...g.groups].map((n) => n.key), boxes: [...g.nodes, ...g.groups].map((n) => n.box).filter(Boolean) }', undefined, undefined, 'finding room to draw'))
+		const { shapes } = await exec('const g = toucan.graph(); return { shapes: [...g.nodes, ...g.groups].filter((n) => n.box).map((n) => ({ key: n.key, box: n.box })) }', undefined, undefined, 'finding room to draw')
+		const frame = frameKey || title ? { key: typeof frameKey === 'string' ? frameKey : `frame-${String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'drawing'}`, title: typeof title === 'string' ? title : undefined } : null
+		const placed = (() => {
+			try {
+				return placeDrawing(tg, { spec, existing: shapes, update, prefix: typeof prefix === 'string' ? prefix : undefined, frame })
+			} catch (e) {
+				return die(e.message)
+			}
+		})()
 		const named = typeof label === 'string' ? label : `draw ${spec.title ?? spec.kind}`
 		const out = await exec(`return await toucan.applyGraph(${JSON.stringify(tg)}, ${JSON.stringify({ move })})`, 120000, named, typeof label === 'string' ? label : `drawing ${spec.title ?? spec.kind}`)
 		print(placed.prefix ? { ...out, keysPrefixed: placed.prefix } : out)
@@ -413,6 +687,29 @@ switch (cmd) {
 	case 'files':
 		print(await call(cpath('/files')))
 		break
+	case 'review': {
+		const producer = flag('producer'), title = flag('title'), previous = flag('previous'), caption = flag('caption')
+		const replacement = flag('replacement'), mutation = flag('mutation')
+		const [sub, id, value, extra] = positional()
+		const post = (data) => call(cpath('/review'), {
+			method: 'POST',
+			body: JSON.stringify({ protocol: 'toucan.review/1', mutation: mutation ?? crypto.randomUUID(), ...data }),
+		})
+		if (!sub) print(await call(cpath('/review')))
+		else if (sub === 'inbox' && id && !value) print(await call(cpath(`/review?producer=${encodeURIComponent(id)}`)))
+		else if (sub === 'post' && id && value && !extra && typeof producer === 'string' && typeof title === 'string') {
+			if (statSync(value).size > (5 << 20)) die('screenshot exceeds 5 MiB')
+			print(await post({ op: 'post', artifact: id, image: readFileSync(value).toString('base64'), producer, title, previous: previous ?? null, caption }))
+		} else if (sub === 'reply' && id && value && !extra && typeof producer === 'string') {
+			print(await post({ op: 'reply', note: id, text: value, producer, replacement }))
+		} else if (sub === 'image' && id && value && !extra) {
+			const response = await fetch((server ?? cfg.url) + cpath(`/review/${encodeURIComponent(id)}/image`), { headers: { authorization: `Bearer ${cfg.token}` } })
+			if (!response.ok) die(`could not download revision (${response.status})`)
+			writeFileSync(value, Buffer.from(await response.arrayBuffer()), { flag: 'wx' })
+			print(value)
+		} else die('usage: review | inbox PRODUCER | post KEY IMAGE --producer ID --title T [--previous REV] [--caption T] [--mutation ID] | image REV OUT | reply NOTE TEXT --producer ID [--replacement REV] [--mutation ID]')
+		break
+	}
 	case 'threads': {
 		const all = !!flag('all'), on = flag('on'), region = flag('region'), reply = flag('reply'), as = flag('as'), ask = flag('ask')
 		const author = typeof as === 'string' ? { kind: 'person', name: as } : { kind: 'agent' }
@@ -467,11 +764,21 @@ switch (cmd) {
 		else die('usage: routine list [--kind K] [--engine E] | show NAME | run NAME [--args JSON] | save NAME FILE [--title T] [--description D] [--engines E] [--kind K] [--when TEXT] [--takes TEXT] | suggest [--since 30d] [--min N] | stats [--since 30d] | rm NAME')
 		break
 	}
-	case 'guide':
-		// Written for the chat agent, which runs from the checkout. Everyone else has `toucan`.
-		// Its note on how the chat panel runs the CLI only makes sense there.
-		print(readFileSync(join(ROOT, 'AGENTS.md'), 'utf8').replace(/^In the chat panel you run it as .*\n\n?/m, '').replaceAll('node bin/toucan.mjs', 'toucan'))
+	case 'guide': {
+		const topics = {
+			index: 'AGENTS.md',
+			cli: 'docs/agents/cli.md',
+			editing: 'docs/agents/editing.md',
+			collaboration: 'docs/agents/collaboration.md',
+			plans: 'docs/agents/plans.md',
+			extensions: 'docs/agents/extensions.md',
+		}
+		const [topic] = rest
+		if (rest.length > 1 || (topic !== undefined && !Object.hasOwn(topics, topic))) die(`usage: guide [${Object.keys(topics).join('|')}]`)
+		const files = topic === undefined ? Object.values(topics) : [topics[topic]]
+		print(files.map((file) => readFileSync(join(ROOT, file), 'utf8').trimEnd()).join('\n\n'))
 		break
+	}
 	case 'mcp':
 		(await import('../lib/mcp.mjs')).serve()
 		break
@@ -488,6 +795,8 @@ switch (cmd) {
 		if (typeof port === 'string') opts.port = Number(port)
 		if (typeof host === 'string') opts.host = host
 		if (typeof data === 'string') opts.data = resolve(data)
+		const pluginPath = flag('plugin-path')
+		if (typeof pluginPath === 'string') opts.pluginPath = pluginPath
 		if (flag('no-headless')) opts.headless = false
 		else if (flag('headless')) opts.headless = true
 		const takeOver = !!flag('take-over')

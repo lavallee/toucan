@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360">
+<title>Field recording locations along the river</title>
+<defs>
+  <pattern id="water" width="72" height="15" patternUnits="userSpaceOnUse"><path d="M0 8q12-4 24 0t24 0t24 0" fill="none" stroke="#a9bdd4" stroke-width="1"/></pattern>
+  <pattern id="stone" width="10" height="10" patternUnits="userSpaceOnUse"><path d="m0 10 10-10" stroke="#3d5674" stroke-width=".8"/></pattern>
+</defs>
+<rect width="480" height="360" fill="#cfe4ee"/>
+<circle cx="335" cy="70" r="47" fill="#f4f7f8"/>
+<path d="m0 135 40-17 36 7 47-37 40 17 26-8 39 15 50-44 25 10 42-19 69 39 28-9 38 11v150H0" fill="#a9bdd4"/>
+<path d="m0 158 52-20 53 7 52-32 51 21 38-10 56 18 45-33 52-3 81-30v151H0" fill="#6f8fb2"/>
+<path d="M0 171q132-55 242-9t238-23v221H0" fill="#3d5674"/>
+<path d="M0 171q132-55 242-9t238-23v221H0" fill="url(#water)"/>
+<g fill="#0f2a4a"><path d="M0 105h480v9H0zm0 10h480v4H0z"/><path d="M77 103V73h8v30zm235 0V60h9v43zM69 119h23v66H69zm234 0h27v68h-27z"/></g>
+<g stroke="#0f2a4a" fill="none" stroke-width="2"><path d="M0 101q40 4 80-27 120 73 237-13 82 65 163 36"/><path d="M26 100v6m24-15v15m62-15v15m28-4v4m108-11v11m27-23v23m72-24v24m31-10v10m74-6v6"/></g>
+<g fill="#0f2a4a"><path d="M0 298q37-18 77-11l65 18 72 55H0zm333 62 65-38 82-12v50z"/><path d="m0 286 63-17 31 8-80 21z"/><path d="M59 269v-22h3v23zm-30 9v-23h3v22z"/><path d="M287 224h94l-15 12h-62zm15-4v-15h25l10 15zm39-21h3v21h-3z"/></g>
+<path d="M356 242q30 4 66-1m-78 8q51 5 89-1M56 304l78 23" fill="none" stroke="#cfe4ee" stroke-width="2"/>
+<path d="M70 284C149 258 126 193 220 175S278 244 345 230" fill="none" stroke="#f4f7f8" stroke-width="2" stroke-dasharray="4 6"/>
+<g fill="#c2266f" stroke="#f4f7f8" stroke-width="3"><circle cx="70" cy="284" r="6"/><circle cx="220" cy="175" r="6"/><circle cx="345" cy="230" r="6"/></g>
+</svg>

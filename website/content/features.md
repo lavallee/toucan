@@ -1,8 +1,14 @@
 ---
-description: Everything toucan 0.14.0 does, in one list: where to find each feature, and when it arrived.
+description: Toucan features, where to find them and the release that introduced each one.
 kicker: Reference
 ---
-# Features
+# Feature index
+
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
 
 Each row says where you find it: in the app, or as a `toucan` command an agent (or you) runs. Names link to where it's shown or explained, and "(tldraw)" marks what works on the tldraw engine only.
 
@@ -13,7 +19,8 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Canvas](index.html) | A whiteboard in a browser tab that you edit by hand while agents edit it beside you, synced live across tabs. | **The canvas** | 0.1.0 |
 | [Two engines](tour.html#tldraw-or-excalidraw) | Each canvas runs on tldraw or Excalidraw, and converts between them with keys, text, frames and arrows intact. | **New canvas**; CLI: `new NAME --engine tldraw\|excalidraw` | 0.1.0 |
 | Canvas index | Every canvas on the server in one page, with thumbnails, to open or start one. | **Index**; CLI: `canvases` | 0.1.0 |
-| [Templates](gallery.html) | 33 diagrams (blocks) in six groups, from flowchart and swimlane to SWOT, retro and story map, to start a canvas from or add beside what's there. | **New canvas**; CLI: `templates [show ID]` · `new NAME --template ID` · `add ID` | 0.7.0 |
+| [Templates](gallery.html) | 34 diagrams (blocks) in six groups, from flowchart and swimlane to SWOT, retro and story map, to start a canvas from or add beside what's there. | **New canvas**; CLI: `templates [show ID]` · `new NAME --template ID` · `add ID` | 0.7.0 |
+| [Systems maps](gallery.html) | A dense picture of many named parts in a few systems: panels of tiles in columns, a state on any part (live, being built, in trial, planned, retiring) shown by colour and by word, a key made from what the picture uses, and long arrows that travel round the outside instead of through a panel. | **New canvas**; CLI: `templates show systems-map` · `draw FILE` | 0.20.0 |
 | [Starters and Add](gallery.html) | Six starters build a canvas on one subject out of several blocks under headings (system design, incident review, product strategy, project kickoff, research plan, team retro); Add puts any block or starter beside what's on a canvas. | **Add · New canvas**; CLI: `add ID` · `new NAME --template ID` | 0.13.0 |
 | [Welcome canvas](quickstart.html) | A first canvas on setup that shows what to try. | CLI: `setup` | 0.8.0 |
 | Appearance and your name | System, light or dark per browser, and the name shown on your comments. | **Appearance** | 0.3.0 |
@@ -23,9 +30,10 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
-| [Chat panel](tour.html#ask-and-it-draws) | Ask in plain words and the agent draws, edits and checks its work on the canvas, using Codex on your own ChatGPT sign-in. | **Chat** | 0.1.0 |
+| [Chat panel](tour.html#draw-with-an-agent) | Ask in plain words and the agent draws, edits and checks its work on the canvas, using Codex on your own ChatGPT sign-in. | **Chat** | 0.1.0 |
 | Fast and Thorough | Pick a quick default model or a slower, more careful one for the chat, per browser. | **Chat: Fast / Thorough** | 0.4.0 |
 | Steer a turn in progress | Send a message while the agent works and it adjusts the turn instead of waiting for it to end. | **Chat** | 0.4.0 |
+| [Agents notice people](agents.html#what-people-do-while-you-work) | Edit, select and comment while an agent works: it hears what you did between its steps and builds on it. A message sent mid-turn carries what's selected then, and terminal and MCP agents hear it with their next command. | **Chat · Threads** | 0.18.0 |
 | Slash commands and Mermaid shortcut | Type / to run a routine instantly, or paste a Mermaid flowchart and it lands without a model call. | **Chat: /** | 0.4.0 |
 | New chat | Start a fresh conversation with the agent on the same canvas. | **Chat: New chat** |  |
 | Dock or float the chat | Dock the chat left, right or along the bottom, or float it over the canvas, and resize it. | **Chat header** | 0.3.0 |
@@ -37,12 +45,16 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
 | [Sticky notes for the agent](tour.html#leave-a-sticky-note) (tldraw) | Pin a note where the problem is; the agent acts on each and turns it green with a one-line reply. Notes are never deleted. | **Note tool (N)**; CLI: `notes` · `notes resolve KEY --reply TEXT` | 0.2.0 |
-| [Comment threads](tour.html#comment-and-have-it-answered) | Comment on a shape, several shapes or a region and go back and forth until someone closes it. Each thread has its own agent, so several are worked at once. | **Comment · Threads**; CLI: `threads new TEXT --on KEY --ask` · `threads reply N TEXT` | 0.5.0 |
+| [Comment threads](tour.html#start-parallel-comment-threads) | Comment on a shape, several shapes or a region and go back and forth until someone closes it. Each thread has its own agent, so several are worked at once. | **Comment · Threads**; CLI: `threads new TEXT --on KEY --ask` · `threads reply N TEXT` | 0.5.0 |
+| [Screenshot review](extending.html#screenshot-review) | Compare screenshot revisions and pin feedback to an exact image. The original producer can reply with an updated screenshot. | **Review**; CLI: `review post` · `review inbox` · `review reply` | 0.17.0 |
 | [Notes into threads](agents.html#threads-comments-on-shapes-and-regions) (tldraw) | Bring sticky notes into threads, keeping their replies and resolutions. | **Threads panel**; CLI: `threads adopt-notes` | 0.5.0 |
 | [Proposals](tour.html#take-it-or-leave-it) | An agent's suggestion arrives dashed, with Accept and Reject above the canvas. Nothing is final until you say so. | **Proposal bar: Accept all / Reject all**; CLI: `import --propose` · `proposals accept\|reject` | 0.2.0 |
 | [Agent at work](agents.html#what-people-see-presence-and-undo) | While an agent works, every tab shows a status pill with what it's doing, a soft ring round the canvas, and its cursor on the shape it touched. | **On the canvas**; CLI: `say TEXT [--at KEY,KEY]` · `--agent NAME` | 0.9.0 |
 | ["This": selection awareness](agents.html#this-what-people-have-selected) | Agents can see what you've selected, so "make this bigger" means this. | **Select**; CLI: `selection` | 0.2.0 |
 | Edits glow | Shapes an agent adds or changes glow briefly, tagged with its name, in every open tab. | **On the canvas** | 0.2.0 |
+| [Plans: views of a system of record](agents.html#plans-a-canvas-over-a-system-of-record) | Bind a canvas to a project kept elsewhere and see it as a board, gantt, timeline, dependency graph or table that follows upstream changes and writes a person's drags and edits back. | **Plan menu · Details card**; CLI: `plan bind SOURCE REF` · `plan sync` · `new NAME --plan SOURCE REF` | 0.15.0 |
+| [Views as specs](agents.html#plans-a-canvas-over-a-system-of-record) | Agents compose and reshape plan views by writing small declarative specs from a catalog: group by any option field, swimlanes, filter, sort, card fields, roll-ups, a real date axis. A spec that doesn't fit is refused with what would. | **Plan menu**; CLI: `plan catalog` · `plan view add KIND` · `plan view set ID` · `plan view put FILE` · `plan view rm ID` | 0.15.0 |
+| [Writing the plan from the canvas](agents.html#plans-a-canvas-over-a-system-of-record) | An agent updates the system of record through the same versioned write as a person's gesture; a conflict or refusal puts the canvas back to upstream and tells people. | **Notice above the canvas**; CLI: `plan items` · `plan set ITEM field=value` · `plan add --title T` · `plan dismiss` | 0.15.0 |
 
 ## Reading a diagram
 
@@ -57,13 +69,16 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
-| [Routines](tour.html#tidy-it-up) | Chores banked once and run from a menu, the chat (/name) or the CLI, each one undoable in a single step; grouped by kind (tidy, arrows, layout, style, content, check), each saying when to use it. | **Routines menu**; CLI: `routine list [--kind K]` · `routine run NAME` | 0.3.0 |
-| [Clean up and the tidying set](tour.html#tidy-it-up) | Clean up, Lay it out again, Line things up, Even out the gaps, Match box sizes, Fix overlaps, Fit frames, Neat arrows, Colour by frame, Tidy arrows. All run on Excalidraw too. | **Routines menu**; CLI: `routine run clean-up` | 0.7.0 |
+| [Routines](tour.html#run-a-cleanup-routine) | Chores banked once and run from a menu, the chat (/name) or the CLI, each one undoable in a single step; grouped by kind (tidy, arrows, layout, style, content, check), each saying when to use it. | **Routines menu**; CLI: `routine list [--kind K]` · `routine run NAME` | 0.3.0 |
+| [Clean up and the tidying set](tour.html#run-a-cleanup-routine) | Clean up, Lay it out again, Line things up, Even out the gaps, Match box sizes, Fix overlaps, Fit frames, Neat arrows, Colour by frame, Tidy arrows. All run on Excalidraw too. | **Routines menu**; CLI: `routine run clean-up` | 0.7.0 |
 | Routines from real work | Arrows to links, Fit text, Clear arrow labels, Frame these, Stack frames and Open out details: chores agents kept doing by hand. | **Routines menu**; CLI: `routine run NAME` | 0.13.0 |
 | [Air out](tour.html#air-out-a-dense-diagram) | Moves long text from crowded boxes into their details, enlarges names and spreads things a little. | **Routines menu**; CLI: `routine run air-out` | 0.7.0 |
-| [Check this diagram](tour.html#tidy-it-up) | Scores what's drawn out of 100 and names the shapes at fault (overlaps, arrows through boxes, labels on boxes or crossed by other arrows), so an agent can fix what it finds. | **Routines menu**; CLI: `routine run check-diagram` | 0.7.0 |
+| [Check this diagram](tour.html#run-a-cleanup-routine) | Scores what's drawn out of 100 and names the shapes at fault (overlaps, arrows through boxes, labels on boxes or crossed by other arrows), and says what to run or change for each, so an agent can fix what it finds. It also catches frame names cut off, arrows sharing a run, words broken inside boxes and mostly empty frames, can look at one frame alone (`measure({ within })`), and scores a canvas of several sections section by section. | **Routines menu**; CLI: `routine run check-diagram` | 0.7.0 |
 | [Bank your own routine](agents.html#routines-chores-worth-keeping) | Ask the chat to make a chore a routine, paste code, or save one from the CLI; it appears in the menu for every canvas. | **Chat · Routines menu**; CLI: `routine save NAME FILE` | 0.3.0 |
 | [Routines learned from work](agents.html#routines-chores-worth-keeping) | A work log of what agents do on canvases; toucan suggests the code they keep writing by hand as routines to bank, and shows which routines get used. | **Routines menu: From your work**; CLI: `routine suggest` · `routine stats` · `routine learn --codex` | 0.13.0 |
+| [Reflexes](agents.html#reflexes-what-the-canvas-does-by-itself) | The canvas fixes some things by itself the moment they happen, without the agent: text that outgrew its box, a frame cutting off what's in it, an arrow through a box. A tree of them, switched on per canvas; each fix is one undo step, a fix someone undoes stays undone, and what's already there when one is switched on is left. After Sihan Xu's growing behavior tree and The Harness. | **Reflexes menu**; CLI: `reflexes` · `reflexes starters` · `reflexes add --starter NAME --on` · `reflexes on\|watch\|off NAME` | 0.16.0 |
+| [Asks, and teaching the canvas](agents.html#reflexes-what-the-canvas-does-by-itself) | What no reflex can settle is asked about, in the Reflexes menu and the agent's brief (or, if you allow it, in a comment thread its agent takes). The agent can answer by teaching the canvas a new reflex, which arrives watching until you switch it on. | **Reflexes menu: Asking**; CLI: `reflexes asks` · `reflexes add NAME --when CODE --routine R --answers N` · `reflexes wake on\|off` · `reflexes suggest` | 0.16.0 |
+| [Try a reflex on a copy](agents.html#reflexes-what-the-canvas-does-by-itself) (tldraw) | Bring a reflex's situation about on a hidden copy of the canvas, let it answer, and see whether the situation was over afterwards. The canvas itself never changes. | CLI: `reflexes try NAME [--stage CODE]` | 0.16.0 |
 | [Canvas scripts](agents.html#canvas-scripts-growing-features) | Persistent behaviour stored with a canvas, such as a button that re-routes arrows. | CLI: `script list\|put\|rm` | 0.1.0 |
 | Timeline-aware tidying | On a timeline, tidying keeps dates where they are: positions and widths are dates. | — | 0.7.0 |
 
@@ -71,9 +86,9 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
-| [History and restore](tour.html#go-back) | Every canvas keeps versions, whoever made the change. Step through them read-only over the live canvas and restore one; a restore can be undone. | **History**; CLI: `versions` · `versions save LABEL` · `versions restore N` | 0.3.0 |
+| [History and restore](tour.html#save-and-revisit-a-version) | Every canvas keeps versions, whoever made the change. Step through them read-only over the live canvas and restore one; a restore can be undone. | **History**; CLI: `versions` · `versions save LABEL` · `versions restore N` | 0.3.0 |
 | [One undo per agent action](agents.html#what-people-see-presence-and-undo) | An agent's run, a routine or an accepted proposal is a single undo step. | **⌘Z** | 0.2.0 |
-| Upgrade-aware tabs | A tab left open across an upgrade says so and reloads in one click; `toucan reload --all` brings every open tab up to date at once. | **toucan was updated · Reload**; CLI: `reload [--all]` | 0.15.0 |
+| Upgrade-aware tabs | A tab left open across an upgrade says so and reloads in one click; `toucan reload --all` brings every open tab up to date at once. | **toucan was updated · Reload**; CLI: `reload [--all]` | 0.23.0 |
 | [While you were away](agents.html#headless-mode) | Edits agents made with no tab open are logged and announced when you come back. | **Banner**; CLI: `log [--since T]` | 0.2.0 |
 | [A folder per canvas](agents.html#files-what-you-write-for-a-canvas) | What agents write for a canvas goes in its own folder, archived with it, and nowhere else in the data directory. | CLI: `files` | 0.6.0 |
 
@@ -82,9 +97,11 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
 | [The toucan CLI](agents.html#the-cli) | Read a canvas, run JavaScript in the live editor, screenshot it, and merge diagrams in by key, from any terminal agent. | CLI: `summary` · `exec` · `screenshot` · `import` · `graph` | 0.1.0 |
-| [Describe it as data](tour.html#describe-it-as-data) | An agent describes a diagram and a layout engine places it, which is why drawing takes seconds. | CLI: `draw FILE [--update]` | 0.7.0 |
+| [Describe it as data](tour.html#describe-it-as-data) | An agent describes a diagram and a layout engine places it, which is why drawing takes seconds. | CLI: `draw FILE [--update] [--prefix P] [--frame KEY --title T]` | 0.7.0 |
 | [Connect your agents](quickstart.html) | Teaches Claude Code, Codex, Gemini CLI, pi, Cursor, opencode and Claude Desktop to use toucan, by skill or MCP. | CLI: `agents [install\|remove]` | 0.8.0 |
 | [MCP server](quickstart.html) | For agents that can't run the CLI, including Codex in its default sandbox. | CLI: `mcp` | 0.8.0 |
+| [Canvas in the chat](quickstart.html#the-canvas-in-the-chat) | In an MCP Apps host such as Claude, toucan_open and toucan_draw show the live canvas in the conversation. It keeps up with every edit and opens in toucan with one click. | CLI: `mcp` | 0.22.1 |
+| [Agent guide by topic](https://github.com/lavallee/toucan/blob/main/AGENTS.md) | A short AGENTS.md for everyday canvas work, with the rest in topic guides an agent reads when it needs them: CLI, editing, collaboration, plans and extensions. | CLI: `guide [TOPIC]` | 0.19.0 |
 | [A canvas per project](quickstart.html) | toucan init finds or makes the canvas for the repository you're in; commands there use it without --canvas. | CLI: `init [NAME] --open` | 0.8.0 |
 | [Headless mode](agents.html#headless-mode) | With no tab open, agents still read and edit: the server runs the canvas in its own headless page. | CLI: `start --headless` | 0.2.0 |
 | [Node client and extensions](extending.html) | A Node client for scripts, and toucan X runs toucan-X so extensions live in their own repos. | CLI: `toucan-X` | 0.1.0 |
@@ -93,10 +110,13 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 
 | Feature | What it does | Where | Since |
 |---|---|---|---:|
-| Animated build | A GIF of the diagram building up box by box, in the order the arrows go, to drop into a doc, a slide or a chat. | **Animate**; CLI: `animate [OUT.gif]` | 0.14.0 |
+| Export | One menu for every way out of a canvas: a picture as SVG or PNG, the animated build, a file another tool reads, or what the diagram says in words. An SVG carries its title and that description inside it. | **Export**; CLI: `export OUT` · `describe` | 0.21.0 |
+| Renditions | A named, published picture of part of a canvas that documents include by name, with a manifest of what it shows and what it was drawn from, so anyone can tell whether it is current. Redrawn only when asked. | **Export**; CLI: `rendition set NAME` · `rendition publish NAME` · `rendition list` |  |
+| Animated build | A GIF of the diagram building up box by box, in the order the arrows go, to drop into a doc, a slide or a chat. | **Export**; CLI: `animate [OUT.gif]` · `export OUT.gif` | 0.14.0 |
 | [Mermaid in and out](tour.html#or-as-mermaid) | Paste or import Mermaid: on a blank canvas it looks like a template, and on a full one it merges by key. | **Chat: paste**; CLI: `import FILE --format mermaid` · `graph --format mermaid` | 0.1.0 |
 | [JSON Canvas, Excalidraw, DOT](tour.html#or-as-mermaid) | Import and export JSON Canvas (Obsidian) and .excalidraw; export DOT. | CLI: `import` · `graph --format jsoncanvas\|excalidraw\|dot` | 0.1.0 |
 | [Toucan graph](agents.html#graphs-the-engine-neutral-path) | An engine-neutral graph format, with keyed upsert import and automatic layout. | CLI: `graph` · `import --format tg` | 0.1.0 |
+| [A plan as a file](extending.html#plan-sources) | The built-in file source: a plan in one JSON file in the canvas's files or its project, rewritten by edits on the canvas, with nothing else installed. | CLI: `plan bind file files/PATH` · `sources` | 0.15.0 |
 
 ## Installing and running
 
@@ -106,5 +126,6 @@ Each row says where you find it: in the app, or as a `toucan` command an agent (
 | [Setup and doctor](quickstart.html) | setup asks nothing, so an agent can run it; doctor says what's wrong and what to do. | CLI: `setup` · `doctor` · `status` · `open` · `guide` | 0.8.0 |
 | [A server that looks after itself](how-it-works.html) | Commands start a background server when needed, and never fight one you run yourself. | CLI: `start` · `stop` · `restart` · `start --take-over` | 0.8.0 |
 | [Remote and behind a proxy](how-it-works.html) | Run on another machine or behind a reverse proxy, with the address people browse and the names it answers to. | **Sign-in page**; CLI: `--public-url` · `--allow-host` · `TOUCAN_URL` · `TOUCAN_TOKEN` | 0.11.0 |
+| [Plugins](extending.html#plugins) | One mechanism for programs on PATH that connect toucan to your own systems (agent profiles, plan sources), with one trust rule; lists what was found and, for anything refused, why. | CLI: `plugins` · `sources` · `profiles` | 0.15.0 |
 
-*56 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*
+*71 features. The list is built from `website/work/features.json`; [the changelog](https://github.com/lavallee/toucan/blob/main/CHANGELOG.md) has the detail.*

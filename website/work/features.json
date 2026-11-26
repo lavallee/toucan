@@ -1,7 +1,7 @@
 {
  "product": "toucan",
- "version": "0.14.0",
- "updated": "2026-11-12",
+ "version": "0.19.0",
+ "updated": "2026-11-20",
  "note": "The full feature list. scripts/build-features.mjs renders it to website/content/features.md; keep it in step with CHANGELOG.md.",
  "groups": [
   {
@@ -80,10 +80,22 @@
    "id": "templates",
    "group": "canvas",
    "name": "Templates",
-   "summary": "33 diagrams (blocks) in six groups, from flowchart and swimlane to SWOT, retro and story map, to start a canvas from or add beside what's there.",
+   "summary": "34 diagrams (blocks) in six groups, from flowchart and swimlane to SWOT, retro and story map, to start a canvas from or add beside what's there.",
    "app": "New canvas",
    "cli": "templates [show ID] · new NAME --template ID · add ID",
    "since": "0.7.0",
+   "docs": "gallery.html",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "systems-map",
+   "group": "canvas",
+   "name": "Systems maps",
+   "summary": "A dense picture of many named parts in a few systems: panels of tiles in columns, a state on any part (live, being built, in trial, planned, retiring) shown by colour and by word, a key made from what the picture uses, and long arrows that travel round the outside instead of through a panel.",
+   "app": "New canvas",
+   "cli": "templates show systems-map · draw FILE",
+   "since": "0.20.0",
    "docs": "gallery.html",
    "engines": "both",
    "who": "person"
@@ -139,7 +151,7 @@
    "summary": "Ask in plain words and the agent draws, edits and checks its work on the canvas, using Codex on your own ChatGPT sign-in.",
    "app": "Chat",
    "since": "0.1.0",
-   "docs": "tour.html#ask-and-it-draws",
+   "docs": "tour.html#draw-with-an-agent",
    "engines": "both",
    "who": "person"
   },
@@ -160,6 +172,17 @@
    "summary": "Send a message while the agent works and it adjusts the turn instead of waiting for it to end.",
    "app": "Chat",
    "since": "0.4.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "notice",
+   "group": "chat",
+   "name": "Agents notice people",
+   "summary": "Edit, select and comment while an agent works: it hears what you did between its steps and builds on it. A message sent mid-turn carries what's selected then, and terminal and MCP agents hear it with their next command.",
+   "docs": "agents.html#what-people-do-while-you-work",
+   "app": "Chat · Threads",
+   "since": "0.18.0",
    "engines": "both",
    "who": "person"
   },
@@ -234,7 +257,19 @@
    "app": "Comment · Threads",
    "cli": "threads new TEXT --on KEY --ask · threads reply N TEXT",
    "since": "0.5.0",
-   "docs": "tour.html#comment-and-have-it-answered",
+   "docs": "tour.html#start-parallel-comment-threads",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "screenshot-review",
+   "name": "Screenshot review",
+   "group": "together",
+   "since": "0.17.0",
+   "summary": "Compare screenshot revisions and pin feedback to an exact image. The original producer can reply with an updated screenshot.",
+   "app": "Review",
+   "cli": "review post · review inbox · review reply",
+   "docs": "extending.html#screenshot-review",
    "engines": "both",
    "who": "person"
   },
@@ -297,6 +332,42 @@
    "who": "person"
   },
   {
+   "id": "plans",
+   "group": "together",
+   "name": "Plans: views of a system of record",
+   "summary": "Bind a canvas to a project kept elsewhere and see it as a board, gantt, timeline, dependency graph or table that follows upstream changes and writes a person's drags and edits back.",
+   "app": "Plan menu · Details card",
+   "cli": "plan bind SOURCE REF · plan sync · new NAME --plan SOURCE REF",
+   "since": "0.15.0",
+   "docs": "agents.html#plans-a-canvas-over-a-system-of-record",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "plan-views",
+   "group": "together",
+   "name": "Views as specs",
+   "summary": "Agents compose and reshape plan views by writing small declarative specs from a catalog: group by any option field, swimlanes, filter, sort, card fields, roll-ups, a real date axis. A spec that doesn't fit is refused with what would.",
+   "app": "Plan menu",
+   "cli": "plan catalog · plan view add KIND · plan view set ID · plan view put FILE · plan view rm ID",
+   "since": "0.15.0",
+   "docs": "agents.html#plans-a-canvas-over-a-system-of-record",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "plan-write",
+   "group": "together",
+   "name": "Writing the plan from the canvas",
+   "summary": "An agent updates the system of record through the same versioned write as a person's gesture; a conflict or refusal puts the canvas back to upstream and tells people.",
+   "app": "Notice above the canvas",
+   "cli": "plan items · plan set ITEM field=value · plan add --title T · plan dismiss",
+   "since": "0.15.0",
+   "docs": "agents.html#plans-a-canvas-over-a-system-of-record",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
    "id": "details",
    "group": "reading",
    "name": "Details cards",
@@ -350,7 +421,7 @@
    "app": "Routines menu",
    "cli": "routine list [--kind K] · routine run NAME",
    "since": "0.3.0",
-   "docs": "tour.html#tidy-it-up",
+   "docs": "tour.html#run-a-cleanup-routine",
    "engines": "both",
    "who": "person"
   },
@@ -362,7 +433,7 @@
    "app": "Routines menu",
    "cli": "routine run clean-up",
    "since": "0.7.0",
-   "docs": "tour.html#tidy-it-up",
+   "docs": "tour.html#run-a-cleanup-routine",
    "engines": "both",
    "who": "person"
   },
@@ -393,11 +464,11 @@
    "id": "check",
    "group": "tidy",
    "name": "Check this diagram",
-   "summary": "Scores what's drawn out of 100 and names the shapes at fault (overlaps, arrows through boxes, labels on boxes or crossed by other arrows), so an agent can fix what it finds.",
+   "summary": "Scores what's drawn out of 100 and names the shapes at fault (overlaps, arrows through boxes, labels on boxes or crossed by other arrows), and says what to run or change for each, so an agent can fix what it finds. It also catches frame names cut off, arrows sharing a run, words broken inside boxes and mostly empty frames, can look at one frame alone (`measure({ within })`), and scores a canvas of several sections section by section.",
    "app": "Routines menu",
    "cli": "routine run check-diagram",
    "since": "0.7.0",
-   "docs": "tour.html#tidy-it-up",
+   "docs": "tour.html#run-a-cleanup-routine",
    "engines": "both",
    "who": "person"
   },
@@ -424,6 +495,41 @@
    "docs": "agents.html#routines-chores-worth-keeping",
    "engines": "both",
    "who": "person"
+  },
+  {
+   "id": "reflexes",
+   "group": "tidy",
+   "name": "Reflexes",
+   "summary": "The canvas fixes some things by itself the moment they happen, without the agent: text that outgrew its box, a frame cutting off what's in it, an arrow through a box. A tree of them, switched on per canvas; each fix is one undo step, a fix someone undoes stays undone, and what's already there when one is switched on is left. After Sihan Xu's growing behavior tree and The Harness.",
+   "app": "Reflexes menu",
+   "cli": "reflexes · reflexes starters · reflexes add --starter NAME --on · reflexes on|watch|off NAME",
+   "since": "0.16.0",
+   "docs": "agents.html#reflexes-what-the-canvas-does-by-itself",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "reflex-asks",
+   "group": "tidy",
+   "name": "Asks, and teaching the canvas",
+   "summary": "What no reflex can settle is asked about, in the Reflexes menu and the agent's brief (or, if you allow it, in a comment thread its agent takes). The agent can answer by teaching the canvas a new reflex, which arrives watching until you switch it on.",
+   "app": "Reflexes menu: Asking",
+   "cli": "reflexes asks · reflexes add NAME --when CODE --routine R --answers N · reflexes wake on|off · reflexes suggest",
+   "since": "0.16.0",
+   "docs": "agents.html#reflexes-what-the-canvas-does-by-itself",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "reflex-trial",
+   "group": "tidy",
+   "name": "Try a reflex on a copy",
+   "summary": "Bring a reflex's situation about on a hidden copy of the canvas, let it answer, and see whether the situation was over afterwards. The canvas itself never changes.",
+   "cli": "reflexes try NAME [--stage CODE]",
+   "since": "0.16.0",
+   "docs": "agents.html#reflexes-what-the-canvas-does-by-itself",
+   "engines": "tldraw",
+   "who": "agent"
   },
   {
    "id": "scripts",
@@ -453,7 +559,7 @@
    "app": "History",
    "cli": "versions · versions save LABEL · versions restore N",
    "since": "0.3.0",
-   "docs": "tour.html#go-back",
+   "docs": "tour.html#save-and-revisit-a-version",
    "engines": "both",
    "who": "person"
   },
@@ -475,7 +581,7 @@
    "summary": "A tab left open across an upgrade says so and reloads in one click; `toucan reload --all` brings every open tab up to date at once.",
    "app": "toucan was updated · Reload",
    "cli": "reload [--all]",
-   "since": "0.15.0",
+   "since": "0.23.0",
    "engines": "both",
    "who": "person"
   },
@@ -518,7 +624,7 @@
    "group": "agents",
    "name": "Describe it as data",
    "summary": "An agent describes a diagram and a layout engine places it, which is why drawing takes seconds.",
-   "cli": "draw FILE [--update]",
+   "cli": "draw FILE [--update] [--prefix P] [--frame KEY --title T]",
    "since": "0.7.0",
    "docs": "tour.html#describe-it-as-data",
    "engines": "both",
@@ -543,6 +649,28 @@
    "cli": "mcp",
    "since": "0.8.0",
    "docs": "quickstart.html",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "mcp-app",
+   "group": "agents",
+   "name": "Canvas in the chat",
+   "summary": "In an MCP Apps host such as Claude, toucan_open and toucan_draw show the live canvas in the conversation. It keeps up with every edit and opens in toucan with one click.",
+   "cli": "mcp",
+   "since": "0.22.1",
+   "docs": "quickstart.html#the-canvas-in-the-chat",
+   "engines": "both",
+   "who": "agent"
+  },
+  {
+   "id": "guide",
+   "group": "agents",
+   "name": "Agent guide by topic",
+   "summary": "A short AGENTS.md for everyday canvas work, with the rest in topic guides an agent reads when it needs them: CLI, editing, collaboration, plans and extensions.",
+   "cli": "guide [TOPIC]",
+   "since": "0.19.0",
+   "docs": "https://github.com/lavallee/toucan/blob/main/AGENTS.md",
    "engines": "both",
    "who": "agent"
   },
@@ -580,12 +708,33 @@
    "who": "agent"
   },
   {
+   "id": "export",
+   "group": "formats",
+   "name": "Export",
+   "summary": "One menu for every way out of a canvas: a picture as SVG or PNG, the animated build, a file another tool reads, or what the diagram says in words. An SVG carries its title and that description inside it.",
+   "app": "Export",
+   "cli": "export OUT · describe",
+   "since": "0.21.0",
+   "engines": "both",
+   "who": "person"
+  },
+  {
+   "id": "renditions",
+   "group": "formats",
+   "name": "Renditions",
+   "summary": "A named, published picture of part of a canvas that documents include by name, with a manifest of what it shows and what it was drawn from, so anyone can tell whether it is current. Redrawn only when asked.",
+   "app": "Export",
+   "cli": "rendition set NAME · rendition publish NAME · rendition list",
+   "engines": "both",
+   "who": "person"
+  },
+  {
    "id": "animate",
    "group": "formats",
    "name": "Animated build",
    "summary": "A GIF of the diagram building up box by box, in the order the arrows go, to drop into a doc, a slide or a chat.",
-   "app": "Animate",
-   "cli": "animate [OUT.gif]",
+   "app": "Export",
+   "cli": "animate [OUT.gif] · export OUT.gif",
    "since": "0.14.0",
    "engines": "both",
    "who": "person"
@@ -623,6 +772,17 @@
    "docs": "agents.html#graphs-the-engine-neutral-path",
    "engines": "both",
    "who": "agent"
+  },
+  {
+   "id": "plan-file",
+   "group": "formats",
+   "name": "A plan as a file",
+   "summary": "The built-in file source: a plan in one JSON file in the canvas's files or its project, rewritten by edits on the canvas, with nothing else installed.",
+   "cli": "plan bind file files/PATH · sources",
+   "since": "0.15.0",
+   "docs": "extending.html#plan-sources",
+   "engines": "both",
+   "who": "person"
   },
   {
    "id": "install",
@@ -666,6 +826,17 @@
    "cli": "--public-url · --allow-host · TOUCAN_URL · TOUCAN_TOKEN",
    "since": "0.11.0",
    "docs": "how-it-works.html",
+   "engines": "both",
+   "who": "operator"
+  },
+  {
+   "id": "plugins",
+   "group": "running",
+   "name": "Plugins",
+   "summary": "One mechanism for programs on PATH that connect toucan to your own systems (agent profiles, plan sources), with one trust rule; lists what was found and, for anything refused, why.",
+   "cli": "plugins · sources · profiles",
+   "since": "0.15.0",
+   "docs": "extending.html#plugins",
    "engines": "both",
    "who": "operator"
   }

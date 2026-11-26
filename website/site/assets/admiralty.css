@@ -1,0 +1,72 @@
+/* Lyra Forge Admiralty. The pale rose is a Toucan tint for review surfaces. */
+@font-face { font-family: "Instrument Serif"; src:url("fonts/instrument-serif-normal.woff2") format("woff2"); font-display:swap; }
+@font-face { font-family: "Source Sans 3"; src:url("fonts/source-sans-3-normal.woff2") format("woff2"); font-weight:200 900; font-display:swap; }
+@font-face { font-family: "Fragment Mono"; src:url("fonts/fragment-mono-normal.woff2") format("woff2"); font-display:swap; }
+:root {
+  --navy:#0f2a4a; --night:#0b1e36; --chart-white:#f4f7f8; --shallows:#cfe4ee;
+  --mist:#a9bdd4; --slate:#3d5674; --line:#c9d6e0; --magenta:#c2266f; --beacon:#f06aa8;
+  --review-wash:#f4e7ef;
+  --bg:var(--chart-white); --surface:white; --surface-2:var(--shallows); --border:var(--line);
+  --text:var(--navy); --text-2:var(--slate); --muted:var(--slate);
+  --accent:var(--magenta); --accent-strong:var(--navy); --selection:var(--shallows); --code-bg:var(--surface);
+  --font-display:"Instrument Serif",Georgia,serif; --font-ui:"Source Sans 3",Arial,sans-serif;
+  --font-prose:var(--font-ui); --font-numeric:"Fragment Mono",monospace;
+}
+html:has(.site-nav) { --docs-nav-height:3.5rem; scroll-padding-top:var(--docs-nav-height); }
+.site-nav {
+  height:var(--docs-nav-height); box-sizing:border-box; padding:.35rem clamp(1rem,4vw,4rem);
+  justify-content:space-between; flex-wrap:nowrap; background:var(--navy); border-color:var(--slate);
+  font:600 1rem/1.25 var(--font-ui);
+}
+.site-nav .brand { margin:0; padding:0; color:var(--chart-white); font-size:1.25rem; text-decoration:none; }
+.site-nav .nav-links { align-items:center; }
+.site-nav .nav-links a, .site-nav .docs-menu summary, .site-nav .nav-toggle {
+  box-sizing:border-box; display:flex; align-items:center; gap:.45em; min-height:2.5rem;
+  margin:0; padding:.45rem .75rem; border:0; border-radius:.3rem;
+  background:transparent; color:var(--chart-white); font:600 .95rem/1.25 var(--font-ui);
+  text-decoration:none; cursor:pointer;
+}
+.site-nav .nav-toggle { display:none; }
+.site-nav .docs-menu summary { list-style:none; }
+.docs-menu summary::-webkit-details-marker { display:none; }
+.docs-menu summary::after { content:""; width:.36em; height:.36em; border:solid currentColor; border-width:0 1.5px 1.5px 0; transform:translateY(-.1em) rotate(45deg); }
+.docs-menu[open] summary::after { transform:translateY(.1em) rotate(225deg); }
+.site-nav .nav-links :is(a,summary):hover, .site-nav .nav-links a[aria-current="page"],
+.site-nav .docs-menu:is([open],:has([aria-current="page"])) summary, .site-nav .nav-toggle:hover {
+  color:var(--navy); background:var(--shallows);
+}
+.article-title { font:400 clamp(3.2rem,6vw,5.8rem)/1 var(--font-display); }
+.article h2 { font-family:var(--font-display); font-weight:400; }
+.article :is(th,code,kbd) { color:var(--navy); }
+.article pre { border-left:3px solid var(--mist); }
+.article :focus-visible, .site-nav :focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.toucan-footer { color:var(--chart-white); background:var(--night); padding:clamp(2.25rem,5vw,5rem) max(4vw,1.15rem); font:1rem/1.5 var(--font-ui); }
+.footer-inner { display:grid; grid-template-columns:1.6fr 1fr 1.2fr; gap:clamp(1.5rem,5vw,6rem); max-width:88rem; margin:auto; }
+.toucan-footer h2 { margin:0 0 .7rem; color:var(--chart-white); font:400 1.8rem/1.2 var(--font-display); }
+.toucan-footer p { max-width:47ch; margin:0 0 .8rem; color:var(--mist); }
+.toucan-footer a { color:var(--chart-white); text-underline-offset:.22em; }
+.toucan-footer a:hover { color:var(--beacon); }
+.toucan-footer nav a { display:block; width:fit-content; margin-bottom:.35rem; }
+.explorer-links summary { cursor:pointer; color:var(--navy); }
+.explorer-links .toucan-footer { position:fixed; z-index:5; inset:49px 0 auto; max-height:calc(100dvh - 49px); overflow:auto; }
+@media (max-width:45rem) { .footer-inner { grid-template-columns:1fr; } }
+
+.review-sequence { padding:clamp(.75rem,2vw,1.5rem); background:var(--shallows); color:var(--navy); border-radius:.5rem; }
+.review-sequence img { display:block; width:100%; height:auto; }
+.review-sequence summary, .docs-menu summary { cursor:pointer; font-weight:600; }
+.review-sequence summary { padding:.75rem 0; }
+.review-sequence blockquote { margin:.5rem 0; color:inherit; }
+.docs-menu { position:relative; }
+.docs-menu > div { padding:.375rem; background:var(--navy); border:1px solid var(--slate); border-radius:.4rem; }
+@media (min-width:721px) {
+  .docs-menu > div { position:absolute; top:calc(100% + .25rem); right:0; width:15rem; }
+}
+@media (max-width:720px) {
+  .site-nav .nav-toggle { display:flex; }
+  .site-nav .nav-links {
+    position:absolute; inset:100% 0 auto; align-items:stretch; padding:.5rem 1rem;
+    max-height:calc(100dvh - var(--docs-nav-height)); overflow-y:auto; background:var(--navy);
+    border-bottom:1px solid var(--slate);
+  }
+  .docs-menu > div { margin-inline-start:.75rem; border-width:0 0 0 1px; border-radius:0; }
+}

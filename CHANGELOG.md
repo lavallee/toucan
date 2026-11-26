@@ -9,6 +9,256 @@ All notable changes to toucan are recorded here. The format follows
 
 - **Tabs know when toucan was upgraded.** A tab open across an upgrade shows **toucan was updated · Reload**, and an agent's run that fails in it says the tab is running an older page. `toucan reload` reloads a canvas's open tabs, and `toucan reload --all` every open tab, so they run the new version; `toucan update` says so when it restarts the server.
 
+## [0.22.1] — 2026-11-26
+
+0.22.0 was tagged but never released: its release job stopped at `npm ci`, because the lockfile had been rebuilt by a newer npm
+than the workflows use. 0.22.1 is the same release with the lockfile fixed.
+
+### Added
+
+- **The canvas in the chat (MCP Apps).** `toucan mcp` is now an [MCP App](https://modelcontextprotocol.io/docs/extensions/apps):
+  in a host that shows them, such as Claude, `toucan_open` and `toucan_draw` put a live view of the canvas in the conversation
+  (`ui://toucan/canvas.html`). It redraws within a couple of seconds of any edit, by people or agents, pans and zooms, goes full
+  screen where the host allows, and its **Edit in toucan** button opens the canvas, signed in, through `toucan_open`. The view
+  needs no network access. It gets pictures through `toucan_canvas_picture`, a tool only the view can call, which the host
+  passes to the stdio server. The server draws them quietly, so the person doesn't see an agent at work each time it looks
+  (`GET /api/canvases/NAME/picture`). Clients without MCP Apps see the tools as before, answering in text.
+  `npm run test:mcp-app` runs it end to end in a host built on the official MCP Apps SDK, with a person editing alongside.
+  With `--record`, it records the demo on the site.
+
+- Letterpress and Lyra Forge Admiralty palettes for tldraw with light and dark inks. The docs show a full editor capture and SVG export of an illustrated community radio field guide.
+
+- **Renditions.** A named, published picture of part of a canvas (a frame, some shapes, or all of it), so a document can include
+  it by name and tell whether it is current, instead of a folder of one-off exports nobody can trace. `toucan rendition set NAME
+  [--frame KEY | --keys a,b | --all] [--format svg|png] [--alt T] [--title T]` defines one; `rendition publish NAME` draws it into
+  `<data>/CANVAS.renditions/` with a manifest (what it shows, the canvas version and shapes it was drawn from, the picture's hash, when
+  it was published) and lists it in the shared include catalogue (`$INCLUDES_CATALOGUE`, else `~/.config/includes/catalogue.json`) as
+  `toucan:CANVAS/NAME`; `rendition list` says which are current and which are behind; `rendition remove NAME` takes one away. A
+  rendition is redrawn only when someone asks, never on a save. **Export** above the canvas publishes the selection as one, and
+  republishes the canvas's renditions. Archiving a canvas takes its renditions with it, and out of the catalogue.
+
+### Layout and checks, from drawing ten architecture diagrams in Toucan and in D2
+
+- **`flow` keeps the order you wrote.** A cycle between groups or boxes breaks on the arrow written last, so a group that feeds
+  an earlier one runs backward as a loop instead of turning the picture round (ELK `MODEL_ORDER` cycle breaking, in flows with groups; a plain flow such as a small state machine keeps the default, which laid it out better).
+- **`flow` packs separate pieces in a grid.** Groups or boxes with no arrows between them (six state machines) are laid out one
+  by one and packed in rows in the order written, three to a row for six, instead of one 6890 px row; `columns` and `aspect`
+  choose the shape. In a flow running down the page, a group is as narrow as its boxes, and no wider than its own name needs.
+- **`map` gives panels room for their own arrows**: tiles with arrows between them are spaced by the longest label across and a
+  label's height down. A link takes `"dash": "dashed"` without meaning "planned" (only `kind: planned` or `dash: dotted` is
+  dotted and appears in the key).
+- **`draw` keeps keys stable and places a drawing where it belongs.** `--prefix P` prefixes every key; on a clash only the keys
+  the layout made up are renamed, not the ones you wrote; `--update` moves the new layout to where the section is now, not the
+  origin; `--frame KEY --title T` wraps the drawing in a titled frame (also on `toucan_draw`).
+- **Boxes and sequence columns are as wide as their longest word needs**, so `typed_no_body` no longer breaks inside an oval. A
+  sequence sizes participants by their longest name, widens each gap to the label of the message across it, and makes each row
+  as tall as its label or self-message note, so notes stay off the next arrow.
+- **`measure({ within })` and `tidy.*({ within })` look at one frame.** A canvas of several sections is scored section by section
+  (`sections`), and its `score` is their mean, instead of one score that falls to 0 as sections are added.
+- **`measure()` sees more**: frame names cut off, two arrows sharing a run, a word broken inside a box, a label half under a box
+  (its own end too), a frame of over ten boxes that is mostly empty. A grid's cells are no longer flagged "uneven column".
+
+### Changed
+
+- **The bar above the canvas, History and Routines now come from Leyline** (`@lyra-forge/leyline`, the package
+  toucan, Copycat and Skein share), so all three tools look and behave the same. Nothing moves for a person. The
+  Reflexes button's count is now the same amber pill as Threads. toucan's own copies of the UI primitives and the
+  chat dock are gone; the build pins Leyline in `vendor/` (`node scripts/update-leyline.mjs --source PATH`).
+
+## [0.21.0] — 2026-11-23
+
+### Added
+
+- **Export.** One menu above the canvas for every way out: a picture as SVG or PNG, the animated build as a GIF, a file
+  another tool reads (Mermaid, JSON Canvas, Excalidraw, DOT, toucan graph), and what the diagram says, copied as words. It
+  replaces the Animate button, which is now a section of it. From the CLI, `toucan export OUT` writes any of them, choosing
+  the kind by the ending of `OUT`.
+- **SVG.** A canvas, or some of its shapes with `--keys`, as an SVG on both engines: sharp at any size, with its fonts inside
+  it. The SVG carries the canvas's title and a description of the diagram as its `<title>` and `<desc>`, so a screen reader,
+  a search, or an agent reading the file knows what the picture shows. `toucan.svg()` in the editor.
+- **A diagram in words.** `toucan describe` (and `graph --format text`, and `toucan_describe` over MCP) says what a diagram
+  says: each frame and what it holds, the state of each part, and every arrow with its label. It reads the server's copy, so
+  it needs no tab. Use it to check a diagram against what was asked without looking at a picture.
+
+### Changed
+
+- In a systems map, the gap between columns grows to fit the longest label on an arrow across it, so a label no longer
+  wraps in the middle of a word.
+
+### Fixed
+
+- The first command on a canvas just made from a template, run before anyone had opened it, could see an empty canvas: the
+  page that draws the template was still drawing it. A check then scored it 100 with nothing wrong. Commands now wait for the
+  template to be drawn.
+
+### Credits
+
+- `describe`, and putting those words inside the picture, follow `describe()` and the SVG `<desc>` in
+  [open-diagram](https://github.com/lukendeasy/open-diagram) by [Luke Deasy](https://github.com/lukendeasy) (MIT). No code of
+  open-diagram is used.
+
+## [0.20.0] — 2026-11-23
+
+### Added
+
+- **Systems maps.** A new kind of diagram, `map`, for many named parts in a few systems: columns of panels, each a frame with
+  its tiles packed in a grid, so twenty parts fit where a flow chart held six. A tile or a panel can have a state (live, being
+  built, in trial, planned, retiring), shown by colour, line and word and kept in `meta.status`. The key at the top lists only the
+  states the picture uses. A panel takes a step number, a line under its name and a footer such as an owner. An arrow past a
+  column, or back against the reading direction, travels in a lane above or below the picture; arrows on one side of a panel
+  spread along it in the order of where they go; and arrows across one gap turn at different places, in the order that crosses
+  least. `toucan templates show systems-map` shows the form, and it draws on both engines.
+- **A check that says what to do.** `routine run check-diagram` now returns `fixes`: for each kind of finding, what to run or
+  change to clear it, so an agent can act on a finding without looking at the picture. `toucan.fixes` has the whole table.
+- **States from Mermaid.** On import, a class named like a state (`a:::planned`, or `class a,b building`) gives the box that
+  state. Front matter at the top of a Mermaid file is read past, not reported as a warning.
+
+### Changed
+
+- **A panel is in an arrow's way.** A map's panels are frames marked `meta.panel`. An arrow with no end in one goes round it:
+  the check reports `arrow runs through a panel`, and drawing, importing and `tidy-arrows` route round it, as they do round a box.
+  Other frames (lanes, sections) are as before: an arrow may cross them.
+
+### Fixed
+
+- On Excalidraw, an arrow that ends on a frame is drawn. It was left out when a canvas was made from a graph.
+
+### Credits
+
+- The systems map and the check's fixes follow [open-diagram](https://github.com/lukendeasy/open-diagram) by
+  [Luke Deasy](https://github.com/lukendeasy) (MIT): panels of tiles in columns, a state shown by word as well as colour, a key
+  made from what the picture uses, lanes round the outside, arrows spread along a side, and layout problems that each say how to
+  clear them. toucan's implementation is its own, on its own engines; no code of open-diagram is used. Thanks to him for
+  publishing the examples as well as the library: drawing them here is what showed the gap.
+
+## [0.19.0] — 2026-11-20
+
+### Changed
+
+- **The agent guide is split by topic.** `AGENTS.md` is now a short guide to everyday canvas work, with a map of five topic
+  guides under `docs/agents/`: `cli`, `editing`, `collaboration`, `plans` and `extensions`. `toucan guide TOPIC` prints one,
+  `toucan guide index` the short guide, and `toucan guide` all of them, as before. Over MCP, `toucan_guide` takes the topic.
+  The chat and comment-thread agents start from the short guide and read a topic when they need it. The topic guides
+  ship with the install.
+
+## [0.18.0] — 2026-11-20
+
+### Added
+
+- **Agents notice people.** While an agent works, people go on editing, selecting and commenting, and now the agent hears
+  about it. The server keeps a feed per canvas of the shapes people added, changed or removed, what they selected and the
+  comments they left. Each run's own report of what it touched separates an agent's edits from a person's. A terminal or
+  MCP agent gets what's new since its last command with the next command's answer, as a `<canvas_activity>` block on
+  stderr. The chat panel's agent and comment-thread agents hear it between their commands, added to the turn in progress,
+  and the panel says so. A message sent mid-turn now carries what is selected at that moment, and a new turn starts with
+  what changed since the last one. Agents hear each other's edits too, but not their own. `TOUCAN_ACTIVITY=off` turns it
+  off for a terminal agent. Thanks to [Daniel Bachhuber](https://github.com/danielbachhuber), who asked for toucan to work full duplex.
+
+### Fixed
+
+- Load each deployment’s tldraw licence at server startup. The live editor, history and hidden preview use the same key, and release builds contain no deployment key.
+
+## [0.17.0] — 2026-11-20
+
+### Added
+
+- **Screenshot review.** Publish screenshot revisions to a canvas from the CLI or an adapter. Open **Review** in either canvas editor to compare revisions, pin feedback, and see replies linked to updated screenshots. Feedback stays on the exact revision and waits in the producer's inbox until answered or closed. The versioned HTTP protocol supports stable mutation keys and rejects stale revision writes. Inspired by [Kris Puckett's Rounds](https://github.com/krispuckett/rounds).
+
+## [0.16.0] — 2026-11-18
+
+### Added
+
+- **Reflexes: what a canvas does by itself.** A canvas can answer some of what happens to it the moment it happens, without
+  calling the agent: a box whose text outgrew it is fitted, a frame that cuts off what's in it grows, an arrow through a box goes
+  round it. Each canvas has one tree of reflexes, empty at first, switched on from the **Reflexes** menu or `toucan reflexes`. A
+  reflex answers a situation when it begins and once: what was already the case when it was switched on is left alone, each fix
+  is one undo step labelled in the history, nothing runs while someone is dragging or typing or an agent is at work, and a fix a
+  person undoes stays undone (twice, and the reflex pauses itself and says so). Nodes under a node answer first; among nodes at
+  one place, the earlier answers first; a fix that doesn't settle its situation falls to what comes after it.
+- **Asks, and teaching the canvas.** What no reflex can settle becomes an ask: in the Reflexes menu, in the chat agent's brief
+  and, if a person allows it (`reflexes wake on`), in a comment thread whose agent takes it up. The agent can answer by teaching
+  the canvas a reflex (`reflexes add NAME --when CODE --routine R --answers N`), so the next time the canvas answers by itself. What
+  an agent teaches arrives watching: it counts what it would have done, and acts only once a person switches it on. `reflexes
+  suggest` names reflexes worth having from work, such as a routine run by hand again and again on the canvas.
+- **Try a reflex on a copy.** `reflexes try NAME --stage CODE` brings the situation about on a hidden copy of the canvas, lets the
+  reflex answer, and says whether the situation was over afterwards. The canvas itself never changes (tldraw; on Excalidraw it
+  judges the canvas as it is).
+- **Starters**: text-fits, frames-hold and arrows-clear under diagram-faults, and new-notes (tldraw), which asks the agent about a
+  sticky note as soon as it is pinned.
+
+### Changed
+
+- **Fit text and Fit frames take `on`**: given keys, they fit only those boxes, or only the frames those shapes are in, and Fit
+  frames then moves nothing clear. With no arguments they work on the whole canvas as before.
+
+### Credits
+
+- Reflexes follow Sihan Xu's essay [How to Control an Agent with a Growing Behavior Tree](https://sihanxu.me/harnesstree/): a
+  tree that is always judged handles what happens to an agent, the model handles what it sets out to do, and what the model
+  works out once becomes a node, so "the bigger the tree, the quieter the model". The rules for how the tree decides (a node's own
+  nodes first, the earlier before the later, a failure falling to what comes after, telling only what nothing answers) follow the
+  reactive layer of [The Harness](https://github.com/EvolvingLMMs-Lab/the-harness) by LMMs-Lab (MIT). toucan's version is written
+  from those ideas; no code of The Harness is used. Thanks to its authors, and to Wenhao Chai and Weiyang Jin, whom the essay
+  thanks for the discussions behind it.
+
+## [0.15.1] — 2026-11-13
+
+### Fixed
+
+- **Plugins are found again when the server runs sandboxed.** A server started by a service manager that gives it its own view
+  of users (a systemd user unit with `PrivateTmp`, a rootless container) sees root's folders, `/home` among them, as belonging to
+  "nobody", and 0.15.0's plugin trust rule took that for another user and refused every plugin, including profile sources that
+  0.14 had found. Where root can't be seen, nobody's folders now count as root's. `toucan plugins` showed the refusal and
+  `TOUCAN_PLUGIN_PATH` worked round it.
+
+## [0.15.0] — 2026-11-13
+
+### Added
+
+- **Plans: a canvas over a system of record.** A canvas can bind to a project kept somewhere else and show it as views that stay
+  in step both ways: a kanban **board** (columns by any option field, optional swimlanes), a **gantt** with a real date axis, bars
+  exactly as long as start to end (a title that doesn't fit stands beside its bar), a today marker, milestones as diamonds, an
+  Unscheduled strip, optional lanes (headed by a summary bar when grouped by a parent) and dependency arrows, a **timeline**, a
+  dependency **graph**, and a **table**. Upstream changes redraw the views; a person's edits are written back as field changes (a card into
+  another column sets the grouped field, a bar moved or stretched sets its dates in whole days, text sets the title, a box drawn
+  in a column makes an item). A write quotes the version the card showed; on a conflict or a refusal the canvas goes back to what
+  upstream says and a notice says so. Only shapes carrying `meta.plan` are ever touched: what people draw around or inside a view
+  is left alone, and moved out, not removed, when the frame it was in goes. Nothing is read from where a shape is on the page (a
+  column is the frame a card is in, dates are read against the view's own axis), so moving, resizing or nesting a view, restoring a
+  version, or running a routine is never an edit; routines, `import --move`, `draw --update` and `toucan.layout()` leave plan views as
+  they are. What someone is dragging or typing in is left alone until they let go, and everything else syncs meanwhile.
+  Several cards moved at once end in the order they were dropped in; a rotated shape is stood up again; a duplicated view is the
+  person's own ordinary copy; only a card-sized rectangle a person draws in a column becomes an item. Views are placed clear of
+  each other and move down out of the way of one that grows. `plan` reports `drawn` apart from `state`, so data that is current
+  while the drawing waits for a page reads as that.
+  `toucan plan bind SOURCE REF`, `plan sync`, `plan unbind`, and `toucan new NAME --plan SOURCE REF --views board,gantt`.
+- **Views are specs.** Agents compose and reshape views with `plan view add|set|put|rm` from a typed catalog (`plan catalog`):
+  `groupBy`, `lanes`, `filter`, `sort`, `fields`, `rollup` (count, percent done, the sum of a number field, in column and lane
+  headers), gantt `scale`, `from`, `to` and `dependencies`. Fields are whatever the plan declares, including a system's own. A spec
+  that doesn't fit is refused with what would. `plan items`, `plan set ITEM field=value` and `plan add --title T` change the work
+  itself through the same write as a person's gesture.
+- **Plan sources.** A built-in `file` source (a plan as one JSON file in the canvas's files or its project; edits rewrite it), and
+  `toucan-source-NAME` plugins speaking a four-verb protocol (`list`, `read`, `changes`, `write`), documented in full in Extending.
+  `examples/website-relaunch.plan.json` is a plan to try and `examples/toucan-source-example.mjs` a source to copy. `toucan sources`.
+- **One plugin mechanism.** Agent profile sources and plan sources are found, trusted, run and listed by the same code
+  (`server/plugins.mjs`), so a new kind of plugin is a registry entry. `toucan plugins` (and `/api/plugins`) lists every plugin by
+  kind with its path and what it says of itself (an optional `describe` verb), and, for one found on PATH but refused, why: its
+  folder is writable by others, it's inside the data directory, it isn't executable. Existing `toucan-profiles-NAME` sources work unchanged.
+  The trust rule: a plugin's folder and file must be yours or root's and not writable by anyone else (your own private group is
+  fine), with nothing above them world-writable or someone else's; plugins installed with `npm i -g` work. `TOUCAN_PLUGIN_PATH`
+  (or `toucan start --plugin-path`) names folders you vouch for, such as a Homebrew prefix. Every refusal says why and what to do.
+  A plugin that runs past its time limit is killed with everything it started.
+- A plan control in the app bar (state, Sync now, views, group-by, add and remove), and the Details card of a plan's card shows
+  the item's fields, with stage, owner and dates editable there.
+
+### Fixed
+
+- Excalidraw: an edit made in one tab (an import, a routine) took the text off boxes in every other tab that had the canvas open,
+  because each update's bindings were repaired without the unchanged labels it didn't carry.
+
+- `import --move` (and applyGraph with `move`) put a frame nested in another frame at its page position counted from the parent's
+  corner, so it landed offset by wherever the parent was. A nested frame now goes where the graph says (tldraw).
+
 ## [0.14.0] — 2026-11-12
 
 ### Added

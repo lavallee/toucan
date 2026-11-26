@@ -70,7 +70,9 @@ export function ExcalidrawApp() {
 			stopRelay = () => {}
 		const remember = (els: readonly any[]) => els.forEach((e) => known.current.set(e.id, e.version))
 		const apply = (incoming: any[], first: boolean) => {
-			const remote = restoreElements(incoming, null, { refreshDimensions: true, repairBindings: true })
+			// Bindings are repaired only for a whole scene. An update carries just the elements that changed, and repairing those on
+			// their own takes a box's label off it whenever the box arrives without its (unchanged) label.
+			const remote = restoreElements(incoming, null, { refreshDimensions: first, repairBindings: first })
 			const elements = first ? remote : reconcileElements(api.getSceneElementsIncludingDeleted(), remote as any, api.getAppState())
 			remember(incoming)
 			api.updateScene({ elements, captureUpdate: CaptureUpdateAction.NEVER })

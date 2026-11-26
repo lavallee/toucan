@@ -1,4 +1,14 @@
+---
+kicker: Getting started
+description: Install Toucan, open your first canvas and connect an agent.
+---
 # Quick start
+
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
 
 ## Install
 
@@ -21,6 +31,20 @@ The canvas works without an agent or an account. The chat panel needs the
 [Codex CLI](https://github.com/openai/codex), signed in with `codex login`; other agents work through their own harnesses.
 
 `toucan doctor` checks the install and says what to do about anything wrong.
+
+## Make a canvas
+
+From the index page, from an agent, or from a terminal:
+
+![The index page: a New canvas button, and cards for three canvases (a tldraw diagram of a shop's services, an Excalidraw publishing flow and a tldraw roadmap), each with a preview, description and shape count.](assets/toucan-index.png)
+
+
+```sh
+toucan new sketch --title "Sketch"                   # a tldraw canvas
+toucan new board --engine excalidraw --title "Board" # an Excalidraw one
+```
+
+Open the link it prints. Draw two boxes and an arrow, then [make your first change with an agent](tour.html#draw-with-an-agent).
 
 ## Use it from your agent
 
@@ -46,42 +70,26 @@ After installing another agent, run `toucan agents install`. Add `--mcp` for MCP
 { "mcpServers": { "toucan": { "command": "toucan", "args": ["mcp"] } } }
 ```
 
+### The canvas in the chat
+
+`toucan mcp` is also an [MCP App](https://modelcontextprotocol.io/docs/extensions/apps). In a host that shows them, such
+as Claude, the canvas appears in the conversation when an agent calls `toucan_open` or `toucan_draw`. The view is live. When
+you edit the canvas in toucan, the picture in the chat updates within a couple of seconds, and the agent hears what you
+changed with its next tool call. Drag to pan and scroll to zoom. **Edit in toucan** opens the canvas, signed in, in your
+browser.
+
+::: html
+<figure><video data-demo loop muted playsinline preload="none" width="1600" height="900" poster="assets/demos/mcp-app.poster.png" src="assets/demos/mcp-app.mp4" aria-label="An agent draws a release pipeline with toucan_draw and the canvas appears in the chat; a person renames a step in toucan, the view in the chat updates, and the agent builds on the rename"></video><noscript><a href="assets/demos/mcp-app.mp4">Play demo</a></noscript><figcaption>Every tool call in this demo is real <code>toucan mcp</code>, in a host built on the official MCP Apps SDK. The agent's lines are scripted. <code>npm run test:mcp-app</code> runs it.</figcaption></figure>
+:::
+
+The view needs no network access. It gets pictures of the canvas from `toucan mcp` through the host, so it works with the
+stdio server and never sees the server's token. In clients without MCP Apps, the same tools answer in text.
+
 An agent with no connection can read the guide: `toucan guide`. It's also the [agent guide](agents.html) here.
 
 ## Work with your own agent
 
-Point toucan at an agent you already have, and a canvas can be you and that agent working together: its chat panel and
-comment threads take on that agent's instructions and knowledge instead of toucan's general-purpose ones. All it needs is the
-folder the agent lives in, usually a repository with an `AGENTS.md` or `CLAUDE.md`:
-
-```sh
-toucan profiles add reviewer --workdir ~/Projects/reviewer    # starts from the folder's AGENTS.md or CLAUDE.md
-toucan --canvas plan meta --profile local/reviewer            # or pick it in the chat panel's header
-```
-
-From then on the chat panel on that canvas is that agent. It answers from what it knows, draws like any toucan agent, shows
-under its own name on the canvas, and picks up comment threads. Switch back with `--profile none`, or to another agent: each
-keeps its own conversation. To give it more to start from, name the files with `--context AGENTS.md,docs/strategy.md`, or
-edit the profile, a small JSON file in the data folder's `_profiles/`:
-
-```json
-{
-  "name": "Reviewer",
-  "description": "Reviews pull requests against our standards",
-  "workdir": "/home/me/Projects/reviewer",
-  "instructions": "Who the agent is and how it works, in a few lines.",
-  "context": ["AGENTS.md", "docs/standards.md"],
-  "skills": ["skills/review"],
-  "references": ["notes"]
-}
-```
-
-`context` is read at the start of each conversation; `skills` are `SKILL.md` files the agent opens when one applies;
-`references` are folders people can read in the [References](agents.html#references-what-people-read-beside-the-canvas) panel. Everything stays inside `workdir`, and nothing
-hidden is read. The agent writes only in the canvas's files folder, as toucan's own agent does.
-
-If your agents are listed somewhere already, a registry or a team directory, a short program can serve them all instead:
-see [profile sources](extending.html#profile-sources).
+To give a canvas the instructions and project files of an existing agent, [configure a named agent profile](agents.html#profiles-working-with-a-named-agent).
 
 ## The server
 
@@ -99,41 +107,6 @@ Canvases are your documents, so they live outside the install and survive upgrad
 
 Choose another with `toucan setup --data ~/Documents/toucan`, then `toucan restart`. To keep a diagram in a repository, export it:
 `toucan graph --format mermaid docs/architecture.mmd`.
-
-## Make a canvas
-
-From the index page, from an agent, or from a terminal:
-
-![The index page: a New canvas button, and cards for three canvases (a tldraw diagram of a shop's services, an Excalidraw publishing flow and a tldraw roadmap), each with a preview, description and shape count.](assets/toucan-index.png)
-
-
-```sh
-toucan new sketch --title "Sketch"                   # a tldraw canvas
-toucan new board --engine excalidraw --title "Board" # an Excalidraw one
-```
-
-Open the link it prints. With the tab open, an agent can work on it:
-
-```sh
-toucan --canvas sketch exec -e 'toucan.node("api", { x: 0, y: 0, text: "API" }); toucan.node("db", { x: 300, y: 0, text: "Database" }); toucan.edge("api", "db"); return toucan.summary()'
-toucan --canvas sketch screenshot
-```
-
-Or describe what you want and import it:
-
-```sh
-cat > plan.mmd <<'MMD'
-graph LR
-  subgraph web [Web tier]
-    ui[Browser UI] --> cdn[CDN]
-  end
-  ui --> api
-  api --> cache[(Redis)]
-MMD
-toucan --canvas sketch import plan.mmd
-```
-
-Existing shapes keep their positions; new ones are laid out beside them.
 
 ## Serve it beyond your machine
 

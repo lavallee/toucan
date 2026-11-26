@@ -6,6 +6,7 @@ import { useSync } from '@tldraw/sync'
 import { makeHelpers } from './helpers.js'
 import { wsUrl, headless } from './net'
 import { connectRelay, keepThumbnail, applySeed } from './relay'
+import { makeCopy } from './sandbox'
 import { CanvasFrame } from './CanvasFrame'
 import { AgentCursor, PulseBoxes, useAgents, usePulses } from './pulses'
 import { ProposalBar } from './ProposalBar'
@@ -14,6 +15,7 @@ import { DetailsCard } from './Details'
 import { keepPicturesWhole, overviewShowing, overviewVisibility, SystemOverview, systemFormat } from './Overview'
 import { useFormat } from './formats'
 import { myName, startComment } from './threads-store'
+import { canvasThemes } from './canvas-palettes'
 import { getAppearance, setTheme, useAppearance, type Theme } from './theme'
 import geist from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url'
 import geistItalic from '@fontsource-variable/geist/files/geist-latin-wght-italic.woff2?url'
@@ -72,10 +74,16 @@ function AgentPulses() {
 		</div>
 	)
 }
-const components: TLComponents = { InFrontOfTheCanvas: AgentPulses }
+function CanvasPaper() {
+	const editor = useEditor()
+	const backgroundColor = useValue('canvas paper', () => editor.getCurrentTheme().colors[editor.getColorMode()].background, [editor])
+	return <div className="tl-background" style={{ backgroundColor }} />
+}
+const components: TLComponents = { InFrontOfTheCanvas: AgentPulses, Background: CanvasPaper }
+const previewComponents: TLComponents = { Background: CanvasPaper }
 
 /** A saved version, read-only: its own little store, stepped through without touching the live canvas. */
-function VersionPreview({ data }: { data: any }) {
+function VersionPreview({ data, licenseKey }: { data: any; licenseKey?: string }) {
 	const editor = useRef<Editor | null>(null)
 	const snapshot = (room: any) => ({ schema: room.schema, store: Object.fromEntries(room.documents.map((d: any) => [d.state.id, d.state])) })
 	useEffect(() => {
@@ -83,10 +91,13 @@ function VersionPreview({ data }: { data: any }) {
 	}, [data])
 	return (
 		<Tldraw
+			components={previewComponents}
+			themes={canvasThemes}
+			initialTheme={getAppearance().palette}
 			hideUi
 			autoFocus={false}
 			assetUrls={assetUrls}
-			licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
+			licenseKey={licenseKey}
 			onMount={(e) => {
 				editor.current = e
 				loadSnapshot(e.store, snapshot(data.room))
@@ -98,11 +109,11 @@ function VersionPreview({ data }: { data: any }) {
 }
 
 /** The tldraw engine. */
-export function App() {
+export function App({ licenseKey }: { licenseKey?: string }) {
 	const [status, setStatus] = useState('connecting')
 	const [helpers, setHelpers] = useState<{ toucan: any; subscribe: (f: () => void) => () => void } | null>(null)
 	const [editor, setEditor] = useState<Editor | null>(null)
-	const { theme } = useAppearance()
+	const { theme, palette } = useAppearance()
 	const format = useFormat()
 	useEffect(() => {
 		systemFormat.set(format?.id === 'system')
@@ -116,13 +127,17 @@ export function App() {
 		setEditor(editor)
 		keepPicturesWhole(editor)
 		const toucan = makeHelpers(editor)
+		// A hidden copy of the canvas, for trying a reflex without touching the real one (app/sandbox.tsx).
+		;(toucan as any)._copy = makeCopy(editor, makeHelpers, assetUrls, licenseKey)
 		setHelpers({ toucan, subscribe: (f) => editor.store.listen(f) })
 		window.editor = editor
 		window.toucan = toucan
 		// The server's headless page shows up among the collaborators; say what it is.
 		if (headless) editor.user.updateUserPreferences({ name: 'agent (headless)' })
 		else if (myName()) editor.user.updateUserPreferences({ name: myName() })
-		const stopRelay = connectRelay({ editor, tl, toucan }, setStatus)
+		// The seed is fetched before the relay connects, so the first command can't get in ahead of it.
+		const seeded = applySeed(toucan)
+		const stopRelay = connectRelay({ editor, tl, toucan, ready: seeded }, setStatus)
 		const stopThumbnail = keepThumbnail(
 			async () => {
 				const ids = [...editor.getCurrentPageShapeIds()]
@@ -141,7 +156,6 @@ export function App() {
 			if (chosen && chosen !== getAppearance().theme) setTheme(chosen)
 		})
 		editor.zoomToFit({ animation: { duration: 0 } })
-		applySeed(toucan)
 		return () => {
 			stopRelay()
 			stopThumbnail()
@@ -151,14 +165,15 @@ export function App() {
 
 	// One authoritative document per canvas on the server; every tab stays in sync.
 	const store = useSync({ uri: wsUrl('/ws/sync'), assets: inlineBase64AssetStore })
+	const preview = useCallback(({ data }: { data: any }) => <VersionPreview data={data} licenseKey={licenseKey} />, [licenseKey])
 
 	return (
-		<CanvasFrame live={status === 'live' && store.status === 'synced-remote'} engine="tldraw" preview={VersionPreview} onComment={() => startComment(helpers?.toucan)}>
+		<CanvasFrame live={status === 'live' && store.status === 'synced-remote'} engine="tldraw" preview={preview} onComment={() => startComment(helpers?.toucan)}>
 			{helpers && <ProposalBar {...helpers} />}
 			{helpers && <ThreadsLayer {...helpers} />}
 			{editor && <SystemOverview editor={editor} />}
 			{helpers && <DetailsCard {...helpers} />}
-			<Tldraw store={store} onMount={onMount} components={components} assetUrls={assetUrls} getShapeVisibility={overviewVisibility} colorScheme="system" licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY} />
+			<Tldraw themes={canvasThemes} initialTheme={palette} store={store} onMount={onMount} components={components} assetUrls={assetUrls} getShapeVisibility={overviewVisibility} colorScheme="system" licenseKey={licenseKey} />
 		</CanvasFrame>
 	)
 }

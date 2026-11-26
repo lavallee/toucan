@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { atom, computed, useValue, type Editor, type TLShape } from 'tldraw'
-import { Button } from '@/components/ui/button'
+import { Button } from '@lyra-forge/leyline/ui/button'
 import { cn } from '@/lib/utils'
 
 // Past a certain distance a system diagram's boxes can't be read and its arrows are just a tangle. So, zoomed out, it

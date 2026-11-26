@@ -15,10 +15,11 @@ const name = (f) => (f.docs ? `[${f.name}](${f.docs})` : f.name) + (f.engines ==
 
 const out = [
 	'---',
-	`description: Everything toucan ${data.version} does, in one list: where to find each feature, and when it arrived.`,
+	`description: Toucan features, where to find them and the release that introduced each one.`,
 	'kicker: Reference',
 	'---',
-	'# Features',
+	'# Feature index',
+	'', '::: html', '<link rel="stylesheet" href="assets/admiralty.css">', '<script src="assets/site-nav.js"></script>', '<script defer src="assets/site-footer.js"></script>', ':::',
 	'',
 	`Each row says where you find it: in the app, or as a \`toucan\` command an agent (or you) runs. Names link to where it's shown or explained, and "(tldraw)" marks what works on the tldraw engine only.`,
 	'',

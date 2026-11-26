@@ -1,8 +1,19 @@
-# Agent guide
+---
+kicker: Reference
+description: Commands and conventions for an agent working on a shared canvas.
+---
+# Agent CLI reference
 
-This page mirrors [`AGENTS.md`](https://github.com/lavallee/toucan/blob/main/AGENTS.md), the guide
-agents read in the repo. The ground rule: a person is looking at the canvas and editing it by hand at the
-same time. Inspect before you change, keep edits small, and never wipe their work.
+::: html
+<link rel="stylesheet" href="assets/admiralty.css">
+<script src="assets/site-nav.js"></script>
+<script defer src="assets/site-footer.js"></script>
+:::
+
+[`AGENTS.md`](https://github.com/lavallee/toucan/blob/main/AGENTS.md) gives agents the everyday rules
+and links to the topic guides. This page brings the reference material together for web readers.
+Someone may be editing the same canvas by hand. Inspect it first and make small, reversible edits.
+At the terminal, use `toucan guide index` for the map or `toucan guide TOPIC` for a single topic.
 
 ## The CLI
 
@@ -12,6 +23,7 @@ toucan --canvas NAME exec -e 'CODE'             # run JS in the editor; `return`
 toucan --canvas NAME exec FILE.js               # same, from a file (use for anything > 1 line)
 toucan --canvas NAME screenshot [OUT.png]       # look at it (<=1800px)
 toucan --canvas NAME animate [OUT.gif]          # a GIF of the diagram building up, box by box along the arrows
+toucan --canvas NAME rendition set|publish|list|remove NAME   # a named picture of part of the canvas, for documents to include
 toucan --canvas NAME script list|put NAME FILE|rm NAME   # persistent canvas scripts
 toucan canvases                                 # every canvas: title, description, shapes, open tabs
 toucan reload [--all]                           # make open tabs reload the page (this canvas's, or every one): after an upgrade
@@ -36,10 +48,15 @@ toucan profiles                                   # the named agents a canvas ca
 toucan profiles add ID --workdir DIR [--context F,F]   # a profile of your own, from the agent's folder (starts from its AGENTS.md)
 toucan --canvas NAME meta --profile SOURCE/ID|none   # work on the canvas with one: its knowledge, briefing and skills
 toucan --canvas NAME profile                     # the agent the canvas works with: what it reads at the start, and its skills
+toucan plugins                                    # every plugin on PATH by kind (agent profiles, plan sources), and any refused, with why
+toucan sources                                    # where plans come from: the file source and toucan-source-* plugins, with what each lists
+toucan --canvas NAME plan [bind SOURCE REF [--views board,gantt] | unbind | sync | dismiss]   # the plan a canvas shows views of
+toucan --canvas NAME plan catalog | views | view add KIND [options] | view set ID [options] | view put FILE|- | view rm ID [--keep]
+toucan --canvas NAME plan items [--json] | set ITEM field=value... | add --title T [field=value...]   # the work itself, written upstream
 toucan templates                                  # blocks and starters; `new NAME --template ID` makes a canvas from one
 toucan --canvas NAME add ID                       # add a block or starter beside what's on the canvas
 toucan templates show ID                          # a template's description, to copy the form of
-toucan --canvas NAME draw FILE|- [--update] [--move] [--label T]   # lay out a diagram described as data onto a canvas
+toucan --canvas NAME draw FILE|- [--update] [--move] [--prefix P] [--frame KEY] [--title T] [--label T]   # lay out a diagram described as data onto a canvas
 toucan --canvas NAME threads [--all] | show N | new TEXT --on KEY,KEY | --region X,Y,W,H [--ask] | reply N TEXT [--ask] | close N [--reply T] | reopen N | adopt-notes   # comment threads
 ```
 
@@ -49,6 +66,10 @@ browser tab open on the canvas, unless the server runs in headless mode; `graph`
 
 After toucan is upgraded, a tab that was open keeps running the old page: it shows **toucan was updated · Reload**, and code an agent runs
 in it may fail (the error says so). `toucan reload --all` reloads every open tab at once; the canvas is saved, so nothing is lost.
+
+Screenshot review is available through `toucan --canvas NAME review`. Use `review post` to publish an
+image, `review inbox PRODUCER` for feedback on that producer's revisions, and `review reply` to answer a note.
+Run `toucan help` for arguments. The [review protocol](extending.html#screenshot-review) also supports external adapters.
 
 ## Headless mode
 
@@ -151,6 +172,26 @@ selected proposals, or all of them. Leave that choice to them: run `toucan propo
   Cmd-Z doesn't undo your run. On Excalidraw each `updateScene` call is its own undo step
   (`applyGraph` makes one), so batch your element changes into a single `updateScene`.
 
+## What people do while you work
+
+![The chat agent adds a forgot-password path. Meanwhile the person renames Verify email to Confirm your email. The agent is told between its commands, the panel says "Saw a change on the canvas", and the agent colours the renamed box green with the rest of the happy path.](assets/features/agents-notice.gif "A real Codex turn, sped up while it works.")
+
+People keep editing while you work, and toucan tells you what they did, so you don't need to poll. (Thanks to [Daniel Bachhuber](https://github.com/danielbachhuber), who asked for toucan to work full duplex.)
+
+- **From the terminal or MCP.** Each command's answer comes with what people and other agents did on the canvas since
+  your last command under the same `--agent` name: a `<canvas_activity>` block on stderr (with MCP, after the tool's
+  result). It lists shapes added, changed (text, moved, resized, restyled, into or out of a frame) or removed, and by whom,
+  what people selected, and comments they left. Your own edits aren't in it, and neither is what reflexes and a plan's sync
+  do. Your first command on a canvas starts the count, and the server has to hold the canvas open (a tab on it). Agents that
+  share a name share what they hear, so give yourself one with `--agent`. `TOUCAN_ACTIVITY=off` turns it off.
+- **In the chat panel and comment threads.** The agent hears it between its commands, as a message added to the turn in
+  progress, and the panel shows "Saw 2 changes on the canvas". A message sent mid-turn carries what is selected at that
+  moment, so "this" means what the person is looking at now. A new turn starts with what changed since the last one,
+  beside the brief.
+- **What to do with it.** Fold it in and use your judgement. Keep their edits, don't put back what they removed, and
+  don't re-import over a box they just rewrote. If it changes your plan, say so in your reply. If you can't tell what they
+  want, ask. It needs no acknowledgement.
+
 ## Graphs: the engine-neutral path
 
 A canvas reads and writes as a *toucan graph* (TG, `lib/tg.mjs`): `groups` (frames), `nodes` (boxes) and
@@ -196,7 +237,7 @@ Most diagrams are a known shape, and a canvas *has* diagrams rather than *being*
 sample you can edit:
 
 - **Blocks**, one diagram each, in groups: processes (flowchart, swimlane, sequence, state machine, build pipeline, funnel, cycle, SIPOC),
-  structures (org chart, decision tree, mind map, OKR tree), systems (layered architecture, service map, network, entity relationships), time
+  structures (org chart, decision tree, mind map, OKR tree), systems (layered architecture, service map, systems map, network, entity relationships), time
   (roadmap, timeline), work (kanban, customer journey, responsibility chart, retro, empathy map, story map) and decisions (2x2, comparison table,
   fishbone, pros and cons, SWOT, stakeholder map, Eisenhower, five whys, decision log).
 - **Starters**, a whole canvas on one subject made of several blocks under their own headings: system design, incident review, product strategy,
@@ -208,11 +249,37 @@ the canvas. Then change its boxes with `toucan.node`, or `import` more.
 
 To draw on a canvas you're already on, describe the diagram as data and let the engine place it: `toucan templates show flowchart` shows the form,
 and `toucan --canvas NAME draw plan.json` lays it out beside what's there. Each `kind` (flow, tree, mindmap, lanes, grid, board, quadrant, timeline, gantt,
-sequence, fishbone, funnel, stack, cycle) has its own fields, and a box's `detail` is what opens on click. A new drawing never overwrites what's there: if its keys clash it takes a prefix, which the command reports. To change an earlier drawing, draw it again with `--update`, and `--move` to reposition its boxes too.
+sequence, fishbone, funnel, stack, cycle, map) has its own fields, and a box's `detail` is what opens on click. A new drawing never overwrites what's there: if its keys clash it takes a prefix, which the command reports. To change an earlier drawing, draw it again with `--update`, and `--move` to reposition its boxes too.
+
+For many named parts in a few systems, draw a **map** (`toucan templates show systems-map`): `columns` of panels, each with `tiles` packed in a grid,
+and `links` between panels. A tile or a panel can have a `status` (live, building, trial, planned, retiring), shown by colour, line and word and kept
+in `meta.status`; the key at the top lists only the states the picture uses. A panel takes a `step` number, a `sub` line and a `footer` such as
+"Owner: Data team". A link with `"kind": "planned"` is dotted. A link past a column, or back against the reading direction, travels in a lane above
+or below the picture (`"lane": "top"` or `"bottom"` to choose), and no arrow runs through a panel it doesn't end in. Never invent an owner, a step or
+a state: leave out what the person didn't give you. In a Mermaid import, a class named like a state (`a:::planned`, or `class a,b building`) sets it.
+(The form follows [open-diagram](https://github.com/lukendeasy/open-diagram) by Luke Deasy.)
+
+`toucan describe` says what a diagram says, in plain words: each frame and what it holds, the state of each part, and every arrow with its
+label. Read it against the request before you answer: every part the person named should be there, and nothing they didn't. `toucan export OUT`
+writes the canvas as a file, by the ending of `OUT`: `.svg` (sharp at any size, with its title and that description inside it, for a document
+or a pull request), `.png`, `.gif` (the animated build), or the graph as `.mmd`, `.canvas`, `.dot`, `.excalidraw`, `.json` or `.txt`. People
+get the same from **Export** above the canvas.
+
+**Renditions** are for a picture a document keeps: a named, published picture of part of a canvas that other documents include by
+name, and that says whether the canvas has moved on since. `toucan rendition set NAME --frame KEY` (or `--keys a,b`, or `--all`,
+the default; `--format svg|png`, `--alt TEXT`, `--title TEXT`) says what it shows; set it again to change it, and what you leave out
+stays as it was. `toucan rendition publish NAME` draws it now, the way `export` does, into the canvas's data folder
+(`<data>/CANVAS.renditions/NAME.svg`, with `NAME.json` beside it: what it shows, the canvas version and a hash of the shapes it was
+drawn from, a hash of the picture, and when it was published; an unchanged picture keeps its date). It also lists the picture in the
+include catalogue shared by this machine's tools (`$INCLUDES_CATALOGUE`, else `~/.config/includes/catalogue.json`) as
+`toucan:CANVAS/NAME`, which a document names as `<!-- include: toucan:CANVAS/NAME -->`; `--no-catalogue` leaves it out.
+`toucan rendition list` says which are `current` and which are `behind`, and `rendition remove NAME` takes one away, with its entry.
+A rendition is drawn only when asked, never when the canvas is saved: publish again when the person wants the documents that include
+it to change, and give it `--alt` words for people who can't see it. People publish one from **Export**, under Rendition.
 
 `toucan.measure()` measures the diagram as drawn and returns a `score` out of 100 and `findings`, each naming the shapes involved: overlaps, text that
-outgrew its box, arrows through boxes, crossings, labels on boxes or on each other, arrows through other arrows' labels, boxes cut off by a frame. `routine run check-diagram` reports the same and points at
-the shapes. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing
+outgrew its box, arrows through boxes, crossings, labels on boxes or on each other, arrows through other arrows' labels, arrows through a map's panels, boxes cut off by a frame. `routine run check-diagram` reports the same, points at
+the shapes, and gives a `fixes` line for each kind of finding: what to run or change to clear it. Use it after a layout change: it's faster than a screenshot and says exactly what to fix. What a good diagram has, roughly in order: nothing
 overlapping or cut off; arrows that don't run through boxes; boxes of a kind that match and line up; one direction of flow; short titles, with the rest in
 `meta.detail`; and text you can read when the whole diagram fits on screen (on a big canvas, over 25 boxes or three or more frames, that
 last one is only a measure: it's read by zooming in).
@@ -238,9 +305,9 @@ move through the canvas with ← and → in that card, and tells agents how to b
 - **system**: named parts and real connections; ← → follow arrows, and the card lists the choices where they branch. Zoomed out on tldraw, people see frames and
   how many connections run between them, and a frame opens on click. That's only what they see: `summary`, `graph`, `screenshot` and exports still have every shape.
 
-Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. `animate` (and **Animate** above the canvas) builds
+Solid arrows are the way through, so proposals and dotted arrows are skipped when walking. `animate` (and **Export** above the canvas) builds
 the diagram up in that same order as a GIF: from where it starts, each box with the arrows that join it to what's already there, a fork's
-branches together, lanes and frames first; nothing on the canvas changes. The **Air out** routine (`routine run air-out`, tldraw)
+branches together, lanes and frames first; nothing on the canvas changes. The **Air out** routine (`routine run air-out`)
 converts a dense diagram: long text moves to `meta.detail`, names get larger, and things spread a little. Run it only when asked. Region threads keep their position, so they may need re-anchoring afterwards.
 
 ## Files: what you write for a canvas
@@ -291,6 +358,79 @@ Paths are relative to `workdir`. Context and shared folders must be inside it an
 characters, with anything missing reported. A profile grants no writing: the agent writes in the canvas's files folder like any chat
 agent, since anyone who can reach the server can bind a profile. Sources are only looked for in PATH folders an agent can't write to.
 `toucan profiles` lists every source's profiles, and `toucan --canvas NAME profile` shows what the bound one reads and its skills.
+
+## Plans: a canvas over a system of record
+
+A canvas can show a **plan**: a project kept somewhere else (a file, or a project-management system reached through a plan source),
+drawn as views that stay in step with it both ways. The plan is the system of record and the canvas holds views of it. When it
+changes upstream the views are redrawn; when a person drags a card to another column, stretches a bar or retitles a box, that edit
+is written upstream. A canvas has one plan and any number of views of it, beside whatever else is on it.
+
+- `toucan sources` lists where plans can come from: the built-in `file` source (a plan as a JSON file, `files/PATH` in the canvas's
+  files folder or `project/PATH` in its project; `examples/website-relaunch.plan.json` is one to try) and any `toucan-source-NAME`
+  plugin, with the plans each lists. `toucan plugins` says which plugins were found, and why one wasn't trusted.
+- `toucan --canvas NAME plan bind SOURCE REF [--views board,gantt]` binds the canvas (`--copy` copies a file plan given by path into
+  the canvas's files, under a free name); `toucan new NAME --plan SOURCE REF --views board,gantt` makes a canvas that way. `plan`
+  shows the source, when it last synced, the views and any problems; `plan sync` pulls now; `plan unbind` lets go, leaving the shapes
+  as ordinary ones. `plan`, `plan items` and `plan views` ask the source whether it has moved and wait for the answer, so what they
+  say is current with no tab open. `state` is about the data (`synced`: read and written); `drawn` says whether the views on the
+  canvas show it yet, which with nobody there and no headless mode waits for the canvas to be opened.
+- **You compose views by writing small specs, never by placing shapes.** The kinds are `board` (columns by an option field,
+  optionally rows by another with `--lanes`), `gantt` (bars on a date axis, optionally lanes), `timeline` (dated items in order),
+  `graph` (boxes and `dependsOn` arrows) and `table` (a row per item, a column per field). `plan view add KIND --group-by FIELD
+  --filter 'stage!=done' --sort priority,-end --fields assignee,end --rollup count,sum:estimate`, `plan view set ID …` to change
+  one, `plan view put FILE|-` for a whole spec as JSON, `plan view rm ID` (`--keep` leaves its shapes). **`plan catalog` lists every
+  option of every kind**, and a spec that doesn't fit is refused with what would: an unknown field, a group-by that isn't an option
+  field, a value that isn't one of the options. Fields are whatever the plan declares, including ones of its own: group, filter,
+  sort and show any of them.
+- **Change the work with `plan`, not with `exec`.** `plan items` lists the fields and items; `plan set ITEM stage=done end=2026-12-03`
+  writes upstream (an option by its id or label; an empty value clears, as in `start= end=`; `--after ID` or `--first` places it)
+  and `plan add --title T stage=todo` makes an item. They go through the same write as a person's drag, and the views follow. A
+  refusal (`conflict`, `invalid`, `forbidden`) is the command's error: read it, and don't retry blindly.
+- **Shapes keyed `plan:…` belong to the sync.** A view's frame is `plan:<view>`, and everything in it is `plan:<view>:<what>:<id>`
+  (`item`, `col`, `lane`, `row`, `axis`, `label`, `cell`…). Each card carries `meta.plan = { item, view, version }`, and its Details
+  card shows the record, with the fields a person can change there (a date is cleared there too). Don't move, restyle, relabel or
+  delete them with `exec`: a move that means something is written upstream as if a person made it, and anything else is undone by
+  the next sync. `import`, `draw --update`, `toucan.layout()`, `toucan.tidy.*` and every routine leave them, and whatever is inside
+  a view's frames, exactly as they are (an import says how many under `planKept`; a routine's summary ends "left the plan views
+  as they are"); `measure()` still measures them. That holds while the canvas is bound: after `plan unbind`, shapes that still
+  carry `meta.plan` (from a restored version, say) are ordinary shapes.
+- Views are placed clear of each other and of what's on the canvas, and each view's frame holds everything drawn in it. A view
+  that grows into the one below moves that one down, unless a person has moved it: then it stays, and a notice says they overlap.
+- **What a sync never touches:** anything that doesn't carry `meta.plan`. Arrows, notes and boxes drawn around or inside a view are
+  the person's. When a view, a column, a lane or the Unscheduled strip goes away, what a person put inside it is moved out to
+  where it stood, not removed with it. A view stays on the page, and inside any frame, a person put it.
+- What a person's edit means, by kind, is in `plan catalog`. In short: a card into another column or row sets the grouped field; up
+  or down a column places it after the card above; a gantt bar is exactly as long as start to end, and moving or stretching it
+  sets those dates in whole days; a card dragged out of Unscheduled onto the chart starts on that day (for a day, or a day per 8
+  hours of its `estimate`); text sets the title (in a table, a cell's text sets its field). A bar's title stands beside it when it
+  doesn't fit inside, and is edited there. Dates are read against the view's own axis, and a card's column is the frame it is in,
+  so moving or resizing a view, its frames or its axis is never an edit. A bar moves once it has gone a third of a day (and 4 px),
+  and then by at least a day in that direction, so a nudge with the arrow keys counts at any scale. Several cards moved together
+  end in the order they were dropped in. A shape that has been rotated is not an edit: it is stood up again.
+- **A box a person draws in a board column becomes a new item** when it is a plain rectangle about the size of a card, with text,
+  and a notice says so. There is no undo for that from the canvas (the protocol has no delete): the item is removed in the system
+  of record. Anything else there is an annotation and stays one: an ellipse, a sticky note, a banner, a box an agent's run adds
+  (`exec`, `import`, a routine), a copy of a card, boxes pasted several at once. To make an item, use `plan add`. A copy of a
+  whole view (its frame duplicated) is the person's own ordinary shapes, frames and all.
+- Not edits upstream: a deleted card (it comes back); a bar dropped into Unscheduled (it goes back: clear dates in the Details card
+  or with `plan set ITEM start= end=`); a restored version (`versions restore` redraws the views from upstream and writes nothing).
+  A person's undo of their own drag writes the previous value back; if the item has changed upstream since, the undo writes
+  nothing and a notice says so. Bars dragged together with the date boxes above them change no dates: they go back, with a notice.
+- A write quotes the version the card showed. If upstream had moved on, or refuses the value, the canvas goes back to what
+  upstream says and people see a notice; `plan` lists these under `problems` and `plan dismiss` clears them.
+- The server syncs, one sync per canvas however many tabs are open: it asks the source for changes every few seconds while a person
+  has the canvas open, and redraws when something moved. A shape someone is dragging or typing in is left alone until they let go
+  (their edit is then read against what they saw); everything else carries on meanwhile. With nobody there and no headless
+  mode, the views are drawn when the canvas is next opened. Two safeguards: if the views keep differing from what was drawn with
+  nothing in the difference to save, more than twelve times in twenty seconds, the canvas is left alone for a minute and a notice
+  says which shapes kept changing (`plan sync` starts it again; something that changes them more slowly is simply drawn over each
+  time); and a binding file that can't be read is kept aside, the canvas says so, and `plan bind` again takes up the shapes
+  already there by their keys.
+- On Excalidraw: a view with columns or lanes has no frame of its own (frames don't nest there), so a gantt without lanes has
+  only its axis, bars and Unscheduled strip; a gantt's titles always stand beside their bars; and a view is always drawn on the
+  one scene (there are no pages). Everything above is otherwise the same there and is tested there, except undo, which has no
+  API to drive and is untested on that engine.
 
 ## Versions: the evolution of a canvas
 
@@ -352,6 +492,54 @@ exec path: one undo step, glowing edits, a labelled version. The `summary` it re
   shared by every canvas on the server; banking under a shipped routine's name replaces it there.
 - **Before doing a chore by hand:** check `routine list`, then `toucan --canvas NAME routine run NAME`.
 - Never remove a routine you didn't bank unless asked.
+
+## Reflexes: what the canvas does by itself
+
+A **reflex** answers something that happens to a canvas, the moment it happens, without calling you: a box whose text
+outgrew it is fitted, a frame that cuts off what's in it grows. A canvas has one tree of them, empty at first. Whatever
+the tree can't answer it **asks** you about, and what you work out can come back as a new reflex, so the next time the
+canvas answers by itself. The idea is Sihan Xu's "growing behavior tree" ([blog](https://sihanxu.me/harnesstree/)) and
+the reactive layer of [The Harness](https://github.com/EvolvingLMMs-Lab/the-harness) by LMMs-Lab: the tree handles what
+happens to the agent, the model what it sets out to do, and "the bigger the tree, the quieter the model".
+
+A node is `{ name, about, when, do, under, status }`:
+
+- `when` is the body of a function of `view` that returns the situations the canvas is in **now**: nothing, `true`, or a
+  list of `{ on: [keys], text }` (one per box with the problem). It is judged a moment after edits go quiet, so it says
+  what is the case, not what just happened. It must be quick and change nothing. `view` has `items(kind)`, `get(key)`,
+  `arrows()`, `findings(kind)` (from `toucan.measure()`, measured once per judgement), `notes()`, `engine`, and
+  `toucan`/`editor` for anything else. A plan's shapes are left out of all of it.
+- `do` is the answer: `--routine NAME` (it gets the situation's shapes as `args.on`; fit-text and fit-frames touch only
+  those), `--do CODE` (a function body with `situations`, `editor`, `tl` and `toucan` in scope), or `--tell` (ask the
+  agent). A node with no answer only groups the ones under it.
+- `--under NODE` puts it under another: it is judged only while that one holds, and answers before it. Order is
+  priority: among nodes at one place the earlier takes a situation from the later. A new node goes under the narrowest
+  node its situation falls in.
+
+How it behaves, because a person is editing the same canvas:
+
+- A reflex answers a situation **when it begins**, once. What was already the case when it was switched on is left.
+- It runs as an agent exec named **Reflex**: one undo step, glowing, labelled `reflex NAME` in the history. Nothing runs
+  while someone is dragging or typing, while an agent is at work on the canvas, or with no tab open.
+- If the situation is still there after it acted, it **failed**: the next node at its place or the node above may take it,
+  and if none does, it asks. A situation back soon after a reflex settled it was most likely **undone**: the reflex
+  leaves it, and after two it pauses itself and asks. More than eight runs in thirty seconds rests the tree for a minute.
+
+What to do:
+
+- **An ask** is in your brief ("Reflex ask #N"). Handle it like a request. If it will happen again, teach the canvas:
+  `reflexes add NAME --when CODE --routine R --answers N`, then `reflexes try NAME`. `--answers` closes the ask.
+- **What you add starts watching**: it is judged and counts what it would have done, and does nothing. Tell the person
+  it's there; switching it on (`reflexes on NAME`, or **On** in the Reflexes menu) is theirs, unless they asked you to.
+- **Try before you hand it over.** `reflexes try NAME --stage CODE` runs CODE on a hidden copy of the canvas to bring the
+  situation about, judges, answers, and judges again: `passed` means the situation was over afterwards. The canvas
+  itself never changes. Without `--stage` it tries on what's there now. (tldraw only; on Excalidraw it only judges.)
+- `reflexes starters` lists ready ones (text-fits, frames-hold, arrows-clear under diagram-faults; new-notes on tldraw),
+  and `reflexes suggest` names the ones worth having from work: a routine run by hand again and again on this canvas.
+- `reflexes wake on` lets the tree hand an ask to a comment thread's agent by itself, at most one every ten minutes.
+  It's off unless a person turns it on. Don't turn it on yourself.
+
+A reflex is for what happens **to** the canvas. Something you set out to do, however often, is a routine.
 
 ## Canvas scripts (growing features)
 

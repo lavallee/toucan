@@ -2,6 +2,40 @@
 // use this, so there's one definition of what makes a diagram sound. Findings name the shapes involved. It reads the canvas through
 // the scene (app/scene.js), so it measures tldraw and Excalidraw canvases alike.
 
+import { scopeScene } from './scene'
+
+/**
+ * What to do about each kind of finding: a finding's `kind` is its name here, so an agent can act on one without looking at the
+ * picture. Keep a kind's wording stable (routines and agents match on it), and give every new kind a line here. Findings that
+ * name their fix follow open-diagram by Luke Deasy (https://github.com/lukendeasy/open-diagram, MIT), whose layout problems each
+ * say how to clear them.
+ */
+export const FIXES = {
+	'overlap': 'Move one of the two, or run the fix-overlaps routine.',
+	'too close': 'Give the two more room: move one, or run distribute-evenly.',
+	'text outgrew its box': 'Shorten the text and put the rest in meta.detail, or run fit-text to make the box fit.',
+	'cut off by its frame': 'Run fit-frames, or move the box inside its frame.',
+	'arrow runs through a box': 'Run tidy-arrows; if it stays, move the box out of the way or draw the arrow from another side.',
+	'arrow runs through a panel': 'Run tidy-arrows; in a map, give the link "lane": "top" or "bottom" so it goes round the outside.',
+	'arrows cross': 'Reorder the boxes so the two arrows do not have to cross, or run tidy-arrows.',
+	'arrow too short to read': 'Move the two boxes apart.',
+	'arrow labels sit on each other': 'Run clear-arrow-labels, or shorten the labels.',
+	'arrow label sits on a box': 'Run clear-arrow-labels; if it stays, shorten the label or widen the gap it sits in.',
+	'arrow label sits on a line': 'Run clear-arrow-labels, or shorten the label.',
+	'arrow label hides its arrow': 'Shorten the label, or move the two boxes apart so its line is longer than it is.',
+	'an arrow runs through another arrow\'s label': 'Run clear-arrow-labels.',
+	'uneven row': 'Run match-sizes.',
+	'uneven column': 'Run match-sizes.',
+	'straight arrows among elbows': 'Run neat-arrows, or set the odd arrows to the route the rest use.',
+	'empty gutter down the frames': 'Run fit-frames.',
+	'frame name cut off': 'Run fit-frames, or widen the frame (or shorten its name).',
+	'arrow label sits under a box': 'Run clear-arrow-labels, or move the label along its arrow, away from the box it comes back to.',
+	'arrows share a run': 'Run tidy-arrows, or move one of the two boxes so the arrows leave by different sides.',
+	'word broken inside a box': 'Widen the box (or run fit-text), or use a shorter word.',
+	'frame mostly empty': 'Run fit-frames, or lay the contents out more compactly (a grid, or fewer columns).',
+	'text too small to read with the whole diagram in view': 'Tighten the gaps, shorten the longest chain, or draw it in the other direction.',
+}
+
 export function measureDiagram(scene) {
 	const findings = []
 	const found = (kind, ...on) => {
@@ -47,6 +81,26 @@ export function measureDiagram(scene) {
 	})
 	spilling.forEach((s) => found('cut off by its frame', s))
 	const frameOverflow = spilling.length
+	// A frame's name is set on one line above it, and cut off where the frame ends.
+	const nameCut = frames.filter((f) => String(f.text ?? '').trim() && String(f.text).length * 8 + 16 > bounds(f).w)
+	nameCut.forEach((f) => found('frame name cut off', f))
+	// A frame of many boxes with most of it bare: the layout spread them out and left the room empty.
+	const sparse = frames.filter((f) => {
+		const inside = solid.filter((s) => ancestors(s).includes(f.id))
+		// Not a dozen boxes in a long row or a sequence, which are wide by nature: a frame of over twenty with a tenth of it covered.
+		if (inside.length <= 20) return false
+		const a = bounds(f)
+		return inside.reduce((sum, s) => sum + bounds(s).w * bounds(s).h, 0) / (a.w * a.h) < 0.1
+	})
+	sparse.forEach((f) => found('frame mostly empty', f))
+	// A word that is longer than the box it is in is broken in the middle of it.
+	const SHAPE_WIDER = { diamond: 1.75, ellipse: 1.35, oval: 1.2, hexagon: 1.25, cloud: 1.5 }
+	const broken = solid.filter((s) => {
+		if (s.kind !== 'box' || s.meta?.borderless === true) return false
+		const longest = Math.max(0, ...String(s.text).split(/\s+|(?<=-)/).map((w) => w.length))
+		return longest * (s.fontSize ?? 18) * 0.58 > (bounds(s).w - 32) / Math.sqrt(SHAPE_WIDER[s.geo] ?? 1)
+	})
+	broken.forEach((s) => found('word broken inside a box', s))
 	let labelClipped = 0
 	frames.forEach((f, i) => frames.forEach((g, j) => {
 		if (j <= i) return
@@ -74,7 +128,10 @@ export function measureDiagram(scene) {
 		return false
 	}
 	const info = arrows.map((a) => ({ a, path: scene.arrowPath(a.id), ends: new Set([a.from, a.to].filter(Boolean)) }))
-	let throughBoxes = 0, crossings = 0, labelOnBox = 0, labelOnMarker = 0, labelSqueezed = 0, shortArrows = 0, loose = 0, labelOnLabel = 0
+	// A panel (a frame marked meta.panel, as the map layout draws) is solid: an arrow with no end in it goes round it, not through.
+	const panels = frames.filter((f) => f.meta?.panel === true)
+	let throughPanels = 0
+	let throughBoxes = 0, crossings = 0, labelUnder = 0, labelOnBox = 0, labelOnMarker = 0, labelSqueezed = 0, shortArrows = 0, loose = 0, labelOnLabel = 0
 	const labels = [] // [arrow, its label's box], to find labels piled on each other (elbows that share a run put theirs together)
 	const markers = boxes.filter((s) => !s.text.trim() || isThin(bounds(s)))
 	const lengths = []
@@ -85,6 +142,7 @@ export function measureDiagram(scene) {
 		const skip = new Set(ends)
 		for (const id of ends) for (const anc of scene.ancestors(id)) skip.add(anc)
 		for (const s of solid) if (!skip.has(s.id) && crossesBox(path, bounds(s))) (throughBoxes++, found('arrow runs through a box', a, s))
+		for (const f of panels) if (!skip.has(f.id) && crossesBox(path, bounds(f))) (throughPanels++, found('arrow runs through a panel', a, f))
 		for (let j = i + 1; j < info.length; j++) {
 			if ([...ends].some((x) => info[j].ends.has(x))) continue
 			for (let p = 1; p < path.length; p++) for (let q = 1; q < info[j].path.length; q++) if (cross(path[p - 1], path[p], info[j].path[q - 1], info[j].path[q])) (crossings++, found('arrows cross', a, info[j].a))
@@ -100,12 +158,36 @@ export function measureDiagram(scene) {
 			for (const [other, b] of labels) if (hit(box, b, 2)) (labelOnLabel++, found('arrow labels sit on each other', a, other))
 			labels.push([a, box])
 			for (const s of solid) if (!ends.has(s.id) && hit(box, bounds(s), 2)) (labelOnBox++, found('arrow label sits on a box', a, s))
+			// Under one of its own ends too: a loop's label drawn half under the box it comes back to.
+			for (const s of solid) if (ends.has(s.id) && hit(box, bounds(s), 6)) (labelUnder++, found('arrow label sits under a box', a, s))
 			for (const s of markers) if (!ends.has(s.id) && hit(box, bounds(s), 0)) (labelOnMarker++, found('arrow label sits on a line', a))
 			// A label longer than the line it sits on: it hides its own arrow.
 			const horizontal = Math.abs(last.x - first.x) >= Math.abs(last.y - first.y)
 			if ((horizontal ? box.maxX - box.x : box.maxY - box.y) > len * 0.8) (labelSqueezed++, found('arrow label hides its arrow', a))
 		}
 	})
+	// Two arrows that run along one line for a stretch read as one arrow. Arrows that leave or arrive at the same box may share the
+	// first few steps (a fork, a join); beyond that, it's a run.
+	const runAlong = (p, q) => {
+		let run = 0
+		for (let i = 1; i < p.length; i++) for (let k = 1; k < q.length; k++) {
+			const a0 = p[i - 1], a1 = p[i], b0 = q[k - 1], b1 = q[k]
+			const horiz = Math.abs(a0.y - a1.y) < 1 && Math.abs(b0.y - b1.y) < 1 && Math.abs(a0.y - b0.y) < 3
+			const vert = Math.abs(a0.x - a1.x) < 1 && Math.abs(b0.x - b1.x) < 1 && Math.abs(a0.x - b0.x) < 3
+			if (horiz) run += Math.max(0, Math.min(Math.max(a0.x, a1.x), Math.max(b0.x, b1.x)) - Math.max(Math.min(a0.x, a1.x), Math.min(b0.x, b1.x)))
+			else if (vert) run += Math.max(0, Math.min(Math.max(a0.y, a1.y), Math.max(b0.y, b1.y)) - Math.max(Math.min(a0.y, a1.y), Math.min(b0.y, b1.y)))
+		}
+		return run
+	}
+	let sharedRuns = 0
+	for (let i = 0; i < info.length; i++) for (let j = i + 1; j < info.length; j++) {
+		const a = info[i].a, b = info[j].a
+		// One arrow ending where the next begins is a chain, not a shared run.
+		if (a.to && a.to === b.from || b.to && b.to === a.from) continue
+		// Arrows that leave or arrive at one box share the way to it for a while (a fork, a join); it's a run past a long stretch.
+		const joined = (a.from && a.from === b.from) || (a.to && a.to === b.to)
+		if (runAlong(info[i].path, info[j].path) > (joined ? 200 : 40)) (sharedRuns++, found('arrows share a run', a, b))
+	}
 	// A label another arrow runs through: elbows that share a run put one arrow's label on the other's line.
 	let labelCrossed = 0
 	// Where two arrows share a run (a fork leaving a decision), the other one runs along this one's own line, which reads fine;
@@ -147,7 +229,7 @@ export function measureDiagram(scene) {
 	// The same in a stack of equally wide boxes: a column of cards that differ by a line of text.
 	// A table's rows may differ, since each row keeps one height across; text without a border has no visible box to compare.
 	let unevenColumns = 0
-	const boxed = solid.filter((s) => s.geo === 'rectangle' && s.meta?.borderless !== true && s.dash !== 'none' && s.color !== undefined)
+	const boxed = solid.filter((s) => s.geo === 'rectangle' && s.meta?.borderless !== true && s.meta?.grid !== true && s.dash !== 'none' && s.color !== undefined)
 	const inRow = (s) => {
 		const a = bounds(s)
 		return boxed.some((o) => o !== s && o.parent === s.parent && Math.abs(bounds(o).y - a.y) < 2 && Math.abs(bounds(o).h - a.h) < 2)
@@ -210,7 +292,7 @@ export function measureDiagram(scene) {
 	return {
 		findings,
 		boxes: solid.length, arrows: arrows.length, frames: frames.length,
-		overlaps, tooClose, outgrew, frameOverflow, framesOverlap: labelClipped, throughBoxes, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, labelOnLabel, labelCrossed, shortArrows, looseArrows: loose,
+		overlaps, tooClose, outgrew, frameOverflow, frameNameCut: nameCut.length, labelUnder, sparseFrames: sparse.length, brokenWords: broken.length, sharedRuns, framesOverlap: labelClipped, throughBoxes, throughPanels, crossings, labelOnBox, labelOnMarker, unevenRows, unevenColumns, mixedArrows, emptyGutter, labelSqueezed, labelOnLabel, labelCrossed, shortArrows, looseArrows: loose,
 		aligned: +aligned.toFixed(2), sizeVariety: +sizeVariety.toFixed(2), gapEvenness: +cv(gaps).toFixed(2), lineEvenness: +mean(lineSpread).toFixed(2), lengthEvenness: +cv(lengths).toFixed(2), flow: +flow.toFixed(2),
 		aspect: page ? +(page.w / page.h).toFixed(2) : 1, fitZoom: +fitZoom.toFixed(2), textAtFit: +(fitZoom * minFont).toFixed(1), large,
 	}
@@ -220,10 +302,41 @@ export function measureDiagram(scene) {
 export function scoreDiagram(m) {
 	let score = 100
 	const fault = (n, each, cap) => (score -= Math.min(cap, n * each))
+	fault(m.frameNameCut ?? 0, 4, 12); fault(m.sparseFrames ?? 0, 6, 6); fault(m.brokenWords ?? 0, 3, 15); fault(m.sharedRuns ?? 0, 2, 8); fault(m.labelUnder ?? 0, 4, 16)
 	fault(m.overlaps, 12, 40); fault(m.frameOverflow, 8, 24); fault(m.framesOverlap, 8, 16); fault(m.outgrew, 3, 15)
-	fault(m.throughBoxes, 6, 30); fault(m.crossings, 3, 15); fault(m.labelOnBox, 5, 20); fault(m.labelOnMarker, 3, 15); fault(m.labelOnLabel ?? 0, 5, 20); fault(m.labelCrossed ?? 0, 5, 20); fault(m.unevenRows, 1, 8); fault(m.unevenColumns ?? 0, 1, 8); fault(m.mixedArrows ?? 0, 2, 8); fault(m.emptyGutter ?? 0, 6, 6); fault(m.labelSqueezed, 3, 12); fault(m.tooClose, 2, 10); fault(m.shortArrows, 2, 8)
+	fault(m.throughBoxes, 6, 30); fault(m.throughPanels ?? 0, 6, 30); fault(m.crossings, 3, 15); fault(m.labelOnBox, 5, 20); fault(m.labelOnMarker, 3, 15); fault(m.labelOnLabel ?? 0, 5, 20); fault(m.labelCrossed ?? 0, 5, 20); fault(m.unevenRows, 1, 8); fault(m.unevenColumns ?? 0, 1, 8); fault(m.mixedArrows ?? 0, 2, 8); fault(m.emptyGutter ?? 0, 6, 6); fault(m.labelSqueezed, 3, 12); fault(m.tooClose, 2, 10); fault(m.shortArrows, 2, 8)
 	score -= (1 - m.aligned) * 12
 	if (m.arrows > 1) score -= (1 - m.flow) * 4
 	if (m.textAtFit < 11 && !m.large) score -= (11 - m.textAtFit) * 3
 	return Math.max(0, Math.round(score))
+}
+
+/**
+ * What `toucan.measure()` reports. Scoped (`within`: the id of a frame), it judges that frame and what is in it, as if it were the
+ * whole canvas. Unscoped, a canvas of several sections (top-level frames marked `meta.section`, as `draw --frame` makes them; or,
+ * with none marked, two or more top-level frames that each hold frames of their own) is scored section by section: the score is
+ * their mean, and `sections` lists each one's. Penalties add up across everything counted, so one score for several diagrams
+ * says little (ten good sections scored 0 together). Anything else is one diagram, scored whole.
+ */
+export function measureCanvas(scene, { within } = {}) {
+	const one = (sc) => {
+		const m = measureDiagram(sc)
+		return { ...m, score: scoreDiagram(m) }
+	}
+	if (within) return { ...one(scopeScene(scene, within)), within }
+	const frames = scene.items().filter((i) => i.kind === 'frame' && !i.parent && i.meta?.panel !== true)
+	const holders = (f) => scene.items().some((i) => i.kind === 'frame' && scene.ancestors(i.id).includes(f.id))
+	const marked = frames.filter((f) => f.meta?.section === true)
+	const sections = marked.length ? marked : frames.filter(holders)
+	if (sections.length < 2) return one(scene)
+	const whole = one(scene)
+	const parts = sections.map((f) => ({ f, m: one(scopeScene(scene, f.id)) }))
+	const mean = Math.round(parts.reduce((sum, p) => sum + p.m.score, 0) / parts.length)
+	return {
+		...whole,
+		score: mean,
+		wholeScore: whole.score,
+		sections: parts.map(({ f, m }) => ({ key: f.key, name: f.text || f.key, score: m.score, boxes: m.boxes, arrows: m.arrows, findings: m.findings.length })),
+		findings: parts.flatMap(({ f, m }) => m.findings.map((x) => ({ ...x, section: f.key }))).slice(0, 60),
+	}
 }

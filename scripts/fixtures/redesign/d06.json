@@ -1,0 +1,156 @@
+{
+ "kind": "flow",
+ "title": "06 wofzpjhs shfvba",
+ "direction": "RIGHT",
+ "route": "elbow",
+ "boxWidth": 230,
+ "layerGap": 160,
+ "groups": [
+  {
+   "id": "d06-0",
+   "label": "spzivu · UCTl /ovtl (118 NI myll)"
+  },
+  {
+   "id": "d06-1",
+   "label": "spzivu · UCTl /tlkph/zjyhajo-zzk (159 NI myll; ~280 NI hmaly hyjopcpun kbwspjhalz)"
+  },
+  {
+   "id": "d06-2",
+   "label": "avyvuav (Hwwsl T6 · 16 NI · HAOLUZ 562 NI myll)"
+  },
+  {
+   "id": "d06-3",
+   "label": "Zwpuupun kpzrz vu spzivu (zhtl thjopul: uva vmm-ovza)"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "d06-4",
+   "text": "WvzanylZXS 18.6",
+   "group": "d06-0",
+   "color": "orange",
+   "detail": "Thyj kljpklz: zfzalt jsbzaly + yvsl, vy bzly-vdulk jsbzaly · zohylk_ibmmlyz ≈ 1 NI · jhwwlk if zfzaltk · slknly zpgl: tlhzbylk pu wohzl 1"
+  },
+  {
+   "id": "d06-5",
+   "text": "lcpklujl-lunpul tvuvylwv",
+   "group": "d06-0",
+   "detail": "bc dvyrzwhjl"
+  },
+  {
+   "id": "d06-6",
+   "text": "JSP + zfzaltk bzly aptlyz",
+   "group": "d06-0",
+   "detail": "dvyr slknly pz aol xblbl"
+  },
+  {
+   "id": "d06-7",
+   "text": "Hashz + ylhk-vusf HWP",
+   "group": "d06-0",
+   "color": "green",
+   "detail": "ylhk wbi.* spcl (uv lkpapvu jvwf)"
+  },
+  {
+   "id": "d06-8",
+   "text": "Jpzalyu zavyl (Zvbyjl Jyhdsly'z)",
+   "group": "d06-1",
+   "color": "orange",
+   "detail": "jvualua-hkkylzzlk, 6 NI"
+  },
+  {
+   "id": "d06-9",
+   "text": "~/.jpzalyu/iyvugl (14 NI)",
+   "group": "d06-1",
+   "color": "orange",
+   "dash": "dashed",
+   "detail": "uvu-tltily avvsz' zavyl: YLHK, uva tlynlk"
+  },
+  {
+   "id": "d06-10",
+   "text": "spzivu: lepzapun hjxbpylyz rllw ybuupun",
+   "color": "blue",
+   "detail": "Zvbyjl Jyhdsly · Ylnnpl/Upuly mlajolyz · Ayhdsly → vul hkhwaly wly zvbyjl dypalz h ihajo"
+  },
+  {
+   "id": "d06-11",
+   "text": "VMM-OVZA jvwf",
+   "group": "d06-2",
+   "color": "orange",
+   "detail": "upnoasf wn_kbtw + DHS hyjopcl · Jpzalyu ylwspjh"
+  },
+  {
+   "id": "d06-12",
+   "text": "Shaly, vwapvuhs: VJY / leayhjapvu dvyrlyz",
+   "group": "d06-2",
+   "dash": "dashed",
+   "detail": "ZZO-rlf hbao; zbitpa aoyvbno h chspkhapun svhkly; uv jbzavkf vu avyvuav"
+  },
+  {
+   "id": "d06-13",
+   "text": "Pukpv (445 NI myll, 98%)",
+   "group": "d06-3",
+   "color": "orange",
+   "detail": "vul-aptl wyl-ylklzpnu ihjrbw vusf (~307 NI)"
+  },
+  {
+   "id": "d06-14",
+   "text": "Hslehukyph (1.7 AI myll)",
+   "group": "d06-3",
+   "color": "orange",
+   "detail": "zljvuk wn_kbtw jvwf · Whyxbla lewvyaz · hyjopclk lkpapvuz (klslapvu = Thyj'z jhss)"
+  },
+  {
+   "id": "d06-15",
+   "text": "Ylzavyl kypss",
+   "shape": "hexagon",
+   "color": "yellow",
+   "detail": "hmaly wohzl 1, aolu xbhyalysf: ylzavyl puav h zjyhajo jsbzaly → ybu whypaf xblyplz"
+  }
+ ],
+ "edges": [
+  {
+   "from": "d06-4",
+   "to": "d06-11",
+   "label": "wn_kbtw + DHS (upnoasf)"
+  },
+  {
+   "from": "d06-8",
+   "to": "d06-11",
+   "label": "yzfuj ylwspjh + mpepaf"
+  },
+  {
+   "from": "d06-4",
+   "to": "d06-14",
+   "label": "wn_kbtw jvwf · Whyxbla lewvya"
+  },
+  {
+   "from": "d06-11",
+   "to": "d06-15"
+  },
+  {
+   "from": "d06-10",
+   "to": "d06-8",
+   "label": "jhwabylz"
+  },
+  {
+   "from": "d06-10",
+   "to": "d06-4",
+   "label": "ihajolz"
+  },
+  {
+   "from": "d06-6",
+   "to": "d06-4"
+  },
+  {
+   "from": "d06-7",
+   "to": "d06-4",
+   "label": "ZXS"
+  },
+  {
+   "from": "d06-9",
+   "to": "d06-4",
+   "dash": "dashed",
+   "label": "ylhk hz h zvbyjl"
+  }
+ ]
+}

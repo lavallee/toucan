@@ -9,24 +9,31 @@ import './theme'
 import './style.css'
 
 // Each engine (and its CSS and fonts) loads only for canvases that use it.
-const ENGINES: Record<string, React.LazyExoticComponent<() => React.JSX.Element>> = {
+type EngineProps = { licenseKey?: string }
+const ENGINES: Record<string, React.LazyExoticComponent<(props: EngineProps) => React.JSX.Element>> = {
 	tldraw: lazy(() => import('./App').then((m) => ({ default: m.App }))),
 	excalidraw: lazy(() => import('./ExcalidrawApp').then((m) => ({ default: m.ExcalidrawApp }))),
 }
 
 function Canvas() {
-	const [engine, setEngine] = useState<string | null>(null)
+	const [config, setConfig] = useState<(EngineProps & { engine: string }) | null>(null)
 	const [error, setError] = useState('')
 	useEffect(() => {
-		api(`/api/canvases/${encodeURIComponent(canvasName)}/info`).then((c) => setEngine(c.engine), (e) => setError(String(e.message ?? e)))
+		api(`/api/canvases/${encodeURIComponent(canvasName)}/info`)
+			.then(async ({ engine }) => {
+				const { licenseKey } = engine === 'tldraw' ? await api('/api/tldraw-license') : {}
+				setConfig({ engine, licenseKey })
+			})
+			.catch((e) => setError(String(e.message ?? e)))
 	}, [])
 	if (error) return <p className="toucan-ui p-6 text-sm text-destructive">{error}</p>
-	if (!engine) return null
+	if (!config) return null
+	const { engine, licenseKey } = config
 	const Engine = ENGINES[engine]
 	if (!Engine) return <p className="toucan-ui p-6 text-sm text-destructive">Unknown engine “{engine}”.</p>
 	return (
 		<Suspense>
-			<Engine />
+			<Engine licenseKey={licenseKey} />
 		</Suspense>
 	)
 }

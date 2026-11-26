@@ -1,0 +1,201 @@
+{
+ "kind": "map",
+ "title": "07 ylwvzpavyf zohwl",
+ "columns": [
+  [
+   {
+    "id": "d07-0",
+    "title": "ri/wbispzolyz/",
+    "cols": 2,
+    "tiles": [
+     {
+      "id": "d07-1",
+      "text": "zvbyjlz/<vul kpy wly zvbyjl>/",
+      "detail": "mlajo.wf · whyzl.wf · thwwpun.fts · mpeabylz/ · alzaz/"
+     },
+     {
+      "id": "d07-2",
+      "text": "wylkpjhalz · aybza · ypnoaz · slhkz",
+      "detail": "wylkpjhalz.fts · aybza.fts · ypnoaz.fts · slhkz.fts"
+     },
+     {
+      "id": "d07-3",
+      "text": "kia/",
+      "detail": "zahnpun → jvyl → wbi"
+     },
+     {
+      "id": "d07-4",
+      "text": "nhalz/",
+      "detail": "tlaovk hjjlwahujl ylzbsaz (98%/50 mvy pkluapaf ybslz)"
+     }
+    ]
+   },
+   {
+    "id": "d07-5",
+    "title": "ri/zjovvsz/",
+    "status": "planned",
+    "sub": "aolpy vdulyz' jovpjl, shaly",
+    "tiles": []
+   },
+   {
+    "id": "d07-6",
+    "title": "ri/jshptz/",
+    "status": "planned",
+    "sub": "aolpy vduly'z jovpjl, shaly",
+    "tiles": []
+   }
+  ],
+  [
+   {
+    "id": "d07-7",
+    "title": "lunpul/ (zohylk, kvthpu-myll)",
+    "cols": 3,
+    "tiles": [
+     {
+      "id": "d07-8",
+      "text": "slknly/",
+      "detail": "dypaly · pkltwvalujf · jbzavkf jsplua · lcpklujl zwhuz"
+     },
+     {
+      "id": "d07-9",
+      "text": "hkhwalyz/",
+      "detail": "myhtldvyr: ylhk hu hjxbpyly'z ylslhzl/klwvzpa/yljlpwa → ihajo"
+     },
+     {
+      "id": "d07-10",
+      "text": "alea/ (klmlyylk)",
+      "detail": "whyzl vujl wly ohzo"
+     },
+     {
+      "id": "d07-11",
+      "text": "leayhja/",
+      "detail": "leayhjavy jvuayhjaz · zwhu joljr · ylcpld xblbl · jvovyaz"
+     },
+     {
+      "id": "d07-12",
+      "text": "ylzvscl/",
+      "detail": "pk ybslz · Zwspur · jsbzalypun · hzzpnutlua · ylkpyljaz"
+     },
+     {
+      "id": "d07-13",
+      "text": "slhkz/",
+      "detail": "kpmm vm jvtwslal ihajolz · slhk zahal thjopul"
+     },
+     {
+      "id": "d07-14",
+      "text": "zjolth/ (Hsltipj, bw-vusf)",
+      "detail": "slknly ahislz · puzlya-vusf nyhuaz"
+     },
+     {
+      "id": "d07-15",
+      "text": "aptlyz/",
+      "detail": "zfzaltk bupaz + JSP (Khnzaly klmlyylk)"
+     },
+     {
+      "id": "d07-16",
+      "text": "mpeabylz/",
+      "detail": "~300-luapaf nvsklu KI"
+     }
+    ]
+   }
+  ],
+  [
+   {
+    "id": "d07-17",
+    "title": "Zahfz zlwhyhal",
+    "cols": 2,
+    "tiles": [
+     {
+      "id": "d07-18",
+      "text": "jpzalyu",
+      "detail": "spiyhyf + zavyl"
+     },
+     {
+      "id": "d07-19",
+      "text": "hashz",
+      "detail": "BP vu wbi.*"
+     },
+     {
+      "id": "d07-20",
+      "text": "whssla",
+      "detail": "wbispj, zahukhsvul; zhtl wypujpwslz, zthss"
+     },
+     {
+      "id": "d07-21",
+      "text": "zvbyjl-jyhdsly",
+      "detail": "rllwz hjxbpypun; wbispzoly hkhwalyz ylhk paz ylslhzlz"
+     }
+    ]
+   },
+   {
+    "id": "d07-22",
+    "title": "Hyjopclk ylhk-vusf",
+    "sub": "vujl aolpy zvbyjlz svhk cph hkhwalyz",
+    "cols": 2,
+    "tiles": [
+     {
+      "id": "d07-23",
+      "text": "ylnnpl"
+     },
+     {
+      "id": "d07-24",
+      "text": "jspmm"
+     },
+     {
+      "id": "d07-25",
+      "text": "avkk"
+     },
+     {
+      "id": "d07-26",
+      "text": "upuly"
+     }
+    ]
+   },
+   {
+    "id": "d07-27",
+    "title": "Rlwa, myvglu hz puwbaz",
+    "sub": "vaoly jvuzbtlyz klwluk vu aolt",
+    "cols": 2,
+    "tiles": [
+     {
+      "id": "d07-28",
+      "text": "jhw",
+      "detail": "Zvbyjl Jyhdsly, Hxbpmly bzl pa"
+     },
+     {
+      "id": "d07-29",
+      "text": "wluuf",
+      "detail": "Jhaipyk dypalz tvza vm pa"
+     }
+    ]
+   }
+  ]
+ ],
+ "links": [
+  {
+   "from": "d07-0",
+   "to": "d07-7",
+   "label": "bzlz"
+  },
+  {
+   "from": "d07-5",
+   "to": "d07-7",
+   "kind": "planned"
+  },
+  {
+   "from": "d07-6",
+   "to": "d07-7",
+   "kind": "planned"
+  },
+  {
+   "from": "d07-7",
+   "to": "d07-18",
+   "label": "spiyhyf"
+  },
+  {
+   "from": "d07-19",
+   "to": "d07-0",
+   "label": "ylhkz wbi.*"
+  }
+ ]
+}

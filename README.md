@@ -112,7 +112,15 @@ For anything else that speaks [MCP](https://modelcontextprotocol.io), add this s
 { "mcpServers": { "toucan": { "command": "toucan", "args": ["mcp"] } } }
 ```
 
-An agent with no connection at all can still follow [AGENTS.md](AGENTS.md) (`toucan guide` prints it). In a container or on another machine, set `TOUCAN_URL` and `TOUCAN_TOKEN` to use a server elsewhere; the token is in `~/.config/toucan/server.json` on the server's machine.
+**The canvas in the chat.** `toucan mcp` is also an [MCP App](https://modelcontextprotocol.io/docs/extensions/apps). In a
+host that shows them, such as Claude, `toucan_open` and `toucan_draw` put a live view of the canvas in the conversation.
+It keeps up as people and agents change the canvas, pans and zooms, and has an **Edit in toucan** button that opens the
+canvas, signed in, in your browser. The view needs no network access: it gets pictures from `toucan mcp` through the host.
+In other clients the same tools answer in text, as before.
+[Watch the demo](https://lavallee.github.io/toucan/quickstart.html#the-canvas-in-the-chat), or run it yourself with
+`npm run build && npm run test:mcp-app`.
+
+An agent can read the guide offline. Start with [AGENTS.md](AGENTS.md), use `toucan guide TOPIC` for a topic, or run `toucan guide` for the full reference. In a container or on another machine, set `TOUCAN_URL` and `TOUCAN_TOKEN` to use a server elsewhere; the token is in `~/.config/toucan/server.json` on the server's machine.
 
 Claude Code and Codex can also use the plugin from the Lyra Forge marketplace, which stays up to date with the marketplace rather than with your install:
 
@@ -184,7 +192,7 @@ node bin/toucan.mjs setup      # builds the app, puts `toucan` on your PATH, and
 - **Threads.** Comment on a shape or drag out a region. Each comment is a thread you go back and forth in and close
   out: give it to its own agent (several can work at once, and you can steer each one), send it into the main chat, or
   leave it for people. They work on both engines and with no tab open, and `toucan threads` does the same from the CLI.
-- **Templates.** 33 diagrams (blocks) to start from or add to any canvas: flowchart, swimlane, sequence, architecture, roadmap, kanban, SWOT, retro, story map and more, laid out by rule and scored against what's actually drawn. Six starters make a whole canvas on one subject (system design, incident review, product strategy and others) out of several blocks. **Check this diagram** scores any canvas and points at what's wrong, and **Clean up** and **Lay it out again** fix most of it.
+- **Templates.** 34 diagrams (blocks) to start from or add to any canvas: flowchart, swimlane, sequence, architecture, roadmap, kanban, SWOT, retro, story map and more, laid out by rule and scored against what's actually drawn. Six starters make a whole canvas on one subject (system design, incident review, product strategy and others) out of several blocks. **Check this diagram** scores any canvas and points at what's wrong, and **Clean up** and **Lay it out again** fix most of it.
 - **Formats and details.** Boxes stay short, and selecting one opens its detail in a card. A story map, ideas map or system diagram
   lets you walk the canvas with ← and →, following arrows or frames, and tells agents how to work on it. **Air out** converts a dense diagram.
 - **Notes for the agent.** On tldraw, a sticky note is addressed to the agent: pin one where the problem
@@ -192,12 +200,17 @@ node bin/toucan.mjs setup      # builds the app, puts `toucan` on your PATH, and
   green with a one-line reply; notes are never deleted.
 - **Proposals.** An agent can answer on the canvas with a proposal: dashed shapes (`import --propose`)
   that you accept (made solid) or reject (removed) from a bar above the canvas.
+- **Screenshot review.** Post a revision from any session, pin feedback to the exact screenshot, and compare it with an update. Producers can poll for their own feedback and reply with a revised screenshot. [Review commands and adapter protocol](https://lavallee.github.io/toucan/extending.html#screenshot-review).
 - **History.** Every canvas keeps its own versions: after each agent run, when your edits go quiet, and whenever
   you name one. Step back and forward through them read-only, and restore any of them for everyone; what was
   there is saved first, so a restore can be undone too. `toucan versions` does the same from the CLI.
 - **Routines.** Bank a chore once and run it on any canvas from the Routines menu or `toucan routine run`, as
   one undo step. About twenty ship with toucan, grouped by kind (tidy, arrows, layout, style, content, check), and toucan
   learns more from work: it notices chores agents keep doing by hand and offers to bank them.
+- **Reflexes.** A canvas can fix some things by itself the moment they happen, without the agent: text that outgrew its
+  box, a frame cutting off what's in it, an arrow through a box. Switch them on from the Reflexes menu. Each fix is one
+  undo step, a fix you undo stays undone, and what a reflex can't settle it asks the agent about. The agent can answer by
+  teaching the canvas a new reflex, which waits for you to switch it on. See [Credits](#credits).
 - **Your look.** A light/dark/system override, and clean lettering by default in place of tldraw's handwritten
   font (switch back under Appearance). It's per browser, and it doesn't change the canvases.
 - **An index of canvases** at `/`, with previews, titles, descriptions and which ones are open.
@@ -215,7 +228,7 @@ Getting going:
   open [NAME]                 open a canvas (or the index) in your browser, signed in
   agents [install [ID...] [--mcp] [--force] | remove [ID...]]   connect the agents on this machine
   mcp                         run as an MCP server on stdio
-  guide                       the full guide for agents
+  guide [TOPIC]               the full agent guide or one topic
   status | doctor             is the server running; check the whole install
   start [--port P] [--host H] [--data DIR] [--no-headless] [--take-over] | stop | restart   the background server
   update                      install the latest release
@@ -287,7 +300,7 @@ away" until you mark them seen (per browser).
 
 ## Extending
 
-- **Canvas scripts** grow a single canvas, and **routines** are chores for every canvas; see [AGENTS.md](AGENTS.md).
+- **Canvas scripts** grow a single canvas, and **routines** are chores for every canvas. See the [extensions guide](docs/agents/extensions.md).
 - **Extension commands.** `toucan X …` runs `toucan-X …` from your PATH, with `TOUCAN_CANVAS` set, so
   domain-specific tooling (a diagram generated from your own data, say) lives in its own repo. From
   Node, use the same client the CLI does:
@@ -298,6 +311,12 @@ away" until you mark them seen (per browser).
   await t.exec('return toucan.summary()')
   ```
 
+- **Plugins.** Programs on PATH named `toucan-profiles-NAME` serve your agents as profiles a canvas can work with, and
+  `toucan-source-NAME` ones let a canvas show board, gantt, timeline, graph and table views of a project kept in your own
+  system, and write edits back. `toucan plugins` lists what was found and why anything was refused;
+  [Extending](https://lavallee.github.io/toucan/extending.html) has the protocols and
+  `examples/toucan-source-example.mjs` a source to copy. With no plugin at all, a plan can be a JSON file:
+  `toucan new relaunch --plan file examples/website-relaunch.plan.json --views board,gantt`.
 - **Deployment notes for agents.** An `AGENTS.md` in the data directory is passed to the chat agent as
   extra instructions, so your house canvases and extensions are documented without forking.
 
@@ -335,7 +354,7 @@ disagree with himself?". Every quotation was checked word for word against its s
 | `TOUCAN_TOKEN` | from `~/.config/toucan/server.json` | with `TOUCAN_URL`: for a server on another machine or outside a container |
 | `TOUCAN_NO_AUTOSTART` | — | never start a server from a command |
 | `TOUCAN_BROWSER` | the system's | program `toucan open` launches |
-| `VITE_TLDRAW_LICENSE_KEY` | — | tldraw licence key, read at build time (see below) |
+| `TLDRAW_LICENSE_KEY` | — | tldraw licence key, read when the server starts (see below) |
 
 ## Security
 
@@ -353,18 +372,45 @@ copy of any config file it changes, and `toucan agents remove` undoes them.
 `toucan_exec`, like `toucan exec`, runs JavaScript in your signed-in browser tab or the server's headless page, where it can reach
 the network and the toucan server. The MCP tools don't run other programs or take file paths, but treat them as trusting
 that agent with toucan, and check the chat's and your harness's approval settings accordingly.
+The MCP App view runs in the host's sandbox with no network access. It sees only pictures of the canvas, never the server's
+token, and its **Edit in toucan** button calls `toucan_open`, which signs your browser in on this machine without the
+link passing through the conversation.
 
 Headless mode adds no new way in: the headless page is a local Chromium the server starts itself. It
 gets the token through a script that puts it in the page's (in-memory, throwaway) local storage, never
 in a URL, and then authenticates like any tab.
 
+## Credits
+
+Screenshot review was inspired by [Rounds by Kris Puckett](https://github.com/krispuckett/rounds). Rounds
+showed how to pin feedback to the screenshot a session produced, return the note to that session, and
+compare its update with the original.
+
+That fit the round trips we were already building in Toucan. A keyed import can bring changes back to the
+same shapes, and a card moved on a [Daymark board](https://github.com/lavallee/toucan-source-daymark)
+writes back to the task it came from. Screenshot review gives feedback the same continuity. Toucan
+keeps the pinned revision, and its producer picks up the note through an inbox and can reply with an
+updated image.
+
+Reflexes (a canvas answering what happens to it by itself, and asking the agent about the rest) follow Sihan Xu's
+[How to Control an Agent with a Growing Behavior Tree](https://sihanxu.me/harnesstree/) and the reactive layer of
+[The Harness](https://github.com/EvolvingLMMs-Lab/the-harness) by LMMs-Lab. The ideas are theirs; toucan's code is its own.
+
+Agents noticing what people do while they work, so a canvas runs both ways at once, came from [Daniel Bachhuber](https://github.com/danielbachhuber) asking for
+toucan to be full duplex.
+
+The systems map (panels of tiles in columns, a state on any part shown by colour and by word, a key made from what the picture
+uses, and lanes that take a long arrow round the outside) follows [open-diagram](https://github.com/lukendeasy/open-diagram) by
+Luke Deasy. So does a check that says how to clear each thing it finds, and `toucan describe`, which says a diagram in plain words and puts them inside an exported SVG. Reading open-diagram's examples beside toucan's own
+showed where a dense picture went wrong here without the check noticing. The ideas are his; toucan's code is its own.
+
 ## Licences
 
-toucan's own code is [MIT](LICENSE). It builds on **tldraw**, which is *not* MIT: the
-[tldraw licence](https://github.com/tldraw/tldraw/blob/main/LICENSE.md) allows development use freely,
-but production use (anything served over HTTPS) needs a licence key, including tldraw's free hobby
-licence for non-commercial projects. The key is read at build time, so [install from source](#install-from-source), put it
-in `.env` as `VITE_TLDRAW_LICENSE_KEY=…` and rebuild. A release served from your own machine doesn't need one.
+Toucan’s original code and documentation are released under the [MIT License](LICENSE). Third-party dependencies are licensed by their respective owners.
+
+The tldraw SDK has its own [license terms](https://tldraw.dev/community/license). Its default terms cover development. Production deployments need a valid trial, commercial, or qualifying non-commercial hobby key. Set `TLDRAW_LICENSE_KEY` in the server environment or in the
+`.env` beside Toucan’s `package.json`, then restart the server. Use a key that covers your deployment
+host. Toucan loads it at runtime, and the SDK displays the required tldraw attribution for hobby keys.
 Excalidraw canvases need no key (MIT).
 
 ## Develop

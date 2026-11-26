@@ -4,7 +4,7 @@
 //
 //   npm run build && node scripts/build-docs.mjs [--only a,b] [--no-agents] [--list]
 //
-// Writes website/site/assets/{tour,explore}/ and website/content/{tour,gallery}.md. Then `artoo build website`.
+// Writes website/site/assets/{tour,explore}/ and website/content/gallery.md. Then `artoo build website`.
 import { execFile, spawn } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
@@ -423,176 +423,17 @@ const SCENES = {
 const AGENT_SCENES = new Set(['chat', 'notes', 'proposal', 'thread'])
 
 // ---- the pages ---------------------------------------------------------------------------------------------------------------
-function agentRequests() {
-	const file = join(ROOT, 'evals/out/agent.json')
-	if (!existsSync(file)) return null
-	const all = JSON.parse(readFileSync(file, 'utf8'))
-	const pick = ['web-stack', 'org', 'moving', 'ticket'].map((id) => all.find((r) => r.id === id)).filter(Boolean)
-	for (const r of pick) copyFileSync(join(ROOT, 'evals/out', `ask-${r.id}.png`), join(TOUR, `ask-${r.id}.png`))
-	return { pick, count: all.length, mean: Math.round(all.reduce((s, r) => s + r.score, 0) / all.length), seconds: Math.round(all.reduce((s, r) => s + r.seconds, 0) / all.length) }
-}
-
-// One box or arrow to a line, which is how a person would write it. Colours are left out to fit the column.
-function specText(spec) {
-	if (!spec) return ''
-	const list = (items) => items.map((i) => {
-		const { color, ...rest } = i
-		return `    ${JSON.stringify(rest)}`
-	}).join(',\n')
-	return `{\n  "kind": "${spec.kind}",\n  "direction": "${spec.direction}",\n  "nodes": [\n${list(spec.nodes)}\n  ],\n  "edges": [\n${list(spec.edges)}\n  ]\n}`
-}
-
-function writeTour() {
-	const asked = agentRequests() ?? facts.asked
-	if (asked) facts.asked = asked
-	// A straight quote would end the Markdown title early, and the image would come out as text.
-	const curly = (t) => t.replace(/"([^"]*)"/g, '“$1”').replace(/"/g, '”')
-	const pic = (name, alt, caption) => `![${alt}](assets/tour/${name}.png${caption ? ` "${curly(caption)}"` : ''})`
-	const f = facts
-	const spec = f.draw?.spec && { ...f.draw.spec, nodes: f.draw.spec.nodes.slice(0, 4), edges: f.draw.spec.edges.slice(0, 3) }
-	const lines = [
-		'# See it work',
-		'',
-		'Every picture here is a screenshot of toucan running, made by a script against a real server. Where it says an agent did something, that is a real turn of the chat agent on Codex, unedited. There is no public server to try, because toucan is built for your own machine or a trusted network, but the [Explore](explore.html) page lets you click through some of these canvases.',
-		'',
-		'## Ask, and it draws',
-		'',
-		`The chat panel sits beside the canvas. Asked for "${f.chat?.request}", the agent drew this and checked its own work.`,
-		'',
-		pic('chat', 'The canvas with the chat panel open. The agent has drawn a sequence diagram of a password reset, with four participants and a column of messages between them.', `Measured at ${f.chat?.score} of 100 by the same check the agent runs.`),
-		'',
-		asked && `Agents don't place boxes by hand. They describe the diagram and a layout engine places it, which is why this takes seconds. Here are four more requests, from the set toucan is tested against: across ${asked.count} requests the average score is ${asked.mean} of 100, in about ${asked.seconds} seconds each.`,
-		'',
-		...(asked?.pick ?? []).flatMap((r) => [`**"${r.ask}"**`, '', pic(`ask-${r.id}`, `What the agent drew for: ${r.ask}`, `Scored ${r.score} of 100, in ${r.seconds} seconds.`), '']),
-		'## Describe it as data',
-		'',
-		'Any agent, or any script of yours, can do the same from a terminal. A diagram is a small description, in the same form as the [templates](gallery.html), and `toucan draw` places it. This one is shortened; the full version has seven boxes.',
-		'',
-		'```json',
-		specText(spec),
-		'```',
-		'',
-		'```sh',
-		'toucan --canvas checkout draw checkout.json',
-		'```',
-		'',
-		pic('draw', 'A left-to-right checkout flow: review cart, enter address, take payment, a decision on whether it was approved, then confirm order and ship, or show the error and go back to payment.'),
-		'',
-		'A second drawing lands beside the first and never over it. `--update` changes an earlier one.',
-		'',
-		'## Or as Mermaid',
-		'',
-		'Mermaid works as an edit language too. On a blank canvas it comes out looking like a template, and it merges by key on a full one, so importing it again changes only what differs.',
-		'',
-		'```',
-		(f.mermaid?.source ?? '').trim(),
-		'```',
-		'',
-		pic('mermaid', 'The Mermaid flowchart as boxes on a canvas: idea, draft, a reviewed decision, publish, with a loop back to draft.'),
-		'',
-		'What goes in comes back out. The same canvas as DOT:',
-		'',
-		'```',
-		f.mermaid?.dot ?? '',
-		'```',
-		'',
-		'It also exports JSON Canvas (for Obsidian), `.excalidraw` and toucan\'s own graph format.',
-		'',
-		'## Tldraw or Excalidraw',
-		'',
-		'A canvas runs on either engine, and converts between them with its keys, text, frames and arrows intact. Some styling is approximated: Excalidraw draws these arrows straight, for one.',
-		'',
-		pic('engine-tldraw', 'A layered architecture diagram on tldraw, with clients, edge, services and data in four frames.', 'On tldraw.'),
-		'',
-		pic('engine-excalidraw', 'The same architecture diagram on Excalidraw, with the same boxes and frames in Excalidraw\'s style.', 'The same canvas, converted to Excalidraw.'),
-		'',
-		'## Tidy it up',
-		'',
-		`Diagrams get knocked about. **Routines** are chores banked once and run from a menu or the CLI, each one undoable in a single step, and they keep your arrangement rather than starting over. Here a service map scored ${f.cleanup?.clean} when clean and ${f.cleanup?.before?.score} after being knocked about.`,
-		'',
-		pic('cleanup-before', 'A service map with boxes out of line, different sizes, and two dropped on top of their neighbours.', `Before: ${f.cleanup?.before?.score} of 100.`),
-		'',
-		pic('cleanup-after', 'The same service map with the boxes lined up, matching in size and clear of each other.', `After Clean up: ${f.cleanup?.after?.score} of 100.`),
-		'',
-		pic('routines-menu', 'The Routines menu open over a canvas, listing Clean up, Lay it out again, Check this diagram and other chores, each with a description.', 'The routines menu. Ask an agent to bank a new one and it appears here.'),
-		'',
-		'**Check this diagram** scores what\'s drawn and names the shapes at fault, so an agent can fix what it finds instead of squinting at a screenshot.',
-		'',
-		'## Short boxes, with the rest a click away',
-		'',
-		'A box holds a name. What\'s behind it opens in a card when you select it, and on a canvas with a **format**, ← and → walk you through. This is the Odyssey as a story map.',
-		'',
-		pic('story-whole', 'The Odyssey as a story map: a long path of short titled stops with branches.', 'The whole map.'),
-		'',
-		pic('story-card', 'One stop selected, with a card beside it holding a quotation from the poem and buttons to walk to the previous and next stops.', 'Select a stop, and the quotation opens beside it.'),
-		'',
-		pic('story-walk', 'The canvas has moved to the next stop along the path, with its own card open.', 'Press → and the canvas moves along the path.'),
-		'',
-		'[Try this one yourself](explorer.html?map=odyssey), no install needed.',
-		'',
-		'## Zoom out on a system',
-		'',
-		'On a system diagram, zooming out swaps the details for what matters at that height: the frames, how many parts each holds, and how many connections run between them. It only changes what you see; agents and exports still get every shape.',
-		'',
-		pic('system-close', 'A layered architecture diagram with every box and arrow visible.', 'Up close.'),
-		'',
-		pic('system-overview', 'The same diagram zoomed out: four labelled frames with part counts, joined by arrows with connection counts.', 'Zoomed out.'),
-		'',
-		'## Air out a dense diagram',
-		'',
-		'Long text in boxes makes a canvas hard to read and hard to talk about. The **Air out** routine moves it into the details, makes the names larger, and spreads things a little.',
-		'',
-		pic('airout-before', 'Four boxes crowded with paragraphs of text, joined by arrows.', 'Before.'),
-		'',
-		pic('airout-after', 'The same four boxes with short names only.', 'After. The text is one click away, in the card.'),
-		'',
-		'## Comment, and have it answered',
-		'',
-		'A comment on a box or a region is a **thread**: a back-and-forth that someone eventually closes. Send a message to the agent and it works that thread on its own, so several can run at once.',
-		'',
-		pic('thread', 'A thread open on the Show the error box. A person asks whether to retry the card automatically, and the agent answers in the thread.', `Asked: "${f.thread?.comment}" The answer is the agent's, unedited.`),
-		'',
-		'## Leave a sticky note',
-		'',
-		'Pin a note where the problem is instead of describing it in chat. Its position is part of the message. Asked to handle the notes, the agent acts on each one, and the note turns green with a one-line reply.',
-		'',
-		pic('notes-before', 'The checkout flow with a yellow sticky note above the Take payment box: missing, what if an item went out of stock?', 'A note left on the canvas.'),
-		'',
-		pic('notes-after', 'The flow now has a step for the out-of-stock case, and the note has turned green with the agent\'s reply.', f.notes?.[0]?.reply ? `The agent's reply: "${f.notes[0].reply}"` : undefined),
-		'',
-		'## Take it or leave it',
-		'',
-		'Ask for an opinion and the answer arrives as a **proposal**: drawn dashed, with Accept and Reject above the canvas. Nothing is final until you say so.',
-		'',
-		pic('proposal', 'The checkout flow with new dashed boxes and arrows the agent proposes, and a bar above the canvas with Accept and Reject.', `Asked: "${f.proposal?.request}"`),
-		'',
-		'## Go back',
-		'',
-		'Every canvas keeps its history, whoever made the change. Step through versions read-only, with the live canvas still running underneath, and restore one if you want it. A restore can itself be undone.',
-		'',
-		pic('history', 'The History panel open beside the checkout flow, with a version named First sketch selected and shown read-only.', 'An earlier version, named First sketch, shown over the live canvas.'),
-		'',
-		'## Where to go next',
-		'',
-		'- [Explore](explore.html): click through real canvases in your browser.',
-		'- [Gallery](gallery.html): every diagram toucan starts from.',
-		'- [Quick start](quickstart.html): run it yourself.',
-		'- [Agent guide](agents.html): what agents can do, in full.',
-		'',
-	]
-	writeFileSync(join(ROOT, 'website/content/tour.md'), lines.filter((l) => l !== null && l !== undefined && l !== false).join('\n'))
-}
-
 // The gallery's sections are the templates' own groups, so a new block lands in the right one without editing this.
 const GROUPS = TEMPLATE_GROUPS.map((g) => [g.label, `${g.about}.`, TEMPLATES.filter((t) => t.group === g.id).map((t) => t.id)])
 function writeGallery() {
 	const seen = new Set()
 	const page = [
-		'# Gallery',
+		'# Diagram templates',
+		'', '::: html', '<link rel="stylesheet" href="assets/admiralty.css">', '<script src="assets/site-nav.js"></script>', '<script defer src="assets/site-footer.js"></script>', ':::',
 		'',
-		'Every diagram toucan starts from, as it draws them. Each one is ordinary shapes you can change. These same diagrams are the test set for layout, so a change that makes one worse fails the build.',
+		'Choose a starting layout for your own canvas. Each preview includes the command to create an editable copy.',
 		'',
-		'A canvas *has* diagrams rather than *being* one. Each diagram below is a **block**: start a canvas with one (`toucan new NAME --template ID`, or **Start from** on the index page), or add it beside what is already on a canvas (`toucan --canvas NAME add ID`, or **Add** above the canvas). An agent can read the description behind any of them with `toucan templates show ID`, then draw its own in the same form with `toucan --canvas NAME draw -`. See [See it work](tour.html) for that in action.',
+		'A canvas *has* diagrams rather than *being* one. Each diagram below is a **block**: start a canvas with one (`toucan new NAME --template ID`, or **Start from** on the index page), or add it beside what is already on a canvas (`toucan --canvas NAME add ID`, or **Add** above the canvas). An agent can read the description behind any of them with `toucan templates show ID`, then draw its own in the same form with `toucan --canvas NAME draw -`.',
 		'',
 		'## Starters',
 		'',
@@ -633,7 +474,6 @@ try {
 		}
 	}
 	writeFileSync(FACTS, JSON.stringify(facts, null, 1) + '\n')
-	writeTour()
 	writeGallery()
 } finally {
 	await browser.close()

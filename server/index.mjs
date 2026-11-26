@@ -15,18 +15,27 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, rmSync
 import { hostname } from 'node:os'
 import { dirname, join, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { parseEnv } from 'node:util'
 import { WebSocketServer } from 'ws'
 import { TLSocketRoom } from '@tldraw/sync-core'
 import { CodexChat } from './codex.mjs'
+import { createActivity, tldrawRows, excalidrawRows, describe as describeActivity, format as formatActivity } from './activity.mjs'
 import { createHeadless } from './headless.mjs'
 import * as trail from './trail.mjs'
 import * as versions from './versions.mjs'
+import * as renditions from './renditions.mjs'
 import { createRoutines, KINDS as ROUTINE_KINDS } from './routines.mjs'
 import * as worklog from './worklog.mjs'
 import { formatBrief, parseDirect } from './brief.mjs'
 import * as threads from './threads.mjs'
+import { ReviewError, reviewDir, reviewImage, reviewView, reviewWrite } from './review.mjs'
 import * as refs from './references.mjs'
 import { createProfiles, makeLocalProfile, profileInstructions, ProfileError } from './profiles.mjs'
+import { createSources } from './sources.mjs'
+import { createPlugins } from './plugins.mjs'
+import { createPlans, sidecarPath as planPath } from './plan.mjs'
+import { createReflexes, reflexesPath, ReflexError } from './reflexes.mjs'
+import { PlanError, catalogText, itemsText, KINDS as PLAN_KINDS } from '../lib/plan.mjs'
 import { hostCheck, parsePublicUrl, refusal } from '../lib/hosts.mjs'
 import { FORMATS as CANVAS_FORMATS, formatList } from './formats.mjs'
 import { compose, layOut, placeBeside } from '../lib/layouts.mjs'
@@ -46,6 +55,11 @@ const buildId = () => {
 	}
 }
 const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version
+
+// Read just the tldraw key from the install's .env. The server environment takes precedence.
+const licenseFrom = (env) => env.TLDRAW_LICENSE_KEY?.trim() || env.TLDRAW_LICENSE?.trim() || env.VITE_TLDRAW_LICENSE_KEY?.trim()
+const envFile = join(ROOT, '.env')
+const tldrawLicenseKey = licenseFrom(process.env) ?? (existsSync(envFile) ? licenseFrom(parseEnv(readFileSync(envFile, 'utf8'))) : undefined)
 
 const args = Object.fromEntries(
 	process.argv.slice(2).map((a, i, all) => (a.startsWith('--') ? [a.slice(2), all[i + 1]?.startsWith('--') || all[i + 1] === undefined ? true : all[i + 1]] : null)).filter(Boolean),
@@ -86,6 +100,7 @@ const authed = (req, url) =>
 const tabs = new Map() // canvas -> [ws...] (most recently focused last)
 const unlanded = new Map() // canvas -> { sentAt, changes } of its last run that changed something, whose changes reach this server through sync
 const pending = new Map() // exec id -> {resolve, reject, timer, acked}
+const agentWork = new Map() // canvas -> { n: agent calls running, at: when one last started or ended }
 let execSeq = 0
 const ACK_MS = 2500
 const HEADLESS_ACK_MS = 30000 // a page the server just opened is still loading, and on a slow machine that takes a while; a person's silent tab gets skipped quickly
@@ -98,11 +113,18 @@ const headless = createHeadless({ enabled: !!(args.headless ?? /^(1|true|yes)$/i
 function exec(canvas, code, timeoutMs, label, who = {}) {
 	const agent = speaker(canvas, who.agent)
 	broadcast(canvas, { type: 'agent-activity', phase: 'start', agent, doing: String(who.doing || label || 'working on the canvas').slice(0, 120) })
-	const end = () => broadcast(canvas, { type: 'agent-activity', phase: 'end', agent })
-	return run(canvas, code, timeoutMs, label, agent).finally(end)
+	// Reflexes wait while an agent is at work here (its own runs and the plan's redraws aside), and a moment after.
+	const working = !who.internal && agent !== 'Reflex'
+	if (working) agentWork.set(canvas, { n: (agentWork.get(canvas)?.n ?? 0) + 1, at: Date.now() })
+	const end = () => {
+		if (working) agentWork.set(canvas, { n: Math.max(0, (agentWork.get(canvas)?.n ?? 1) - 1), at: Date.now() })
+		broadcast(canvas, { type: 'agent-activity', phase: 'end', agent })
+	}
+	return run(canvas, code, timeoutMs, label, agent, who.internal).finally(end)
 }
 
-function run(canvas, code, timeoutMs = 30000, label, agent) {
+// `read`: code that only looks (a picture for a view elsewhere): the tab runs it outside its edit tracking, so it adds no undo step.
+function run(canvas, code, timeoutMs = 30000, label, agent, internal = false, read = false) {
 	// So the person's edits and the agent's stay separate steps, note the unsaved state before a run; it's
 	// saved only if the run turns out to change something, so reads (summary, notes) cost nothing.
 	// (A previous run still reaching the server's copy waits its turn: quick runs share one version.)
@@ -115,7 +137,7 @@ function run(canvas, code, timeoutMs = 30000, label, agent) {
 		const send = (ws, next) => {
 			const id = ++execSeq
 			const done = (f) => (v) => (ws.headless && headless.touch(canvas, false), f(v))
-			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now(), agent, next }
+			const p = { resolve: done(resolve), reject: done(reject), acked: false, ws, canvas, code, label, before, sentAt: Date.now(), agent, next, internal }
 			if (ws.headless) headless.touch(canvas, true)
 			p.timer = setTimeout(() => {
 				pending.delete(id)
@@ -126,7 +148,7 @@ function run(canvas, code, timeoutMs = 30000, label, agent) {
 				p.timer = setTimeout(() => (pending.delete(id), p.reject(new Error('exec timed out'))), timeoutMs)
 			}
 			pending.set(id, p)
-			ws.send(JSON.stringify({ type: 'exec', id, code, agent }))
+			ws.send(JSON.stringify({ type: 'exec', id, code, agent, ...(read && { read: true }) }))
 		}
 		const tryTab = (i) => {
 			if (i < candidates.length) return send(candidates[i], () => tryTab(i + 1))
@@ -156,10 +178,14 @@ function getRoom(canvas) {
 			clearTimeout(entry.timer)
 			entry.timer = setTimeout(persist, 1000)
 			snapshotSoon(canvas)
+			plans.touched(canvas)
+			reflexes.touched(canvas)
+			activity.touched(canvas)
 		},
 		onSessionRemoved: (room, { numSessionsRemaining }) => {
 			if (numSessionsRemaining > 0) return
 			clearTimeout(entry.timer)
+			activity.close(canvas)
 			persist()
 			snapshotNow(canvas)
 			room.close()
@@ -167,6 +193,7 @@ function getRoom(canvas) {
 		},
 	})
 	rooms.set(canvas, entry)
+	activity.open(canvas)
 	snapshotNow(canvas) // anything from before this server ran, and a first version for an older canvas
 	return entry.room
 }
@@ -176,12 +203,47 @@ function getRoom(canvas) {
 // (ties: the lower `versionNonce`, Excalidraw's own rule), persists, and forwards what it kept to the
 // other tabs, which merge it with reconcileElements. Deletions are elements with isDeleted.
 const scenes = new Map() // canvas -> { elements: Map, sockets: Set, timer, changed }
+
+// ---- activity: what people do while an agent works, so it notices (server/activity.mjs) -------------------------------
+const activity = createActivity({
+	rowsOf: (n) => (scenes.has(n) ? excalidrawRows([...scenes.get(n).elements.values()]) : rooms.has(n) ? tldrawRows((rooms.get(n).room.getCurrentSnapshot().documents ?? []).map((d) => d.state)) : null),
+	busy: (n) => [...pending.values()].some((p) => p.canvas === n),
+})
+/** Who did what wasn't said: the person at the canvas, if there's only one and they gave a name. */
+function personAt(canvas) {
+	const names = new Set(activity.selections(canvas).map((s) => s.user).filter(Boolean))
+	return names.size === 1 ? [...names][0] : undefined
+}
+/**
+ * What's new on a canvas for one reader, as the block it reads, and how to mark it told; null when there's nothing.
+ * `mine(actor)`: the reader's own edits; `skip(event)`: what it hears some other way.
+ */
+function activityFor(key, canvas, { mine, skip, intro } = {}) {
+	const { events, upto, reader } = activity.pending(key, canvas, { mine, skip })
+	const ack = () => activity.ack(key, upto, events)
+	const text = events.length ? formatActivity(describeActivity(events, { person: personAt(canvas), seen: reader?.seen }), { canvas, intro }) : null
+	if (!text) ack() // nothing worth saying, but the place moves on past it
+	return text ? { text, ack } : null
+}
+/** What a chat conversation (the panel's, or a comment thread's: "name#3") hasn't heard yet. Its own edits are Codex's. */
+function chatActivity(key, intro) {
+	const [canvas, thread] = key.split('#')
+	const own = new Set(['Codex', speaker(canvas, 'Codex')])
+	return activityFor(`chat:${key}`, canvas, { intro, mine: (a) => a?.kind === 'agent' && own.has(a.name), skip: (e) => thread !== undefined && e.thread === Number(thread) })
+}
+/** The selection to resolve "this" by, as a line for the agent: the most recent report from a person's tab. */
+function selectionLine(canvas) {
+	const [s] = activity.selections(canvas)
+	if (!s) return null
+	return s.keys.length ? `Selected now${s.user ? ` by ${s.user}` : ''} ("this", "these"): ${s.keys.join(', ')}` : `Nothing is selected in ${s.user ? `${s.user}'s` : 'their'} tab now.`
+}
 function getScene(canvas) {
 	if (scenes.has(canvas)) return scenes.get(canvas)
 	const saved = existsSync(scenePath(canvas)) ? JSON.parse(readFileSync(scenePath(canvas), 'utf8')) : { elements: [] }
 	const scene = { elements: new Map(saved.elements.map((e) => [e.id, e])), sockets: new Set(), timer: null, changed: 0 }
 	scene.persist = () => writeFileSync(scenePath(canvas), JSON.stringify({ type: 'excalidraw', version: 2, source: 'toucan', elements: [...scene.elements.values()], appState: {}, files: {} }))
 	scenes.set(canvas, scene)
+	activity.open(canvas)
 	snapshotNow(canvas)
 	return scene
 }
@@ -204,11 +266,15 @@ function onScene(ws, canvas) {
 		clearTimeout(scene.timer)
 		scene.timer = setTimeout(scene.persist, 1000)
 		snapshotSoon(canvas)
+		plans.touched(canvas)
+		reflexes.touched(canvas)
+		activity.touched(canvas)
 	})
 	ws.on('close', () => {
 		scene.sockets.delete(ws)
 		if (scene.sockets.size) return
 		clearTimeout(scene.timer)
+		activity.close(canvas)
 		scene.persist()
 		snapshotNow(canvas)
 		scenes.delete(canvas)
@@ -280,6 +346,7 @@ function describe(n, idx) {
 		openThreads: threads.list(CANVASES, n).filter((t) => t.status === 'open').length,
 		format: idx[n]?.format ?? null,
 		profile: idx[n]?.profile ? { ref: idx[n].profile, name: bound.get(n)?.name ?? idx[n].profile.split('/')[1] } : null,
+		plan: plans.has(n) ? plans.status(n).source ?? null : null,
 		open: (tabs.get(n) ?? []).filter((w) => !w.headless).length,
 		headless: headless.has(n),
 		thumb: existsSync(thumbPath(n)) ? Math.round(mtime(thumbPath(n))) : null,
@@ -358,6 +425,63 @@ function snapshotSoon(n, { label, delay = QUIET_MS } = {}) {
 	unsaved.set(n, due)
 }
 
+// ---- renditions: named, published pictures of part of a canvas (server/renditions.mjs) ----------
+/** Every shape on the canvas with its key, what it sits in and its record, from the server's copy. */
+function shapeTree(n) {
+	if (engineOf(n) === 'excalidraw') return renditions.treeFromExcalidraw(sceneElements(n))
+	const room = rooms.has(n) ? rooms.get(n).room.getCurrentSnapshot() : existsSync(docPath(n)) ? JSON.parse(readFileSync(docPath(n), 'utf8')).room : null
+	return renditions.treeFromTldraw((room?.documents ?? []).map((d) => d.state))
+}
+/** A rendition as `rendition list` shows it: its manifest, whether it is current, and where its picture is. */
+function renditionRow(n, def, tree = shapeTree(n)) {
+	let shapes = null
+	try {
+		shapes = renditions.shapesHash(tree, renditions.pick(tree, def.select))
+	} catch {} // what it shows is gone
+	const picture = renditions.picturePath(CANVASES, n, def.name, def.format)
+	return { ...def, ...renditions.status(def, shapes), picture: def.published && existsSync(picture) ? picture : null, catalogue: renditions.entryName(n, def.name) }
+}
+/**
+ * Draws a rendition now, in a tab (a person's, or the headless page), the way `toucan export` draws a picture: an SVG
+ * with its title and what it shows in words, or a PNG. Writes it beside its definition, with the manifest, and puts it
+ * in the include catalogue unless asked not to. Only ever on request.
+ */
+async function publishRendition(n, name, { catalogue = true, agent } = {}) {
+	const def = renditions.get(CANVASES, n, name)
+	if (!def) throw new renditions.RenditionError(404, `no rendition ${name} on ${n}: define it with \`rendition set ${name}\``)
+	const tree = shapeTree(n)
+	const keys = renditions.pick(tree, def.select)
+	if (!keys.size) throw new renditions.RenditionError(400, 'the canvas is empty: nothing to draw')
+	// So the version number names the state the picture is drawn from (a version is saved only if something changed).
+	snapshotNow(n)
+	const version = { n: versions.list(CANVASES, n)[0]?.n ?? null, shapes: renditions.shapesHash(tree, keys) }
+	const drawKeys = def.select.all ? null : def.select.frame ? [def.select.frame] : def.select.keys
+	const who = { agent, doing: `publishing the rendition ${name}` }
+	let bytes
+	if (def.format === 'svg') {
+		const title = def.title ?? readIndex()[n]?.title ?? n
+		const tg = graphOf(n)
+		const desc = FORMATS.text.export(def.select.all ? tg : renditions.subGraph(tg, keys), { title: readIndex()[n]?.title })
+		const r = await exec(n, `return toucan.svg(${JSON.stringify({ keys: drawKeys, title, desc })})`, 120000, undefined, who)
+		if (!r?.svg) throw new renditions.RenditionError(400, 'nothing to draw: the shapes it shows are not on the page')
+		bytes = Buffer.from(renditions.stableIds(r.svg, name))
+	} else {
+		const b64 = await exec(n, `return toucan.screenshot(${JSON.stringify({ keys: drawKeys, max: 1800 })})`, 120000, undefined, who)
+		if (!b64) throw new renditions.RenditionError(400, 'nothing to draw: the shapes it shows are not on the page')
+		bytes = Buffer.from(b64, 'base64')
+	}
+	const out = renditions.publish(CANVASES, n, name, { bytes, version })
+	let registered = { skipped: true }
+	if (catalogue) {
+		try {
+			registered = renditions.register(out.rendition, out.picture)
+		} catch (e) {
+			registered = { error: e.message, file: renditions.cataloguePath() }
+		}
+	}
+	return { ...out, rendition: renditionRow(n, out.rendition), catalogue: registered }
+}
+
 /** Puts a version's document back. Every tab follows; what was there is saved first, and this is a version too. */
 function restoreVersion(n, version) {
 	const before = currentDocument(n)
@@ -368,15 +492,22 @@ function restoreVersion(n, version) {
 	saveVersion(n, { label: due?.label ?? `Before restoring v${version.n}`, source: due?.label ? 'agent' : 'edit' })
 	const undo = versions.list(CANVASES, n)[0]?.n ?? null
 	const label = `Restored v${version.n}${version.label ? ` (${version.label})` : ''}`
+	// On a canvas that shows a plan, the old version's views are old drawings, not edits: nothing of them is written upstream.
+	plans.reset(n)
+	activity.settle(n) // what people did before the restore is theirs; what the restore changes is the restore's
 	if (engineOf(n) === 'excalidraw') restoreScene(n, version.data.elements)
 	else if (rooms.has(n)) rooms.get(n).room.loadSnapshot(version.data.room)
 	else writeFileSync(docPath(n), JSON.stringify({ room: version.data.room }))
+	activity.settle(n, { actor: { kind: 'canvas', name: 'restore' } })
+	activity.note(n, { actor: null, text: `The canvas was restored to ${label.replace(/^Restored /, '')}: run \`summary\` before going on.` })
 	const saved = snapshotNow(n, { label, source: 'restore' })
 	if (!saved) return { ...version, data: undefined, unchanged: true } // it already looked like that
+	// A version from when the canvas showed a plan, restored on a canvas that no longer does: its plan views are just shapes now.
+	const orphaned = !plans.has(n) && [...(planGraph(n).nodes ?? []), ...(planGraph(n).groups ?? [])].filter((x) => x.meta?.plan).length
 	// Nobody may be watching this one land.
 	const after = currentDocument(n)
 	if (!(tabs.get(n) ?? []).some((w) => !w.headless) && before && after) trail.record(CANVASES, n, { source: 'restore', label, changes: versions.diffShapes(before.shapes, after.shapes) })
-	return { ...saved, undo }
+	return { ...saved, undo, ...(orphaned && { plan: `This version has ${orphaned} shapes drawn from a plan, and the canvas is no longer bound to one: they are ordinary shapes now. \`plan bind SOURCE REF\` takes them up again.` }) }
 }
 /** Excalidraw merges by element version, so restored elements must outrank what tabs hold now. */
 function restoreScene(n, target) {
@@ -428,6 +559,10 @@ const server = createServer(async (req, res) => {
 	try {
 		if (!url.pathname.startsWith('/api/')) return serveStatic(url, res)
 		if (!authed(req, url)) return json(res, 401, { error: 'missing or bad token' })
+		if (url.pathname === '/api/tldraw-license' && req.method === 'GET') {
+			res.setHeader('Cache-Control', 'no-store')
+			return json(res, 200, { licenseKey: tldrawLicenseKey })
+		}
 		const [, , route, canvas, sub, subName] = url.pathname.split('/')
 		if (route === 'health' && !canvas) return json(res, 200, { ok: true, version: VERSION, pid: process.pid, managed: MANAGED, data: CANVASES, headless: headless.enabled })
 		if (route === 'canvases' && !canvas && req.method === 'GET') {
@@ -461,6 +596,14 @@ const server = createServer(async (req, res) => {
 			for (const [name, list] of tabs) if (!canvas || name === canvas) for (const w of list) if (w.readyState === 1) w.send(JSON.stringify({ type: 'reload' })), n++
 			return json(res, 200, { reloaded: n, ...(canvas && { canvas }) })
 		}
+		// Every plugin on PATH, by kind, and the ones found but not trusted, with why (server/plugins.mjs).
+		if (route === 'plugins' && req.method === 'GET') return json(res, 200, await plugins.list())
+		// Plan sources (server/sources.mjs) and the catalog of views (lib/plan.mjs).
+		if (route === 'sources' && req.method === 'GET') {
+			const of = url.searchParams.get('canvas')
+			return json(res, 200, { sources: await planSources.list(of && NAME.test(of) && canvasNames().includes(of) ? of : null) })
+		}
+		if (route === 'plan' && canvas === 'catalog') return json(res, 200, { kinds: Object.fromEntries(Object.entries(PLAN_KINDS).map(([k, v]) => [k, { title: v.title, about: v.about }])), text: catalogText() })
 		if (route === 'profiles' && !canvas && req.method === 'GET') return json(res, 200, await profiles.list())
 		if (route === 'profiles' && !canvas && req.method === 'POST') {
 			try {
@@ -508,15 +651,40 @@ const server = createServer(async (req, res) => {
 			return json(res, 405, { error: 'method' })
 		}
 		if (route !== 'canvases' || !NAME.test(canvas ?? '')) return json(res, 404, { error: 'not found' })
+		// A terminal agent hears what people did since its last command along with this one's answer (bin/toucan.mjs).
+		// The chat panel's agent hears between its tool calls instead (server/codex.mjs), so not here as well.
+		const reading = typeof req.headers['x-toucan-agent'] === 'string' ? req.headers['x-toucan-agent'].slice(0, 40) : null
+		if (reading && reading !== 'Codex' && speaker(canvas, reading) === reading && (rooms.has(canvas) || scenes.has(canvas))) {
+			const told = activityFor(`cli:${canvas}:${reading}`, canvas, { mine: (a) => a?.kind === 'agent' && a.name === reading })
+			if (told) {
+				res.setHeader('x-toucan-activity', encodeURIComponent(told.text.slice(0, 6000)))
+				told.ack()
+			}
+		}
 
 		if (sub === 'info' && req.method === 'GET') return json(res, 200, canvasNames().includes(canvas) ? describe(canvas, readIndex()) : { name: canvas, engine: 'tldraw', new: true })
+		// The canvas as a picture, for a view of it somewhere else (the MCP App in lib/mcp.mjs): drawn only when it changed
+		// since `since`, and drawn quietly, as nobody's edit, so a view that keeps looking doesn't show as an agent at work.
+		if (sub === 'picture' && req.method === 'GET') {
+			if (!canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` })
+			const info = describe(canvas, readIndex())
+			const head = { canvas, title: info.title, engine: info.engine, shapes: info.shapes, updated: info.updated, url: publicUrl(canvas) }
+			if (String(info.updated) === url.searchParams.get('since')) return json(res, 200, { ...head, same: true })
+			// The tab draws it, and is ahead of the count here for a moment after an edit, so only it can say the canvas is empty.
+			try {
+				const r = await run(canvas, 'return toucan.svg({ padding: 24 })', 20000, undefined, 'toucan', true, true)
+				return json(res, 200, { ...head, svg: r?.svg ?? null, width: r?.width ?? 0, height: r?.height ?? 0 })
+			} catch (e) {
+				return json(res, 200, { ...head, svg: null, ...(info.shapes && { error: String(e.message ?? e) }) })
+			}
+		}
 		if (sub === 'graph' && req.method === 'GET') {
 			const format = url.searchParams.get('format') ?? 'tg'
 			if (!FORMATS[format]?.export) return json(res, 400, { error: `format: one of ${Object.keys(FORMATS).join(', ')}` })
 			const tg = { ...graphOf(canvas, { raw: url.searchParams.has('raw') }), canvas }
 			if (format === 'tg') return json(res, 200, tg)
 			res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
-			return res.end(FORMATS[format].export(tg, {}))
+			return res.end(FORMATS[format].export(tg, { title: readIndex()[canvas]?.title }))
 		}
 		if (sub === 'seed' && req.method === 'GET') return existsSync(seedPath(canvas)) ? json(res, 200, JSON.parse(readFileSync(seedPath(canvas), 'utf8'))) : (res.writeHead(204), res.end())
 		if (sub === 'seed' && req.method === 'DELETE') {
@@ -572,7 +740,17 @@ const server = createServer(async (req, res) => {
 			if ((tabs.get(canvas) ?? []).length || rooms.has(canvas) || scenes.has(canvas)) return json(res, 409, { error: `${canvas} is open in a tab — close it first` })
 			const dest = join(ARCHIVE, `${canvas}-${new Date().toISOString().replace(/[:.]/g, '-')}`)
 			mkdirSync(dest, { recursive: true })
-			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas), filesDir(canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
+			plans.forget(canvas)
+			reflexes.forget(canvas)
+			// Its pictures move with it, so documents mustn't keep pointing at where they were.
+			for (const r of renditions.list(CANVASES, canvas)) {
+				try {
+					renditions.unregister(canvas, r.name)
+				} catch (e) {
+					console.error(`catalogue entry for ${canvas}/${r.name} not removed: ${e.message}`)
+				}
+			}
+			for (const f of [docPath(canvas), scenePath(canvas), seedPath(canvas), scriptsDir(canvas), thumbPath(canvas), trail.trailPath(CANVASES, canvas), versions.versionsDir(CANVASES, canvas), threads.threadsPath(CANVASES, canvas), planPath(CANVASES, canvas), reflexesPath(CANVASES, canvas), reviewDir(CANVASES, canvas), filesDir(canvas), renditions.renditionsDir(CANVASES, canvas)]) if (existsSync(f)) renameSync(f, join(dest, f.slice(CANVASES.length + 1)))
 			chat.forgetThreads(canvas)
 			const idx = readIndex()
 			if (idx[canvas]) writeFileSync(join(dest, 'index-entry.json'), JSON.stringify(idx[canvas], null, 2) + '\n')
@@ -585,6 +763,31 @@ const server = createServer(async (req, res) => {
 			if (engineOf(canvas) === 'excalidraw') return json(res, 200, { type: 'excalidraw', elements: sceneElements(canvas) })
 			if (rooms.has(canvas)) return json(res, 200, { room: rooms.get(canvas).room.getCurrentSnapshot() })
 			return existsSync(docPath(canvas)) ? json(res, 200, JSON.parse(readFileSync(docPath(canvas), 'utf8'))) : json(res, 404, { error: 'empty' })
+		}
+		// Reflexes: what the canvas does by itself (server/reflexes.mjs). /reflexes, /reflexes/NAME, /reflexes/NAME/try,
+		// /reflexes/asks[/ID/dismiss], /reflexes/wake, /reflexes/suggest.
+		if (sub === 'reflexes') {
+			const action = url.pathname.split('/')[6]
+			const input = ['POST', 'PATCH'].includes(req.method) ? JSON.parse((await body(req)) || '{}') : {}
+			try {
+				if (!subName && req.method === 'GET') return json(res, 200, { ...reflexes.status(canvas), tree: reflexes.tree(canvas) })
+				if (!subName && req.method === 'POST') {
+					const by = speaker(canvas, input.agent)
+					if (input.starter) return json(res, 200, { added: reflexes.addStarter(canvas, String(input.starter), { status: input.status, by }) })
+					return json(res, 200, { added: [reflexes.add(canvas, { ...input.node, by }, { before: input.before })] })
+				}
+				if (subName === 'asks' && req.method === 'GET') return json(res, 200, { asks: reflexes.asks(canvas, url.searchParams.has('all')) })
+				if (subName === 'asks' && action && req.method === 'POST') return json(res, 200, reflexes.closeAsk(canvas, action, url.pathname.split('/')[7] === 'answered' ? 'answered' : 'dismissed'))
+				if (subName === 'wake' && req.method === 'POST') return json(res, 200, reflexes.setWake(canvas, input.on))
+				if (subName === 'suggest' && req.method === 'GET') return json(res, 200, { suggestions: reflexes.suggest(canvas) })
+				if (subName && action === 'try' && req.method === 'POST') return json(res, 200, await reflexes.trial(canvas, subName, typeof input.stage === 'string' ? input.stage : undefined))
+				if (subName && req.method === 'PATCH') return json(res, 200, reflexes.setStatus(canvas, subName, input.status))
+				if (subName && req.method === 'DELETE') return json(res, 200, { removed: reflexes.remove(canvas, subName) })
+				return json(res, 404, { error: 'not found' })
+			} catch (e) {
+				if (e instanceof ReflexError || e instanceof SyntaxError) return json(res, 400, { error: e.message })
+				return json(res, 500, { error: String(e.message ?? e) })
+			}
 		}
 		if (sub === 'exec' && req.method === 'POST') {
 			const { code, timeoutMs, label, agent, doing } = JSON.parse(await body(req))
@@ -606,6 +809,31 @@ const server = createServer(async (req, res) => {
 				return json(res, 200, { ok: false, error: String(e.message ?? e) })
 			}
 		}
+		if (sub === 'review') {
+			const action = url.pathname.split('/')[6]
+			const dir = reviewDir(CANVASES, canvas)
+			try {
+				if (!subName && req.method === 'POST') {
+					let input
+					try { input = JSON.parse(await body(req)) }
+					catch (err) { throw new ReviewError(err instanceof SyntaxError ? 400 : 413, 'expected a JSON review mutation up to 8 MiB') }
+					// Recheck after reading the body: the canvas may have been archived meanwhile.
+					if (!canvasNames().includes(canvas)) throw new ReviewError(404, 'no such canvas')
+					return json(res, 200, reviewWrite(dir, input))
+				}
+				if (!canvasNames().includes(canvas)) throw new ReviewError(404, 'no such canvas')
+				if (!subName && req.method === 'GET') return json(res, 200, reviewView(dir, url.searchParams.get('producer')))
+				if (subName && action === 'image' && req.method === 'GET') {
+					const { type, bytes } = reviewImage(dir, subName)
+					res.writeHead(200, { 'content-type': type, 'x-content-type-options': 'nosniff', 'cache-control': 'no-store' })
+					return res.end(bytes)
+				}
+				return json(res, 404, { error: 'unknown review route' })
+			} catch (err) {
+				if (err instanceof ReviewError) return json(res, err.status, { error: err.message })
+				throw err
+			}
+		}
 		if (sub === 'threads') {
 			const n = /^\d+$/.test(subName ?? '') ? Number(subName) : null
 			const action = url.pathname.split('/')[6]
@@ -623,6 +851,7 @@ const server = createServer(async (req, res) => {
 				}
 				if (subName === undefined && req.method === 'POST') {
 					const thread = threads.create(CANVASES, canvas, { anchor: input.anchor, author: input.author, text: input.text })
+					commented(canvas, thread, 'started')
 					routeThread(canvas, thread, input.ask, input.mode)
 					announceThreads(canvas)
 					return json(res, 201, thread)
@@ -633,6 +862,7 @@ const server = createServer(async (req, res) => {
 				let thread
 				if (action === 'messages') {
 					thread = threads.reply(CANVASES, canvas, n, { author: input.author, text: input.text })
+					commented(canvas, thread, 'replied in')
 					routeThread(canvas, thread, input.ask, input.mode)
 				} else if (action === 'close') thread = threads.close(CANVASES, canvas, n, { by: input.author, reply: input.text })
 				else if (action === 'reopen') thread = threads.reopen(CANVASES, canvas, n)
@@ -755,6 +985,93 @@ const server = createServer(async (req, res) => {
 			broadcast(canvas, { type: 'agent-say', agent: speaker(canvas, agent), text: String(text).slice(0, 200), keys: [keys].flat().map(String).slice(0, 50) })
 			return json(res, 200, { ok: true, tabs: (tabs.get(canvas) ?? []).filter((w) => !w.headless).length })
 		}
+		// A plan: the system of record this canvas shows views of (server/plan.mjs).
+		if (sub === 'plan') {
+			const action = subName, id = url.pathname.split('/')[6]
+			let input = {}
+			try {
+				if (['POST', 'PATCH', 'PUT'].includes(req.method)) input = JSON.parse((await body(req)) || '{}')
+			} catch (e) {
+				return json(res, 400, { error: `the request body isn't JSON: ${e.message}` })
+			}
+			if (!input || typeof input !== 'object' || Array.isArray(input)) return json(res, 400, { error: 'the request body must be a JSON object' })
+			try {
+				// Whoever reads the plan from here is told what upstream says now, not what it said when a tab was last open.
+				if (req.method === 'GET' && (!action || action === 'items' || action === 'views')) await plans.fresh(canvas)
+				if (!action && req.method === 'GET') return json(res, 200, plans.status(canvas))
+				if (!canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` })
+				if (action === 'bind' && req.method === 'POST') {
+					// A file named by where it is on disk, when that's somewhere this canvas can read.
+					const roots = refs.rootsOf(canvas, { filesDir })
+					const ref = input.path ? refs.refForPath(input.path, roots) : input.ref
+					if (input.path && !ref) return json(res, 400, { error: `${input.path} isn't in this canvas's files folder or its project, so the canvas can't keep reading it. Copy it to ${filesDir(canvas)} (\`plan bind file PATH --copy\` does that).` })
+					return json(res, 200, await plans.bind(canvas, { name: input.name, ref, views: input.views ?? [] }))
+				}
+				if (!action && req.method === 'DELETE') return json(res, 200, await plans.unbind(canvas))
+				if (action === 'sync' && req.method === 'POST') return json(res, 200, await plans.sync(canvas))
+				if (action === 'items' && req.method === 'GET') {
+					const plan = plans.items(canvas)
+					return json(res, 200, url.searchParams.has('text') ? { text: itemsText(plan) } : plan)
+				}
+				if (action === 'views' && !id && req.method === 'GET') return json(res, 200, { views: plans.status(canvas).views ?? [] })
+				if (action === 'views' && !id && req.method === 'POST') return json(res, 200, await plans.putView(canvas, input))
+				if (action === 'views' && id && req.method === 'PATCH') return json(res, 200, await plans.setView(canvas, decodeURIComponent(id), input))
+				if (action === 'views' && id && req.method === 'DELETE') return json(res, 200, await plans.removeView(canvas, decodeURIComponent(id), { keep: url.searchParams.has('keep') }))
+				if (action === 'write' && req.method === 'POST') return json(res, 200, await plans.change(canvas, input.changes))
+				if (action === 'problems' && req.method === 'DELETE') return json(res, 200, plans.dismiss(canvas, url.searchParams.get('ids')?.split(',').filter(Boolean)))
+				return json(res, 404, { error: 'not found' })
+			} catch (e) {
+				if (e instanceof PlanError) return json(res, { not_found: 404, invalid: 400, conflict: 409, forbidden: 403, unavailable: 502 }[e.code] ?? 500, { error: e.message, code: e.code })
+				throw e
+			}
+		}
+		// Renditions (server/renditions.mjs): /renditions, /renditions/NAME (PUT defines, DELETE removes), /renditions/NAME/publish.
+		if (sub === 'renditions') {
+			const action = url.pathname.split('/')[6]
+			try {
+				if (!canvasNames().includes(canvas)) throw new renditions.RenditionError(404, `no canvas ${canvas}`)
+				if (!subName && req.method === 'GET') {
+					const tree = shapeTree(canvas)
+					return json(res, 200, { dir: renditions.renditionsDir(CANVASES, canvas), catalogue: renditions.cataloguePath(), renditions: renditions.list(CANVASES, canvas).map((d) => renditionRow(canvas, d, tree)) })
+				}
+				renditions.checkName(subName)
+				if (!action && req.method === 'GET') {
+					const def = renditions.get(CANVASES, canvas, subName)
+					return def ? json(res, 200, renditionRow(canvas, def)) : json(res, 404, { error: `no rendition ${subName} on ${canvas}` })
+				}
+				if (!action && req.method === 'PUT') {
+					const input = JSON.parse((await body(req)) || '{}')
+					const exists = !!renditions.get(CANVASES, canvas, subName)
+					// Checked against the canvas now, so a typo is caught when it's made, not when someone publishes.
+					if (input.select !== undefined) renditions.pick(shapeTree(canvas), input.select)
+					const title = typeof input.title === 'string' ? input.title : exists ? undefined : readIndex()[canvas]?.title ?? canvas
+					const made = renditions.define(CANVASES, canvas, subName, { select: input.select, format: input.format, alt: input.alt, title })
+					return json(res, made.created ? 201 : 200, { ...renditionRow(canvas, made.rendition), created: made.created })
+				}
+				if (action === 'publish' && req.method === 'POST') {
+					const input = JSON.parse((await body(req)) || '{}')
+					return json(res, 200, await publishRendition(canvas, subName, { catalogue: input.catalogue !== false, agent: input.agent }))
+				}
+				if (!action && req.method === 'DELETE') {
+					const gone = renditions.remove(CANVASES, canvas, subName)
+					if (!gone) return json(res, 404, { error: `no rendition ${subName} on ${canvas}` })
+					let catalogue = { skipped: true }
+					if (url.searchParams.get('catalogue') !== '0') {
+						try {
+							catalogue = renditions.unregister(canvas, subName)
+						} catch (e) {
+							catalogue = { error: e.message, file: renditions.cataloguePath() }
+						}
+					}
+					return json(res, 200, { removed: subName, catalogue })
+				}
+				return json(res, 404, { error: 'not found' })
+			} catch (e) {
+				if (e instanceof renditions.RenditionError) return json(res, e.status, { error: e.message })
+				if (e instanceof SyntaxError) return json(res, 400, { error: `the request body isn't JSON: ${e.message}` })
+				throw e
+			}
+		}
 		if (sub === 'log' && req.method === 'GET') return json(res, 200, { entries: trail.read(CANVASES, canvas, url.searchParams.get('since')) })
 		if (sub === 'scripts' && req.method === 'GET') return json(res, 200, { scripts: listScripts(canvas) })
 		if (sub === 'scripts' && NAME.test(subName ?? '')) {
@@ -790,6 +1107,37 @@ const wss = new WebSocketServer({ noServer: true })
 // ---- agent profiles (server/profiles.mjs) ------------------------------------------------------------
 // A canvas can be bound to a named agent: its chat and comment threads become that agent, with its knowledge loaded.
 const profiles = createProfiles({ data: CANVASES, exclude: [ROOT] })
+
+// ---- plans: a canvas over a system of record (server/sources.mjs, server/plan.mjs) -------------------------------------
+// --plugin-path / TOUCAN_PLUGIN_PATH: folders the operator vouches for, searched as well as PATH (server/plugins.mjs).
+// (Set in the environment too: agent profiles look their plugins up through the same variable.)
+if (typeof args['plugin-path'] === 'string') process.env.TOUCAN_PLUGIN_PATH = args['plugin-path']
+const plugins = createPlugins({ data: CANVASES, exclude: [ROOT], pluginPath: typeof args['plugin-path'] === 'string' ? args['plugin-path'] : process.env.TOUCAN_PLUGIN_PATH ?? '' })
+const planSources = createSources({ plugins, roots: (canvas) => refs.rootsOf(canvas, { filesDir }) })
+const personTabs = (canvas) => (tabs.get(canvas) ?? []).filter((w) => !w.headless && w.readyState === 1)
+/** Every page of the canvas as one graph: a plan's views may be on any of them. */
+function planGraph(canvas) {
+	const out = { tg: 1, groups: [], nodes: [], edges: [] }
+	for (const page of pagesOf(canvas)) {
+		const tg = graphOf(canvas, page ? { page } : undefined)
+		out.groups.push(...tg.groups)
+		out.nodes.push(...tg.nodes)
+		out.edges.push(...tg.edges)
+	}
+	return out
+}
+const plans = createPlans({
+	data: CANVASES,
+	sources: planSources,
+	graphOf: planGraph,
+	engineOf,
+	exec: (canvas, code, { label, doing }) => exec(canvas, code, 60000, label, { agent: 'toucan', doing, internal: true }),
+	people: (canvas) => personTabs(canvas).length,
+	canDraw: (canvas) => personTabs(canvas).length > 0 || headless.enabled,
+	busy: (canvas) => personTabs(canvas).flatMap((w) => (w.busyKeys?.length && Date.now() - w.busyAt < 6000 ? w.busyKeys : [])),
+	changedAt: (canvas) => rooms.get(canvas)?.changed ?? scenes.get(canvas)?.changed ?? 0,
+	broadcast,
+})
 const bound = new Map() // canvas -> its loaded profile, kept so names and folders are at hand without a lookup
 async function profileOf(canvas) {
 	const ref = readIndex()[canvas]?.profile
@@ -816,7 +1164,33 @@ function speaker(canvas, agent) {
 	if (name !== 'Codex' && !(name === 'agent' && chatting)) return name
 	return bound.get(canvas)?.name ?? 'Codex'
 }
-const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, profileOf, profileInstructions, routineIndex: (engine) => routines.list().filter((r) => r.engines.includes(engine)).map((r) => `- ${r.name}, ${r.kind}: ${r.when || r.description}`).join('\n'), onThread: onThreadEvent, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: turnAgent(canvas, key, active), key, active }) })
+const chat = new CodexChat({ root: ROOT, port: PORT, engineOf, data: CANVASES, brief: chatBrief, direct: chatDirect, profileOf, profileInstructions, routineIndex: (engine) => routines.list().filter((r) => r.engines.includes(engine)).map((r) => `- ${r.name}, ${r.kind}: ${r.when || r.description}`).join('\n'), onThread: onThreadEvent, activity: chatActivity, selection: selectionLine, onTurn: (canvas, key, active) => broadcast(canvas, { type: 'agent-turn', agent: turnAgent(canvas, key, active), key, active }) })
+
+// ---- reflexes: what a canvas does by itself (server/reflexes.mjs, lib/reflexes.mjs) ----------------------------------------
+// The tree is judged in a person's tab (or the headless page, when it's up) with a read-only program, and what acts runs as an
+// agent exec named Reflex. Nothing is judged while someone drags or types, or while an agent is at work here.
+const reflexes = createReflexes({
+	data: CANVASES,
+	engineOf,
+	routines,
+	exec: (canvas, code, timeoutMs, label, who) => exec(canvas, code, timeoutMs, label, who),
+	judge: (canvas, code, timeoutMs) => run(canvas, code, timeoutMs, undefined, 'Reflex', true),
+	busy: (canvas) => personTabs(canvas).some((w) => w.busyKeys?.length && Date.now() - w.busyAt < 6000),
+	agentBusy: (canvas) => {
+		const w = agentWork.get(canvas)
+		const chatting = [...chat.turns.keys()].some((k) => k === canvas || k.startsWith(`${canvas}#`))
+		return chatting || (!!w && (w.n > 0 || Date.now() - w.at < 2500))
+	},
+	live: (canvas) => (tabs.get(canvas) ?? []).some((w) => w.readyState === 1),
+	broadcast,
+	// The agent may be woken for an ask (when the canvas allows it): as a comment thread on what it's about, for its own agent.
+	wake: (canvas, ask, text) => {
+		const thread = threads.create(CANVASES, canvas, { anchor: { shapes: ask.on }, author: { kind: 'agent', name: 'Reflexes' }, text, source: { reflex: ask.node, ask: ask.id } })
+		announceThreads(canvas)
+		routeThread(canvas, thread, 'agent')
+	},
+	runsOf: (canvas) => worklog.read(CANVASES, '60d').filter((e) => e.canvas === canvas && e.kind === 'routine'),
+})
 
 // ---- comment threads (server/threads.mjs) -------------------------------------------------------
 // What's in the file is the conversation. What an agent is doing right now isn't worth saving: it lives here, and
@@ -880,6 +1254,13 @@ const openThreadLines = (canvas) =>
 		return `#${t.id} ${threads.anchorLine(t, graphForThread(canvas, t))}: ${last.author.name} said "${last.text.replace(/\s+/g, ' ').slice(0, 120)}"`
 	})
 
+/** A person said something in a thread: news for the agents at work elsewhere on the canvas. */
+function commented(canvas, thread, how) {
+	const said = thread.messages.at(-1)
+	if (said?.author?.kind === 'agent') return
+	const text = String(said?.text ?? '').replace(/\s+/g, ' ').trim()
+	activity.note(canvas, { actor: { kind: 'person', name: said?.author?.name }, thread: thread.id, text: `${how} comment thread #${thread.id} (${threads.anchorLine(thread, graphForThread(canvas, thread))}): "${text.length > 160 ? `${text.slice(0, 159)}…` : text}"` })
+}
 /** Sends a thread somewhere for an answer. Its own agent by default; the main chat steers whatever's happening there. */
 function routeThread(canvas, thread, ask, mode, handover = false) {
 	if (ask === 'chat') {
@@ -897,18 +1278,20 @@ function routeThread(canvas, thread, ask, mode, handover = false) {
 }
 
 const guideFor = (canvas) => CANVAS_FORMATS[readIndex()[canvas]?.format]?.guide ?? null
+/** What the brief says about how this canvas works: its format, and the plan it shows, if any. */
+const briefGuide = (canvas) => [guideFor(canvas), ...plans.brief(canvas), ...reflexes.brief(canvas)].filter(Boolean).join('\n') || null
 
 /** Selection and notes need a person's tab; with none, or a slow one, the brief goes without them. */
 async function chatBrief(canvas) {
 	if (!(tabs.get(canvas) ?? []).some((w) => !w.headless)) {
-		return formatBrief(graphOf(canvas), null, openThreadLines(canvas), guideFor(canvas))
+		return formatBrief(graphOf(canvas), null, openThreadLines(canvas), briefGuide(canvas))
 	}
 	const asked = exec(canvas, `const s = toucan.summary({ limit: 0 }), sel = toucan.selection?.()
 return { page: toucan.engine === 'tldraw' ? editor.getCurrentPageId() : undefined, selected: s.selected ?? [], openNotes: s.openNotes, others: (sel?.others ?? []).map((o) => ({ user: o.user, shapes: o.shapes.map((x) => x.key) })) }`, 1000, undefined, { agent: 'Codex', doing: 'reading the canvas' })
 	const live = await Promise.race([asked, new Promise((r) => setTimeout(r, 800))]).catch(() => null)
 	// The brief describes the page the person is on, not just the first one.
 	const tg = graphOf(canvas, live?.page ? { page: live.page } : undefined)
-	return formatBrief(tg, live, openThreadLines(canvas), guideFor(canvas))
+	return formatBrief(tg, live, openThreadLines(canvas), briefGuide(canvas))
 }
 
 /** A message that needs no agent: run it, and return what to say. Null: it's for the agent. */
@@ -945,19 +1328,37 @@ server.on('upgrade', (req, socket, head) => {
 	})
 })
 
+let tabSeq = 0
 function onCanvas(ws, canvas, nonce) {
 	if (!NAME.test(canvas ?? '')) return ws.close()
 	headless.claim(canvas, ws, nonce)
+	ws.tabId = ++tabSeq
 	const list = tabs.get(canvas) ?? []
 	list.push(ws)
 	tabs.set(canvas, list)
 	ws.send(JSON.stringify({ type: 'build', id: buildId() }))
 	ws.send(JSON.stringify({ type: 'scripts', scripts: listScripts(canvas) }))
 	ws.send(JSON.stringify({ type: 'threads', threads: threadsView(canvas) }))
+	// (Bound or not: a tab is told either way, so routines know whether shapes carrying meta.plan are a plan's or just shapes.)
+	ws.send(JSON.stringify({ type: 'plan', plan: plans.status(canvas) }))
+	ws.send(JSON.stringify({ type: 'reflexes', reflexes: reflexes.status(canvas) }))
+	reflexes.touched(canvas)
+	if (plans.has(canvas)) {
+		// A person opening the canvas is what brings its plan up to date.
+		if (!ws.headless) plans.opened(canvas)
+	}
 	ws.on('message', (raw) => {
 		const msg = JSON.parse(raw)
 		// The tab heard a newer build than the one it loaded (it reconnected across an upgrade) and runs old code.
 		if (msg.type === 'stale') ws.stale = true
+		if (msg.type === 'busy') {
+			// What this tab's person is dragging or typing in: a plan's sync leaves those shapes alone (server/plan.mjs). A claim
+			// lasts a few seconds unless renewed, so a tab that went to sleep mid-edit doesn't hold them for ever.
+			ws.busyKeys = Array.isArray(msg.keys) ? msg.keys.filter((k) => typeof k === 'string').slice(0, 2000) : []
+			ws.busyAt = Date.now()
+		}
+		// What this tab's person has selected, and their name if they gave one: what "this" means, as it changes.
+		else if (msg.type === 'presence' && !ws.headless) activity.selected(canvas, ws.tabId, typeof msg.user === 'string' ? msg.user.slice(0, 40) : '', Array.isArray(msg.selected) ? msg.selected.filter((k) => typeof k === 'string') : [])
 		else if (msg.type === 'focus') {
 			const l = tabs.get(canvas).filter((w) => w !== ws)
 			l.push(ws)
@@ -971,13 +1372,19 @@ function onCanvas(ws, canvas, nonce) {
 			pending.delete(msg.id)
 			clearTimeout(p.timer)
 			// What agents and routines do is what routines are learned from (server/worklog.mjs).
+			// (Not a plan's own redraws: nobody would bank those.)
 			try {
-				worklog.record(CANVASES, { canvas, engine: engineOf(canvas), agent: p.agent, label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error, ms: Date.now() - p.sentAt })
+				if (!p.internal) worklog.record(CANVASES, { canvas, engine: engineOf(canvas), agent: p.agent, label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error, ms: Date.now() - p.sentAt })
 			} catch (e) {
 				console.error(`work log: ${e.message}`)
 			}
 			// Nobody watched a headless edit land, so it goes on the canvas's trail.
-			if (ws.headless) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
+			// (A plan's own redraws aren't an agent's edits: the plan control says when it last synced.)
+			if (ws.headless && !p.internal) trail.record(CANVASES, canvas, { source: 'headless', label: p.label, code: p.code, changes: msg.changes, ok: msg.ok, error: msg.error })
+			// A box an agent's run put in a plan's board column is an annotation, not a new item (server/plan.mjs).
+			if (!p.internal && msg.changes?.added?.length) plans.agentAdded(canvas, msg.changes.added.map((c) => c.key))
+			// What this run touched is its own, not a person's, when the edits come through sync (server/activity.mjs).
+			activity.ran(canvas, p.internal || p.agent === 'Reflex' ? { kind: 'canvas', name: p.internal ? 'plan' : 'Reflex' } : { kind: 'agent', name: p.agent }, msg.changes)
 			if (msg.changes && (msg.changes.added?.length || msg.changes.updated?.length || msg.changes.removed?.length)) {
 				unlanded.set(canvas, { sentAt: p.sentAt, changes: msg.changes })
 				if (p.before) saveBefore(canvas, p.before)
@@ -991,6 +1398,7 @@ function onCanvas(ws, canvas, nonce) {
 	})
 	ws.on('close', () => {
 		tabs.set(canvas, (tabs.get(canvas) ?? []).filter((w) => w !== ws))
+		activity.left(canvas, ws.tabId)
 		// A run this tab had taken can't finish now: say so at once rather than at the timeout. The usual cause is the editor
 		// reloading because tldraw refused a shape, or the person closing the tab. One it hadn't taken yet goes to the next tab.
 		for (const [id, p] of pending) {
@@ -1066,6 +1474,7 @@ for (const sig of ['SIGINT', 'SIGTERM']) {
 		} catch (e) {
 			console.error(`toucan: couldn't save on the way out: ${e.message}`)
 		}
+		plans.close()
 		// Close Chromium with the server (it would follow anyway once its pipe closes, but not always promptly).
 		if (headless.enabled) await headless.shutdown().catch(() => {})
 		process.exit(0)

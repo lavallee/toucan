@@ -1,22 +1,27 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { HistoryIcon, LayoutTemplateIcon, MessageSquareIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@lyra-forge/leyline/ui/button'
+import { AppBar, AppBarButton } from '@lyra-forge/leyline/app-bar'
 import { cn } from '@/lib/utils'
 import { Chat } from './Chat'
-import { ChatDock, DockButtons, useChatLayout } from './ChatDock'
+import { ChatDock, DockButtons, useChatLayout } from '@lyra-forge/leyline/dock'
 import { History, type VersionPreview } from './History'
 import { Routines } from './Routines'
+import { Reflexes } from './Reflexes'
 import { CommentButton, ThreadsButton, ThreadsPanel } from './Threads'
 import { update as updateThreads, useThreads } from './threads-store'
 import { AppearanceMenu } from './Appearance'
 import { api, canvasName, headless } from './net'
 import { chooseFormat, loadFormats, useFormat, useFormatList } from './formats'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@lyra-forge/leyline/ui/popover'
 import { AwayNotice } from './AwayNotice'
 import { AgentStatus } from './pulses'
 import { ReferencesButton, ReferencesPanel } from './References'
 import { AddMenu } from './AddMenu'
-import { AnimateMenu } from './AnimateMenu'
+import { PlanMenu } from './PlanMenu'
+import { PlanNotice } from './PlanNotice'
+import { ExportMenu } from './ExportMenu'
+import { ReviewButton } from './Review'
 import { UpdateNotice } from './UpdateNotice'
 import { close as closeReferences, openReference, toggle as toggleReferences, useReferences } from './references-store'
 
@@ -77,27 +82,10 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 	}, [])
 	return (
 		<div className="flex h-full flex-col">
-			<header className="toucan-ui z-[700] flex h-11 shrink-0 items-center gap-1.5 border-b bg-background px-3 text-sm">
-				<a href="/" className="font-semibold tracking-tight outline-none hover:opacity-70 focus-visible:underline" title="All canvases">
-					toucan
-				</a>
-				<span aria-hidden className="text-muted-foreground/60">
-					/
-				</span>
-				<span className="min-w-0 truncate font-medium" title={canvasName}>
-					{title}
-				</span>
-				<span className={cn('size-2 shrink-0 rounded-full', live ? 'bg-emerald-500' : 'bg-destructive')} role="status" aria-label={live ? 'synced' : 'offline'} title={live ? 'synced' : 'offline'} />
-				{engine !== 'tldraw' && <span className="shrink-0 rounded bg-muted px-1 font-mono text-[10px] text-muted-foreground max-sm:hidden">{engine}</span>}
-				{!headless && <AwayNotice />}
-				<UpdateNotice />
-				<span className="flex-1" />
+			<AppBar product="toucan" productHref="/" productTitle="All canvases" title={title} titleHint={canvasName} live={live} tag={engine !== 'tldraw' ? engine : null} status={<>{!headless && <AwayNotice />}<UpdateNotice /></>}>
 				<Popover>
 					<PopoverTrigger asChild>
-						<Button variant="ghost" size="sm" aria-label={`Format: ${format?.label ?? 'none'}`} title="Format: how this canvas behaves">
-							<LayoutTemplateIcon />
-							<span className="max-lg:hidden">{format?.label ?? 'Format'}</span>
-						</Button>
+						<AppBarButton icon={LayoutTemplateIcon} label={format?.label ?? 'Format'} aria-label={`Format: ${format?.label ?? 'none'}`} title="Format: how this canvas behaves" />
 					</PopoverTrigger>
 					<PopoverContent className="w-72 p-1">
 						<ul role="radiogroup" aria-label="Format">
@@ -113,15 +101,20 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 						<p className="border-t px-2 pt-1.5 pb-1 text-xs text-muted-foreground">Choosing a format moves nothing. To give an existing diagram room, run Air out from Routines.</p>
 					</PopoverContent>
 				</Popover>
+				<PlanMenu />
 				<AddMenu />
 				<ReferencesButton open={referencesOpen} onToggle={toggleReferences} />
 				<CommentButton onComment={onComment} />
 				<ThreadsButton />
-				<Button variant="ghost" size="sm" onClick={() => (setHistoryOpen((o) => !o), updateThreads({ panel: false }))} aria-expanded={historyOpen} aria-label="History" title="History" className={cn(historyOpen && 'bg-muted')}>
-					<HistoryIcon />
-					<span className="max-lg:hidden">History</span>
-				</Button>
-				<AnimateMenu />
+				<AppBarButton icon={HistoryIcon} label="History" pressed={historyOpen} aria-expanded={historyOpen} onClick={() => (setHistoryOpen((o) => !o), updateThreads({ panel: false }))} />
+				{!headless && <ReviewButton />}
+				<ExportMenu />
+				<Reflexes
+					onAskAgent={(text) => {
+						setChatOpen(true)
+						setDraftRequest({ text })
+					}}
+				/>
 				<Routines
 					engine={engine}
 					onAskAgent={(text) => {
@@ -129,16 +122,14 @@ export function CanvasFrame({ live, engine, preview, onComment, children }: { li
 						setDraftRequest({ text: text ?? BANK_PROMPT })
 					}}
 				/>
-				<AppearanceMenu />
-				<Button variant="outline" size="sm" onClick={() => setChatOpen((o) => !o)} aria-expanded={chatOpen} aria-label={chatOpen ? 'Hide chat' : 'Show chat'} title={chatOpen ? 'Hide chat' : 'Show chat'} className={cn('ml-1', chatOpen && 'bg-muted')}>
-					<MessageSquareIcon />
-					<span className="max-lg:hidden">Chat</span>
-				</Button>
-			</header>
+				<AppearanceMenu tldraw={engine === 'tldraw'} />
+				<AppBarButton icon={MessageSquareIcon} label="Chat" variant="outline" pressed={chatOpen} aria-expanded={chatOpen} aria-label={chatOpen ? 'Hide chat' : 'Show chat'} title={chatOpen ? 'Hide chat' : 'Show chat'} className={cn(chatOpen && 'bg-muted')} onClick={() => setChatOpen((o) => !o)} />
+			</AppBar>
 			<div ref={stage} className={cn('relative flex min-h-0 flex-1', chat.dock === 'left' ? 'flex-row-reverse' : chat.dock === 'bottom' ? 'flex-col' : 'flex-row')}>
 				<div className="relative min-h-0 min-w-0 flex-1">
 					{children}
 					{!headless && <AgentStatus top={engine === 'excalidraw' ? 84 : 52} />}
+					{!headless && <PlanNotice />}
 					{historyOpen && !threadsOpen && <History Preview={preview} onClose={() => setHistoryOpen(false)} />}
 					{threadsOpen && <ThreadsPanel />}
 					{referencesOpen && !threadsOpen && !historyOpen && <ReferencesPanel />}

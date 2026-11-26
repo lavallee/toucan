@@ -1,6 +1,6 @@
 ---
 name: toucan
-description: Draw on and read a live toucan canvas (tldraw or Excalidraw in a browser tab) through the toucan CLI while a person edits it by hand. Use when asked to use toucan, to start or open a canvas for this project, to draw, update, lay out, inspect, screenshot, export or import a diagram on a toucan canvas, to turn data or a Mermaid sketch into one, or to add lasting behaviour to a canvas with a canvas script. Do not use for diagrams that are not meant for a toucan canvas.
+description: Draw on and read a live toucan canvas (tldraw or Excalidraw in a browser tab) through the toucan CLI while a person edits it by hand. Use when asked to use toucan, to start or open a canvas for this project, to draw, update, lay out, inspect, screenshot, export or import a diagram on a toucan canvas, to turn data or a Mermaid sketch into one, to publish or review screenshot revisions, or to add lasting behaviour to a canvas with a canvas script. Do not use for diagrams that are not meant for a toucan canvas.
 ---
 
 # toucan
@@ -42,10 +42,11 @@ Never `npm install toucan`: that name on the npm registry is an unrelated packag
 headless browser, and your edits go on the canvas's trail (`toucan log`); if neither is possible, ask the person
 to open the canvas with `toucan open`.
 
-## The full guide
+## Agent guide
 
-Read it before your first edit: `toucan guide`. It covers the commands, the `toucan.*` helpers, the graph
-format, both engines and canvas scripts. A deployment may add notes in its data directory's `AGENTS.md`.
+Start with the repository's `AGENTS.md` or `toucan guide index`. Use `toucan guide TOPIC` to read just what you need:
+`cli`, `editing`, `collaboration`, `plans`, or `extensions`. `toucan guide` prints the full reference.
+A deployment may add notes in its data directory's `AGENTS.md`.
 
 ## The loop
 
@@ -65,6 +66,10 @@ line per step, not a commentary.
 **"This".** When the person says "this" or "these", run `toucan --canvas NAME selection` to see what
 they have selected before guessing.
 
+**Notice.** Your commands' answers come with a `<canvas_activity>` block on stderr when people (or other agents)
+changed, selected or commented on something since your last command. Fold it in: keep their edits, don't redo what
+they removed, and adjust your plan when it bears on it.
+
 **Proposals.** For broad feedback, propose rather than impose: `toucan --canvas NAME import plan.mmd
 --propose` adds shapes dashed; the person accepts or rejects them. Don't accept your own proposals unless asked.
 
@@ -74,6 +79,11 @@ they have selected before guessing.
 
 **Threads.** People leave comments on shapes and regions as threads: `toucan --canvas NAME threads` lists the open
 ones with what each is attached to, and `threads reply N "…"` answers. Leave closing them to people unless asked.
+
+**Screenshot review.** Post an image with `toucan --canvas NAME review post KEY IMAGE --producer ID --title TITLE`.
+Reuse the artifact key and pass `--previous REV` to publish the next revision. Reviewers pin feedback in **Review**.
+Poll with `review inbox ID`, read the original image with `review image REV OUT`, and use `review reply NOTE TEXT --producer ID`.
+Add `--replacement REV` to link an updated screenshot. Keep the same `--mutation ID` when retrying a write.
 
 **Templates and quality.** Don't place boxes by hand: describe the diagram as data and pipe it to `toucan --canvas NAME draw -`. `toucan templates` lists the kinds and `toucan templates show ID` shows the form. After a layout change, `toucan --canvas NAME routine run check-diagram` scores it and names what's wrong; `clean-up` and `lay-out-again` fix most of it.
 
@@ -86,6 +96,16 @@ with `meta.refs: [{ref, label}]`.
 
 **Profiles.** A canvas can work with a named agent instead of the chat panel's own: `toucan profiles` lists them, `toucan profiles
 add ID --workdir DIR` makes one from an agent's folder, and `toucan --canvas NAME meta --profile local/ID` binds it (only when asked).
+
+**Reflexes.** A canvas can fix some things by itself the moment they happen (text outgrowing a box, a frame cutting off
+what's in it) and ask you about what it can't: those asks are in your brief as "Reflex ask #N". Handle one like a request,
+and if it will recur, teach the canvas with `toucan --canvas NAME reflexes add NAME --when CODE --routine R --answers N`,
+then `reflexes try NAME`. What you add starts watching; switching it on is the person's call. See AGENTS.md, "Reflexes".
+
+**Plans.** A canvas can show views of a project kept elsewhere (a board, gantt, timeline, dependency graph or table over a plan
+file or a `toucan-source-NAME` plugin), kept in step both ways. `toucan --canvas NAME plan` says whether it does. Compose views with
+`plan view add KIND --group-by FIELD …` (`plan catalog` lists the options) and change the work with `plan set ITEM field=value` and
+`plan add --title T`; never edit shapes keyed `plan:…` with `exec` or `import`. `toucan sources` and `toucan plugins` list what's there.
 
 **Routines.** Before doing a chore by hand, check `toucan routine list` and `toucan --canvas NAME routine run
 NAME`. When the person says "bank that", write it as a routine and `toucan routine save NAME FILE --title T
