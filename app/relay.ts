@@ -70,6 +70,16 @@ export function connectRelay(scope: Scope, setStatus: (s: string) => void) {
 			// A canvas just made from a template is drawn by its first tab: a command that arrives first waits, or it would see nothing
 			// (and the template's shapes would be counted as its own).
 			await scope.ready?.catch(() => {})
+			// Code that only looks (a picture for the MCP App's view, server/index.mjs) stays out of the person's undo history.
+			if (msg.read) {
+				try {
+					const result = await new AsyncFunction('editor', 'tl', 'toucan', msg.code)(scope.editor, scope.tl, scope.toucan)
+					sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: true, result: JSON.parse(JSON.stringify(result ?? null)) }))
+				} catch (e: any) {
+					sock.send(JSON.stringify({ type: 'result', id: msg.id, ok: false, error: `${e.name}: ${e.message}` }))
+				}
+				return
+			}
 			// One undo step per run, and a record of which shapes it added, changed or removed.
 			const done = scope.toucan._track?.()
 			setRunning(msg.agent)

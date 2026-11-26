@@ -114,7 +114,8 @@ function exec(canvas, code, timeoutMs, label, who = {}) {
 	return run(canvas, code, timeoutMs, label, agent, who.internal).finally(end)
 }
 
-function run(canvas, code, timeoutMs = 30000, label, agent, internal = false) {
+// `read`: code that only looks (a picture for a view elsewhere): the tab runs it outside its edit tracking, so it adds no undo step.
+function run(canvas, code, timeoutMs = 30000, label, agent, internal = false, read = false) {
 	// So the person's edits and the agent's stay separate steps, note the unsaved state before a run; it's
 	// saved only if the run turns out to change something, so reads (summary, notes) cost nothing.
 	// (A previous run still reaching the server's copy waits its turn: quick runs share one version.)
@@ -138,7 +139,7 @@ function run(canvas, code, timeoutMs = 30000, label, agent, internal = false) {
 				p.timer = setTimeout(() => (pending.delete(id), p.reject(new Error('exec timed out'))), timeoutMs)
 			}
 			pending.set(id, p)
-			ws.send(JSON.stringify({ type: 'exec', id, code, agent }))
+			ws.send(JSON.stringify({ type: 'exec', id, code, agent, ...(read && { read: true }) }))
 		}
 		const tryTab = (i) => {
 			if (i < candidates.length) return send(candidates[i], () => tryTab(i + 1))
@@ -655,7 +656,7 @@ const server = createServer(async (req, res) => {
 			if (String(info.updated) === url.searchParams.get('since')) return json(res, 200, { ...head, same: true })
 			// The tab draws it, and is ahead of the count here for a moment after an edit, so only it can say the canvas is empty.
 			try {
-				const r = await run(canvas, 'return toucan.svg({ padding: 24 })', 20000, undefined, 'toucan', true)
+				const r = await run(canvas, 'return toucan.svg({ padding: 24 })', 20000, undefined, 'toucan', true, true)
 				return json(res, 200, { ...head, svg: r?.svg ?? null, width: r?.width ?? 0, height: r?.height ?? 0 })
 			} catch (e) {
 				return json(res, 200, { ...head, svg: null, ...(info.shapes && { error: String(e.message ?? e) }) })
