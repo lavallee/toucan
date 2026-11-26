@@ -5,7 +5,19 @@ All notable changes to toucan are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-11-26
+
 ### Added
+
+- **The canvas in the chat (MCP Apps).** `toucan mcp` is now an [MCP App](https://modelcontextprotocol.io/docs/extensions/apps):
+  in a host that shows them, such as Claude, `toucan_open` and `toucan_draw` put a live view of the canvas in the conversation
+  (`ui://toucan/canvas.html`). It redraws within a couple of seconds of any edit, by people or agents, pans and zooms, goes full
+  screen where the host allows, and its **Edit in toucan** button opens the canvas, signed in, through `toucan_open`. The view
+  needs no network access. It gets pictures through `toucan_canvas_picture`, a tool only the view can call, which the host
+  passes to the stdio server. The server draws them quietly, so the person doesn't see an agent at work each time it looks
+  (`GET /api/canvases/NAME/picture`). Clients without MCP Apps see the tools as before, answering in text.
+  `npm run test:mcp-app` runs it end to end in a host built on the official MCP Apps SDK, with a person editing alongside.
+  With `--record`, it records the demo on the site.
 
 - Letterpress and Lyra Forge Admiralty palettes for tldraw with light and dark inks. The docs show a full editor capture and SVG export of an illustrated community radio field guide.
 

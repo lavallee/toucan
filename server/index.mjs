@@ -646,6 +646,21 @@ const server = createServer(async (req, res) => {
 		}
 
 		if (sub === 'info' && req.method === 'GET') return json(res, 200, canvasNames().includes(canvas) ? describe(canvas, readIndex()) : { name: canvas, engine: 'tldraw', new: true })
+		// The canvas as a picture, for a view of it somewhere else (the MCP App in lib/mcp.mjs): drawn only when it changed
+		// since `since`, and drawn quietly, as nobody's edit, so a view that keeps looking doesn't show as an agent at work.
+		if (sub === 'picture' && req.method === 'GET') {
+			if (!canvasNames().includes(canvas)) return json(res, 404, { error: `no canvas ${canvas}` })
+			const info = describe(canvas, readIndex())
+			const head = { canvas, title: info.title, engine: info.engine, shapes: info.shapes, updated: info.updated, url: publicUrl(canvas) }
+			if (String(info.updated) === url.searchParams.get('since')) return json(res, 200, { ...head, same: true })
+			// The tab draws it, and is ahead of the count here for a moment after an edit, so only it can say the canvas is empty.
+			try {
+				const r = await run(canvas, 'return toucan.svg({ padding: 24 })', 20000, undefined, 'toucan', true)
+				return json(res, 200, { ...head, svg: r?.svg ?? null, width: r?.width ?? 0, height: r?.height ?? 0 })
+			} catch (e) {
+				return json(res, 200, { ...head, svg: null, ...(info.shapes && { error: String(e.message ?? e) }) })
+			}
+		}
 		if (sub === 'graph' && req.method === 'GET') {
 			const format = url.searchParams.get('format') ?? 'tg'
 			if (!FORMATS[format]?.export) return json(res, 400, { error: `format: one of ${Object.keys(FORMATS).join(', ')}` })

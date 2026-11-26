@@ -69,6 +69,14 @@ Screenshot review is available through `toucan --canvas NAME review`. Use `revie
 image, `review inbox PRODUCER` for feedback on that producer's revisions, and `review reply` to answer a note.
 Run `toucan help` for arguments. The [review protocol](https://lavallee.github.io/toucan/extending.html#screenshot-review) also supports external adapters.
 
+## Over MCP
+
+`toucan mcp` gives the same commands as `toucan_*` tools, for agents that can't run the CLI. With no `canvas` argument, a tool
+uses the project's canvas (`toucan_project_canvas` makes one). In a host that shows MCP Apps, such as Claude, `toucan_open` and
+`toucan_draw` also put a live view of the canvas in the conversation. The view keeps up with every edit, so call `toucan_open`
+once at the start rather than taking screenshots to show the person progress. Their edits still reach you as
+`<canvas_activity>` after your next tool's result. `toucan_canvas_picture` is the view's own tool, and you won't be offered it.
+
 ## Headless mode
 
 A server started by toucan has this on; one a person runs themselves has it only if started with `--headless`. Then `exec`, `summary`, `screenshot` and `import` still work

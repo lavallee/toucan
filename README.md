@@ -112,6 +112,14 @@ For anything else that speaks [MCP](https://modelcontextprotocol.io), add this s
 { "mcpServers": { "toucan": { "command": "toucan", "args": ["mcp"] } } }
 ```
 
+**The canvas in the chat.** `toucan mcp` is also an [MCP App](https://modelcontextprotocol.io/docs/extensions/apps). In a
+host that shows them, such as Claude, `toucan_open` and `toucan_draw` put a live view of the canvas in the conversation.
+It keeps up as people and agents change the canvas, pans and zooms, and has an **Edit in toucan** button that opens the
+canvas, signed in, in your browser. The view needs no network access: it gets pictures from `toucan mcp` through the host.
+In other clients the same tools answer in text, as before.
+[Watch the demo](https://lavallee.github.io/toucan/quickstart.html#the-canvas-in-the-chat), or run it yourself with
+`npm run build && npm run test:mcp-app`.
+
 An agent can read the guide offline. Start with [AGENTS.md](AGENTS.md), use `toucan guide TOPIC` for a topic, or run `toucan guide` for the full reference. In a container or on another machine, set `TOUCAN_URL` and `TOUCAN_TOKEN` to use a server elsewhere; the token is in `~/.config/toucan/server.json` on the server's machine.
 
 Claude Code and Codex can also use the plugin from the Lyra Forge marketplace, which stays up to date with the marketplace rather than with your install:
@@ -363,6 +371,9 @@ copy of any config file it changes, and `toucan agents remove` undoes them.
 `toucan_exec`, like `toucan exec`, runs JavaScript in your signed-in browser tab or the server's headless page, where it can reach
 the network and the toucan server. The MCP tools don't run other programs or take file paths, but treat them as trusting
 that agent with toucan, and check the chat's and your harness's approval settings accordingly.
+The MCP App view runs in the host's sandbox with no network access. It sees only pictures of the canvas, never the server's
+token, and its **Edit in toucan** button calls `toucan_open`, which signs your browser in on this machine without the
+link passing through the conversation.
 
 Headless mode adds no new way in: the headless page is a local Chromium the server starts itself. It
 gets the token through a script that puts it in the page's (in-memory, throwaway) local storage, never
