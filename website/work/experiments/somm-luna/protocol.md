@@ -1,0 +1,7 @@
+# Somm project-pages trial
+
+A fresh GPT-6 Luna received the revised guide and its starter assignment. The agent's checkout began at Somm `04f63ea` (0.30.0); the guide as assigned is preserved beside this file. The agent chose the reader task independently. It was authorized to build a private candidate using local/offline inputs. The evaluator did not give it a target design or the solutions used on Flip.
+
+Before implementation, the main filled button was **See the components** and led to the top of the components catalog. The first screen contained a Python example requesting a model call and a status command, without a visible result from running either. The baseline already explained the local ledger, measurement limits and model-decision history; preserving those claims alone earns no redesign credit.
+
+The evaluator will check whether a reader gains a shorter or more intelligible path from the hero to credible product proof and whether the result can be reproduced without a paid model call. Check for visible design decisions on the home, destination and a third page; page and fragment preservation under /somm/; phone and desktop behavior; and site-specific tests. Rate the reader improvement and release readiness independently. Do not fix the candidate before attributing the result. The two runs use different products, so their comparison describes observed outcomes and cannot isolate the effect of the new brief.
